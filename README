@@ -1,3 +1,47 @@
 $Id$
 
-This file should contain a basic level description of the project.
+This is a library to aid in reading and writing of
+the e57 file format.
+
+The library is self contained, i.e. it depends only on ANSI Std. C++
+features and should be able to compile with any recent compiler that
+has support for TR1. (If TR1 is not vailable it is possible to use
+boost tr1 implementation instead.)
+
+The only library that e57 depends on is "tinyxml" from
+http://www.grinninglizard.com/tinyxml/index.html
+which comes with a rather permissive license. This library is used
+for the XML encoding/decoding part, because it is very lightweight
+and simple to use. Since the used part of the library contains only
+three source files and one header no separate library build step is
+required. The whole library can be shrink-wrapped with the application.
+
+The example directory contains two files that demonstrate reading and
+writing files. As of this writing the library is only a interface design
+study, i.e. it does not yet generate the real e57 file that will consist
+of several stream mapped into a single file. Instead each stream uses
+it's own file, and so does the xml part.
+
+To compile the examples (and the library) the following options exist:
+
+  1) Copy the files from the src directory to your project (e.g. the
+     examples) and specify them to your compiler just as source files.
+     Add the definitions of TIXML_USE_STL to your cmdline when compiling 
+     the files.
+     Make sure your compiler is able find the include directory. (one
+     below e57, e.g -Iroot_of_e57/include)
+     
+  2) Use the makefile from build/make. I.e. open a shell in this subdir
+     and invoke make from there. This assumes you have gnu g++ and 
+     gnumake available.
+     
+  3) Use boost build system (aka. bjam) from build/bb subdirectory. This 
+     approach while needing the installation of boost.build as a prerequisite
+     has the benefit that it is working with a lot of different compilers
+     and on various platforms.
+       
+  4) Use one of the suuplied IDE project setups. (Not available yet.)
+  
+TODO:
+  1) Is tinyxml capable enough? Alternatives?
+  2) Definition of the stream container file i.e. e57 format.

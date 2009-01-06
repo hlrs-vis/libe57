@@ -1,0 +1,40 @@
+# $Id$
+
+project e57
+    : default-build 
+        <variant>release
+        <link>static
+    : requirements
+        <include>../../include
+    : source-location 
+        ../../src
+        ../../examples
+    : build-dir
+        ../../bin.bb
+    ;
+
+lib e57
+    : tinyxml.cpp
+      tinyxmlparser.cpp
+      tinyxmlerror.cpp
+    : <define>TIXML_USE_STL
+      <include>../../include/e57/detail
+    ;
+    
+exe e57toasc
+    : e57toasc.cpp
+    : <library>e57
+    ;
+
+exe asctoe57
+    : asctoe57.cpp
+    : <library>e57
+    ;
+
+install binaries
+    : e57toasc
+      asctoe57
+    : <install-dependencies>off
+      <install-type>EXE
+      <location>../../bin
+    ;
