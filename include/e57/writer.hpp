@@ -95,7 +95,7 @@ public:
 
     void write(const wrecord& r)
     {
-        sb->sputn(&(r.buffer[0]), r.buffer.size());
+		sb->sputn(&(r.buffer[0]), static_cast<std::streamsize>(r.buffer.size()));
     }
 };
 
@@ -105,7 +105,7 @@ class writer
     TiXmlDocument xml;
     std::ofstream xmls;
     TiXmlElement* images_root;
-    std::map<std::string, unsigned> images;
+	std::map<std::string, std::size_t> images;
     
 public:
     writer()
@@ -160,7 +160,7 @@ public:
         images_root->LinkEndChild(e57image);
         // the name of the image is an attribute
         e57image->SetAttribute("name", s);
-        e57image->SetAttribute("index", images[s]);
+        e57image->SetAttribute("index", static_cast<int>(images[s]));
         TiXmlElement* e57schema = new TiXmlElement("e57:schema");
         // the size attribute is the number of octetts in the record
         e57schema->SetAttribute("size", size);

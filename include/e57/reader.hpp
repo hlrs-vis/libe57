@@ -68,7 +68,7 @@ public:
         if (size != r.buffer.size())
             r.buffer.resize(size);
         // read in the next record. return false if no more records available.
-        sb->sgetn(&(r.buffer[0]), r.buffer.size());
+		sb->sgetn(&(r.buffer[0]), static_cast<std::streamsize>(r.buffer.size()));
         return std::streambuf::traits_type::eof() != sb->sgetc();
     }
      
