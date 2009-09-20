@@ -7,7 +7,7 @@
  * 
  * E57RI is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of
+ * published by the FreeSoftware Foundation, either version 3 of
  * the License, or at your option) any later version.
  * 
  * E57RI is distributed in the hope that it will be useful,
@@ -18,7 +18,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with E57RI.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "E57Foundation.h"
 #include "E57FoundationImpl.h"
 using namespace e57;
 using namespace std;
@@ -304,6 +303,7 @@ CompressedVectorReader CompressedVectorNode::reader(vector<SourceDestBuffer>& db
 }
 
 //=====================================================================================
+#if 0 //!!!
 IntegerNode::IntegerNode(ImageFile imf, int8_t   value, int8_t   minimum, int8_t  maximum)
 : impl_(new IntegerNodeImpl(imf.impl(), static_cast<int64_t>(value), static_cast<int64_t>(minimum), static_cast<int64_t>(maximum)))
 {}
@@ -316,10 +316,6 @@ IntegerNode::IntegerNode(ImageFile imf, int32_t  value, int32_t  minimum, int32_
 : impl_(new IntegerNodeImpl(imf.impl(), static_cast<int64_t>(value), static_cast<int64_t>(minimum), static_cast<int64_t>(maximum)))
 {}
 
-IntegerNode::IntegerNode(ImageFile imf, int64_t  value, int64_t  minimum, int64_t  maximum)
-: impl_(new IntegerNodeImpl(imf.impl(), value, minimum, maximum))
-{}
-
 IntegerNode::IntegerNode(ImageFile imf, uint8_t  value, uint8_t  minimum, uint8_t  maximum)
 : impl_(new IntegerNodeImpl(imf.impl(), static_cast<int64_t>(value), static_cast<int64_t>(minimum), static_cast<int64_t>(maximum)))
 {}
@@ -330,6 +326,11 @@ IntegerNode::IntegerNode(ImageFile imf, uint16_t value, uint16_t minimum, uint16
 
 IntegerNode::IntegerNode(ImageFile imf, uint32_t value, uint32_t minimum, uint32_t maximum)
 : impl_(new IntegerNodeImpl(imf.impl(), static_cast<int64_t>(value), static_cast<int64_t>(minimum), static_cast<int64_t>(maximum)))
+{}
+#endif //!!!
+
+IntegerNode::IntegerNode(ImageFile imf, int64_t  value, int64_t  minimum, int64_t  maximum)
+: impl_(new IntegerNodeImpl(imf.impl(), value, minimum, maximum))
 {}
 
 NodeType IntegerNode::type()        {return(impl_->type());}
@@ -369,6 +370,7 @@ IntegerNode::IntegerNode(shared_ptr<IntegerNodeImpl> ni)
 {}
 
 //=====================================================================================
+#if 0 //!!!
 ScaledIntegerNode::ScaledIntegerNode(ImageFile imf, int8_t   value, int8_t   minimum, int8_t  maximum, double scale, double offset)
 : impl_(new ScaledIntegerNodeImpl(imf.impl(), static_cast<uint64_t>(value), static_cast<int64_t>(minimum), static_cast<int64_t>(maximum), scale, offset))
 {}
@@ -381,10 +383,6 @@ ScaledIntegerNode::ScaledIntegerNode(ImageFile imf, int32_t  value, int32_t  min
 : impl_(new ScaledIntegerNodeImpl(imf.impl(), static_cast<uint64_t>(value), static_cast<int64_t>(minimum), static_cast<int64_t>(maximum), scale, offset))
 {}
 
-ScaledIntegerNode::ScaledIntegerNode(ImageFile imf, int64_t  value, int64_t  minimum, int64_t  maximum, double scale, double offset)
-: impl_(new ScaledIntegerNodeImpl(imf.impl(), static_cast<uint64_t>(value), minimum, maximum, scale, offset))
-{}
-
 ScaledIntegerNode::ScaledIntegerNode(ImageFile imf, uint8_t  value, uint8_t  minimum, uint8_t  maximum, double scale, double offset)
 : impl_(new ScaledIntegerNodeImpl(imf.impl(), static_cast<uint64_t>(value), static_cast<int64_t>(minimum), static_cast<int64_t>(maximum), scale, offset))
 {}
@@ -395,6 +393,11 @@ ScaledIntegerNode::ScaledIntegerNode(ImageFile imf, uint16_t value, uint16_t min
 
 ScaledIntegerNode::ScaledIntegerNode(ImageFile imf, uint32_t value, uint32_t minimum, uint32_t maximum, double scale, double offset)
 : impl_(new ScaledIntegerNodeImpl(imf.impl(), static_cast<uint64_t>(value), static_cast<int64_t>(minimum), static_cast<int64_t>(maximum), scale, offset))
+{}
+#endif //!!!
+
+ScaledIntegerNode::ScaledIntegerNode(ImageFile imf, int64_t  value, int64_t  minimum, int64_t  maximum, double scale, double offset)
+: impl_(new ScaledIntegerNodeImpl(imf.impl(), static_cast<uint64_t>(value), minimum, maximum, scale, offset))
 {}
 
 NodeType ScaledIntegerNode::type()      {return(impl_->type());}

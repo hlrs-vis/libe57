@@ -21,6 +21,8 @@
 #ifndef STDINT_H_INCLUDED
 #define STDINT_H_INCLUDED
 
+#include <float.h>  //??? not really integer stuff
+
 /// Shorthands for integers of known size
 typedef char                int8_t;
 typedef short               int16_t;
@@ -40,15 +42,21 @@ typedef unsigned __int64 uint64_t; //???
 #define INT16_MAX       (32767)
 #define INT32_MIN       (-2147483647-1)
 #define INT32_MAX       (2147483647)
-#define INT64_MIN       (-9223372036854775808LL)
-#define INT64_MAX       (9223372036854775807LL)
+#define INT64_MIN       (static_cast<int64_t>(-9223372036854775808LL))
+#define INT64_MAX       (static_cast<int64_t>(9223372036854775807LL))
 #define UINT8_MIN       (0)
 #define UINT8_MAX       (255)
 #define UINT16_MIN      (0)
 #define UINT16_MAX      (65535)
 #define UINT32_MIN      (0)
 #define UINT32_MAX      (4294967295U)
-#define UINT64_MIN      (0)
+#define UINT64_MIN      (0LL)
 #define UINT64_MAX      (18446744073709551615LL)
+
+//??? where should these go?
+#define FLOAT_MIN FLT_MIN
+#define FLOAT_MAX FLT_MAX
+#define DOUBLE_MIN DBL_MIN
+#define DOUBLE_MAX DBL_MAX
 
 #endif

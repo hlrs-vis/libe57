@@ -21,6 +21,14 @@
 #ifndef E57FOUNDATION_H_INCLUDED
 #define E57FOUNDATION_H_INCLUDED
 
+/// Undefine the following symbol to enable heap corruption and memory leakage debugging:
+//#define E57_DEBUG_MEMORY 1
+#if E57_DEBUG_MEMORY
+#  define _CRTDBG_MAP_ALLOC
+#  include <stdlib.h>
+#  include <crtdbg.h>
+#endif
+
 #include <vector>
 #include <string>
 #include <iostream>
@@ -32,20 +40,31 @@ namespace e57 {
 typedef std::string ustring;
 
 enum NodeType {
-    STRUCTURE         = 1,
-    VECTOR            = 2,
-    COMPRESSED_VECTOR = 3,
-    INTEGER           = 4,
-    SCALED_INTEGER    = 5,
-    FLOAT             = 6,
-    STRING            = 7,
-    BLOB              = 8
+    E57_STRUCTURE         = 1,
+    E57_VECTOR            = 2,
+    E57_COMPRESSED_VECTOR = 3,
+    E57_INTEGER           = 4,
+    E57_SCALED_INTEGER    = 5,
+    E57_FLOAT             = 6,
+    E57_STRING            = 7,
+    E57_BLOB              = 8
 };
 
 enum FloatPrecision {
-    SINGLE = 0,
-    DOUBLE = 1
+    E57_SINGLE = 0,
+    E57_DOUBLE = 1
 };
+
+/// The URI of E57 v1.0 standard XML namespace
+/// Used to identify the standard field names and the grammar that relates them.
+/// Will typically be associated with the default namespace in an E57 file.
+/// Field names in the default namespace have no prefix (e.g. "cartesianX" as opposed to "las:edgeOfFlightLine").
+#define E57_V1_0_URI "www.astm.org/E57/2009/E57/v0.0" //??? change to v1.0 before final release
+
+/// The URI of the LAS extension.    ??? should not be in E57Foundation.h, should be in separate file with names of fields
+/// Used to identify the extended field names for encoding data from LAS files (LAS versions 1.0 to 1.3).
+/// By convention, will typically be used with prefix "las".
+#define LAS_V1_0_URI "www.astm.org/E57/2009/LAS/v0.0" //??? change to v1.0 before final release
 
 /// Forward references to classes in this header
 class Node;
@@ -64,7 +83,8 @@ class ImageFile;
 
 //???doc
 //??? Can define operator-> that will make implementation more readable
-#define E57_INTERNAL_IMPLEMENTATION_ENABLE 1 //!!!
+/// Internal implementation files should include e57FoundationImpl.h first which defines symbol E57_INTERNAL_IMPLEMENTATION_ENABLE.
+/// Normal API users should not define this symbol.
 #ifdef E57_INTERNAL_IMPLEMENTATION_ENABLE
 #  define E57_OBJECT_IMPLEMENTATION(T)                              \
 public:                                                             \
@@ -72,11 +92,10 @@ public:                                                             \
 protected:                                                          \
     std::tr1::shared_ptr<T##Impl> impl_;
 #else
+#  define E57_OBJECT_IMPLEMENTATION(T)                              \
 protected:                                                          \
     std::tr1::shared_ptr<T##Impl> impl_;
 #endif
-    
-
 
 #if 1 //!!!
 /// Forward references to implementation in other headers (so don't have to include E57FoundationImpl.h)
@@ -170,7 +189,7 @@ public:
 
     int64_t     childCount();
     bool        isDefined(const ustring& pathName);
-    Node        get(int64_t index);
+    Node        get(int64_t index);  //??? allow Node get(const ustring& pathName); and set...
     void        set(int64_t index, Node n);
     void        append(Node n);
 
@@ -299,13 +318,7 @@ protected: //=================
 
 class IntegerNode {
 public:
-    explicit    IntegerNode(ImageFile imf, int8_t   value, int8_t   minimum = INT8_MIN,  int8_t   maximum = INT8_MAX);
-    explicit    IntegerNode(ImageFile imf, int16_t  value, int16_t  minimum = INT16_MIN, int16_t  maximum = INT16_MAX);
-    explicit    IntegerNode(ImageFile imf, int32_t  value, int32_t  minimum = INT32_MIN, int32_t  maximum = INT32_MAX);
     explicit    IntegerNode(ImageFile imf, int64_t  value, int64_t  minimum = INT64_MIN, int64_t  maximum = INT64_MAX);
-    explicit    IntegerNode(ImageFile imf, uint8_t  value, uint8_t  minimum = 0,         uint8_t  maximum = UINT8_MAX);
-    explicit    IntegerNode(ImageFile imf, uint16_t value, uint16_t minimum = 0,         uint16_t maximum = UINT16_MAX);
-    explicit    IntegerNode(ImageFile imf, uint32_t value, uint32_t minimum = 0,         uint32_t maximum = UINT32_MAX);
 
     NodeType    type();
     bool        isRoot();
@@ -333,20 +346,20 @@ protected: //=================
 
 class ScaledIntegerNode {
 public:
-    explicit    ScaledIntegerNode(ImageFile imf, int8_t   value, int8_t   minimum = INT8_MIN,  int8_t   maximum = INT8_MAX,   
-                                  double scale = 1.0, double offset = 0.0);
-    explicit    ScaledIntegerNode(ImageFile imf, int16_t  value, int16_t  minimum = INT16_MIN, int16_t  maximum = INT16_MAX,  
-                                  double scale = 1.0, double offset = 0.0);
-    explicit    ScaledIntegerNode(ImageFile imf, int32_t  value, int32_t  minimum = INT32_MIN, int32_t  maximum = INT32_MAX,  
-                                  double scale = 1.0, double offset = 0.0);
+//    explicit    ScaledIntegerNode(ImageFile imf, int8_t   value, int8_t   minimum = INT8_MIN,  int8_t   maximum = INT8_MAX,   
+//                                  double scale = 1.0, double offset = 0.0);
+//    explicit    ScaledIntegerNode(ImageFile imf, int16_t  value, int16_t  minimum = INT16_MIN, int16_t  maximum = INT16_MAX,  
+//                                  double scale = 1.0, double offset = 0.0);
+//    explicit    ScaledIntegerNode(ImageFile imf, int32_t  value, int32_t  minimum = INT32_MIN, int32_t  maximum = INT32_MAX,  
+//                                  double scale = 1.0, double offset = 0.0);
     explicit    ScaledIntegerNode(ImageFile imf, int64_t  value, int64_t  minimum = INT64_MIN, int64_t  maximum = INT64_MAX,  
                                   double scale = 1.0, double offset = 0.0);
-    explicit    ScaledIntegerNode(ImageFile imf, uint8_t  value, uint8_t  minimum = 0,         uint8_t  maximum = UINT8_MAX,  
-                                  double scale = 1.0, double offset = 0.0);
-    explicit    ScaledIntegerNode(ImageFile imf, uint16_t value, uint16_t minimum = 0,         uint16_t maximum = UINT16_MAX, 
-                                  double scale = 1.0, double offset = 0.0);
-    explicit    ScaledIntegerNode(ImageFile imf, uint32_t value, uint32_t minimum = 0,         uint32_t maximum = UINT32_MAX, 
-                                  double scale = 1.0, double offset = 0.0);
+//    explicit    ScaledIntegerNode(ImageFile imf, uint8_t  value, uint8_t  minimum = 0,         uint8_t  maximum = UINT8_MAX,  
+//                                  double scale = 1.0, double offset = 0.0);
+//    explicit    ScaledIntegerNode(ImageFile imf, uint16_t value, uint16_t minimum = 0,         uint16_t maximum = UINT16_MAX, 
+//                                  double scale = 1.0, double offset = 0.0);
+//    explicit    ScaledIntegerNode(ImageFile imf, uint32_t value, uint32_t minimum = 0,         uint32_t maximum = UINT32_MAX, 
+//                                  double scale = 1.0, double offset = 0.0);
 
     NodeType    type();
     bool        isRoot();
@@ -377,8 +390,8 @@ protected: //=================
 
 class FloatNode {
 public:
-    explicit    FloatNode(ImageFile imf, float value, FloatPrecision precision = SINGLE);
-    explicit    FloatNode(ImageFile imf, double value, FloatPrecision precision = DOUBLE);
+    explicit    FloatNode(ImageFile imf, float value, FloatPrecision precision = E57_SINGLE);
+    explicit    FloatNode(ImageFile imf, double value, FloatPrecision precision = E57_DOUBLE);
 
     NodeType    type();
     bool        isRoot();

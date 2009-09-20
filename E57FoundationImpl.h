@@ -25,9 +25,18 @@
 #include <set>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <algorithm>
 #include "stdint.h"
+
+/// Define the following symbol adds some functions to the API for implementation purposes.
+/// These functions are not available to a normal API user.
+#define E57_INTERNAL_IMPLEMENTATION_ENABLE 1
+
+#ifndef E57FOUNDATION_H_INCLUDED
+#  include "E57Foundation.h"
+#endif
 
 /// Uncomment the lines below to enable various levels of cross checking and verification in the code.
 /// The extra code does not change the file contents.
@@ -45,8 +54,12 @@
 /// Disable MSVC warning: warning C4224: nonstandard extension used : formal parameter 'locale' was previously defined as a type
 #pragma warning( disable : 4224)
 
-/// The XML parser headers
 #include <stack>
+
+/// Turn off DLL input/export mechanism for Xerces library (usually done by defining in compile command line).
+//#define XERCES_STATIC_LIBRARY 1
+
+/// The XML parser headers
 #include <xercesc/sax2/SAX2XMLReader.hpp>
 #include <xercesc/sax2/XMLReaderFactory.hpp>
 #include <xercesc/sax2/DefaultHandler.hpp>
@@ -72,10 +85,10 @@ static char* exception_string(char* e_name, char* file_name, int line_no) {
 static std::string space(int n) {return(std::string(n,' '));};
 
 /// Convert number to hexadecimal and binary strings  (Note hex strings don't have leading zeros).
-static std::string hexString(uint64_t x) {std::ostringstream ss; ss << "0x" << std::hex << x; return(ss.str());};
-static std::string hexString(uint32_t x) {std::ostringstream ss; ss << "0x" << std::hex << x; return(ss.str());};
-static std::string hexString(uint16_t x) {std::ostringstream ss; ss << "0x" << std::hex << x; return(ss.str());};
-static std::string hexString(uint8_t x) {std::ostringstream ss; ss << "0x" << std::hex << x; return(ss.str());};
+static std::string hexString(uint64_t x) {std::ostringstream ss; ss << "0x" << std::hex << std::setw(16)<< std::setfill('0') << x; return(ss.str());};
+static std::string hexString(uint32_t x) {std::ostringstream ss; ss << "0x" << std::hex << std::setw(8) << std::setfill('0') << x; return(ss.str());};
+static std::string hexString(uint16_t x) {std::ostringstream ss; ss << "0x" << std::hex << std::setw(4) << std::setfill('0') << x; return(ss.str());};
+static std::string hexString(uint8_t x)  {std::ostringstream ss; ss << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(x); return(ss.str());};
 static std::string binaryString(uint64_t x) {std::ostringstream ss;for(int i=63;i>=0;i--){ss<<((x&(1LL<<i))?1:0);if(i>0&&i%8==0)ss<<" ";} return(ss.str());};
 static std::string binaryString(uint32_t x) {std::ostringstream ss;for(int i=31;i>=0;i--){ss<<((x&(1LL<<i))?1:0);if(i>0&&i%8==0)ss<<" ";} return(ss.str());};
 static std::string binaryString(uint16_t x) {std::ostringstream ss;for(int i=15;i>=0;i--){ss<<((x&(1LL<<i))?1:0);if(i>0&&i%8==0)ss<<" ";} return(ss.str());};
@@ -109,8 +122,8 @@ enum MemoryRep {
     E57_USTRING
 };
 
-const uint32_t E57_MAJOR_VERSION = 0; //??? should be here?
-const uint32_t E57_MINOR_VERSION = 1; //??? should be here?
+const uint32_t E57_VERSION_MAJOR = 0; //??? should be here?
+const uint32_t E57_VERSION_MINOR = 2; //??? should be here?
 
 /// Section types:
 #define E57_BLOB_SECTION                1
@@ -203,7 +216,7 @@ public:
     virtual NodeType        type() = 0;
     virtual bool            isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni) = 0;
     bool                    isRoot() {return(parent_.expired());};
-    std::tr1::shared_ptr<NodeImpl> parent() {std::tr1::shared_ptr<NodeImpl>myParent(parent_);return(myParent);};
+    std::tr1::shared_ptr<NodeImpl> parent() {std::tr1::shared_ptr<NodeImpl>myParent(parent_);return(myParent);};  //!!! fails for root
     ustring                 pathName();
     ustring                 relativePathName(std::tr1::shared_ptr<NodeImpl> origin, ustring childPathName = ustring());
     ustring                 fieldName() {return(fieldName_);};
@@ -218,6 +231,7 @@ public:
 
     virtual void            checkLeavesInSet(const std::set<ustring>& pathNames, std::tr1::shared_ptr<NodeImpl> origin) = 0;
     void                    checkBuffers(const std::vector<SourceDestBuffer>& sdbufs, bool allowMissing);
+    bool                    findTerminalPosition(std::tr1::shared_ptr<NodeImpl> ni, uint64_t& countFromLeft);
 
     virtual void            writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName=NULL) = 0;
 
@@ -249,7 +263,7 @@ public:
                         StructureNodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent);
     virtual             ~StructureNodeImpl() {};
 
-    virtual NodeType    type() {return(STRUCTURE);};
+    virtual NodeType    type() {return(E57_STRUCTURE);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
     virtual bool        isDefined(const ustring& pathName); 
     virtual int64_t     childCount() {return(children_.size());};
@@ -280,7 +294,7 @@ public:
     explicit            VectorNodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, bool allowHeteroChildren);
     virtual             ~VectorNodeImpl() {};
 
-    virtual NodeType    type() {return(VECTOR);};
+    virtual NodeType    type() {return(E57_VECTOR);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
     bool                allowHeteroChildren() {return(allowHeteroChildren_);};
 
@@ -380,7 +394,7 @@ public:
                         CompressedVectorNodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent);
     virtual             ~CompressedVectorNodeImpl() {};
 
-    virtual NodeType    type() {return(COMPRESSED_VECTOR);};
+    virtual NodeType    type() {return(E57_COMPRESSED_VECTOR);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
     virtual bool        isDefined(const ustring& pathName); 
 
@@ -424,7 +438,7 @@ public:
                         IntegerNodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, int64_t value = 0, int64_t minimum = 0, int64_t maximum = 0); //??? need default min/max, must specify?
     virtual             ~IntegerNodeImpl() {};
 
-    virtual NodeType    type()    {return(INTEGER);};
+    virtual NodeType    type()    {return(E57_INTEGER);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
     virtual bool        isDefined(const ustring& pathName); 
     int64_t             value()   {return(value_);};
@@ -451,7 +465,7 @@ public:
                                               double scale = 1.0, double offset = 0.0);
     virtual             ~ScaledIntegerNodeImpl() {};
 
-    virtual NodeType    type()          {return(SCALED_INTEGER);};
+    virtual NodeType    type()          {return(E57_SCALED_INTEGER);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
     virtual bool        isDefined(const ustring& pathName); 
     int64_t             rawValue()      {return(value_);};
@@ -480,10 +494,10 @@ protected: //=================
 
 class FloatNodeImpl : public NodeImpl {
 public:
-                        FloatNodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, double value = 0, FloatPrecision precision = DOUBLE);
+                        FloatNodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, double value = 0, FloatPrecision precision = E57_DOUBLE);
     virtual             ~FloatNodeImpl() {};
 
-    virtual NodeType    type() {return(FLOAT);};
+    virtual NodeType    type() {return(E57_FLOAT);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
     virtual bool        isDefined(const ustring& pathName); 
     double              value() {return(value_);};
@@ -507,7 +521,7 @@ public:
     explicit            StringNodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring value = "");
     virtual             ~StringNodeImpl() {};
 
-    virtual NodeType    type() {return(STRING);};
+    virtual NodeType    type() {return(E57_STRING);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
     virtual bool        isDefined(const ustring& pathName); 
     ustring             value() {return(value_);};
@@ -530,7 +544,7 @@ public:
                         BlobNodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, uint64_t fileOffset, uint64_t length);
     virtual             ~BlobNodeImpl();
 
-    virtual NodeType    type() {return(BLOB);};
+    virtual NodeType    type() {return(E57_BLOB);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
     virtual bool        isDefined(const ustring& pathName); 
     int64_t             byteCount();
@@ -689,8 +703,8 @@ struct DataPacket {  /// Note this is full sized packet, not just header
 
                 DataPacket();
     void        verify(unsigned bufferLength=0);
-    char*       getBytestream(unsigned streamNumber, unsigned& bufferLength);
-    unsigned    getBytestreamBufferLength(unsigned streamNumber);
+    char*       getBytestream(unsigned bytestreamNumber, unsigned& bufferLength);
+    unsigned    getBytestreamBufferLength(unsigned bytestreamNumber);
 
 #ifdef E57_BIGENDIAN
     void        swab(bool toLittleEndian);    //??? change to swabIfBigEndian() and elsewhere
@@ -788,6 +802,9 @@ public:
 #endif
 protected: //=================
     void        setBuffers(std::vector<SourceDestBuffer>& dbufs); //???needed?
+    uint64_t    earliestPacketNeededForInput();
+    void        feedPacketToDecoders(uint64_t currentPacketLogicalOffset);
+    uint64_t    findNextDataPacket(uint64_t nextPacketLogicalOffset);
 
     //??? no default ctor, copy, assignment?
 
@@ -828,7 +845,7 @@ protected: //=================
     std::tr1::shared_ptr<CompressedVectorNodeImpl>  cVector_;
     std::tr1::shared_ptr<NodeImpl>                  proto_;
 
-    std::vector<Encoder*>   channels_;
+    std::vector<Encoder*>   bytestreams_;
     SeekIndex               seekIndex_;
     DataPacket              dataPacket_;
 
@@ -846,10 +863,12 @@ protected: //=================
 
 class Encoder {
 public:
-    static Encoder*     EncoderFactory(unsigned channelIndex,
+    static Encoder*     EncoderFactory(unsigned bytestreamNumber,
                                        std::tr1::shared_ptr<CompressedVectorNodeImpl> cVector,
                                        std::vector<SourceDestBuffer>& sbuf,
                                        ustring& codecPath);
+
+    virtual             ~Encoder(){};
 
     virtual uint64_t    processRecords(unsigned recordCount) = 0;
     virtual unsigned    sourceBufferNextIndex() = 0;
@@ -865,15 +884,15 @@ public:
     virtual unsigned    outputGetMaxSize() = 0;
     virtual void        outputSetMaxSize(unsigned byteCount) = 0;
 
-    unsigned            channelIndex() {return(channelIndex_);};
+    unsigned            bytestreamNumber() {return(bytestreamNumber_);};
 
 #ifdef E57_DEBUG
     virtual void        dump(int indent = 0, std::ostream& os = std::cout);
 #endif
 protected: //================
-                        Encoder(unsigned channelIndex) : channelIndex_(channelIndex){};  //!!! in .cpp
+                        Encoder(unsigned bytestreamNumber);
 
-    unsigned            channelIndex_;
+    unsigned            bytestreamNumber_;
 };
 
 //================================================================
@@ -898,7 +917,7 @@ public:
     virtual void        dump(int indent = 0, std::ostream& os = std::cout);
 #endif
 protected: //================
-                        BitpackEncoder(unsigned channelIndex, SourceDestBuffer& sbuf, unsigned outputMaxSize, unsigned alignmentSize);
+                        BitpackEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, unsigned outputMaxSize, unsigned alignmentSize);
 
     void                outBufferShiftDown();
 
@@ -916,7 +935,7 @@ protected: //================
 
 class BitpackFloatEncoder : public BitpackEncoder {
 public:
-                        BitpackFloatEncoder(unsigned channelIndex, SourceDestBuffer& sbuf, unsigned outputMaxSize, FloatPrecision precision);
+                        BitpackFloatEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, unsigned outputMaxSize, FloatPrecision precision);
 
     virtual uint64_t    processRecords(unsigned recordCount);
     virtual bool        registerFlushToOutput();
@@ -934,7 +953,7 @@ protected: //================
 template <typename RegisterT>
 class BitpackIntegerEncoder : public BitpackEncoder {
 public:
-                        BitpackIntegerEncoder(bool isScaledInteger, unsigned channelIndex, SourceDestBuffer& sbuf,
+                        BitpackIntegerEncoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& sbuf,
                                               unsigned outputMaxSize, int64_t minimum, int64_t maximum, double scale, double offset);
 
     virtual uint64_t    processRecords(unsigned recordCount);
@@ -958,31 +977,54 @@ protected: //================
 
 //================================================================
 
+class ConstantIntegerEncoder : public Encoder {
+public:
+                        ConstantIntegerEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, int64_t minimum);
+    virtual uint64_t    processRecords(unsigned recordCount);
+    virtual unsigned    sourceBufferNextIndex();
+    virtual uint64_t    currentRecordIndex();
+    virtual float       bitsPerRecord();
+    virtual bool        registerFlushToOutput();
+
+    virtual unsigned    outputAvailable();                                /// number of bytes that can be read
+    virtual void        outputRead(char* dest, unsigned byteCount);       /// get data from encoder
+    virtual void        outputClear();
+
+    virtual void        sourceBufferSetNew(std::vector<SourceDestBuffer>& sbufs);
+    virtual unsigned    outputGetMaxSize();
+    virtual void        outputSetMaxSize(unsigned byteCount);
+
+#ifdef E57_DEBUG
+    virtual void        dump(int indent = 0, std::ostream& os = std::cout);
+#endif
+protected: //================
+    std::tr1::shared_ptr<SourceDestBufferImpl>  sourceBuffer_;
+    uint64_t            currentRecordIndex_;
+    int64_t             minimum_;
+};
+
+//================================================================
+
 class Decoder {
 public:
-    static Decoder*     DecoderFactory(unsigned channelIndex,
+    static Decoder*     DecoderFactory(unsigned bytestreamNumber,
                                        std::tr1::shared_ptr<CompressedVectorNodeImpl> cVector,
                                        std::vector<SourceDestBuffer>& dbufs,
                                        ustring& codecPath);
     virtual             ~Decoder() {};
 
     virtual void        destBufferSetNew(std::vector<SourceDestBuffer>& dbufs) = 0;
-
     virtual uint64_t    totalRecordsCompleted() = 0;
-
     virtual unsigned    inputProcess(const char* source, unsigned count) = 0;
-
     virtual void        stateReset() = 0;
-
-    unsigned            channelIndex() {return(channelIndex_);};
-
+    unsigned            bytestreamNumber() {return(bytestreamNumber_);};
 #ifdef E57_DEBUG
     virtual void        dump(int indent = 0, std::ostream& os = std::cout) = 0;
 #endif
 protected: //================
-                        Decoder(unsigned channelIndex):channelIndex_(channelIndex){};  //!!! in .cpp
+                        Decoder(unsigned bytestreamNumber);
 
-    unsigned            channelIndex_;
+    unsigned            bytestreamNumber_;
 };
 
 //??? into stateReset body
@@ -993,7 +1035,6 @@ protected: //================
 
 class BitpackDecoder : public Decoder {
 public:
-    virtual             ~BitpackDecoder();
     virtual void        destBufferSetNew(std::vector<SourceDestBuffer>& dbufs);
 
     virtual uint64_t    totalRecordsCompleted() {return(currentRecordIndex_);};
@@ -1007,11 +1048,10 @@ public:
     virtual void        dump(int indent = 0, std::ostream& os = std::cout);
 #endif
 protected: //================
-                        BitpackDecoder(unsigned decoderIndex, SourceDestBuffer& dbuf, unsigned alignmentSize, uint64_t maxRecordCount);
+                        BitpackDecoder(unsigned bytestreamNumber, SourceDestBuffer& dbuf, unsigned alignmentSize, uint64_t maxRecordCount);
 
     void                inBufferShiftDown();
 
-    uint16_t            decoderIndex_;
     uint64_t            currentRecordIndex_;
     uint64_t            maxRecordCount_;
 
@@ -1029,8 +1069,7 @@ protected: //================
 
 class BitpackFloatDecoder : public BitpackDecoder {
 public:
-                        BitpackFloatDecoder(unsigned decoderIndex, SourceDestBuffer& dbuf, FloatPrecision precision, uint64_t maxRecordCount);
-    virtual             ~BitpackFloatDecoder(){};
+                        BitpackFloatDecoder(unsigned bytestreamNumber, SourceDestBuffer& dbuf, FloatPrecision precision, uint64_t maxRecordCount);
 
     virtual unsigned    inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit);
 
@@ -1046,9 +1085,8 @@ protected: //================
 template <typename RegisterT>
 class BitpackIntegerDecoder : public BitpackDecoder {
 public:
-                        BitpackIntegerDecoder(bool isScaledInteger, unsigned channelIndex, SourceDestBuffer& dbuf, 
+                        BitpackIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf, 
                                               int64_t minimum, int64_t maximum, double scale, double offset, uint64_t maxRecordCount);
-    virtual             ~BitpackIntegerDecoder(){};
 
     virtual unsigned    inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit);
 
@@ -1063,6 +1101,31 @@ protected: //================
     double      offset_;
     unsigned    bitsPerRecord_;
     RegisterT   destBitMask_;
+};
+
+//================================================================
+
+class ConstantIntegerDecoder : public Decoder {
+public:
+                        ConstantIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf, 
+                                              int64_t minimum, double scale, double offset, uint64_t maxRecordCount);
+    virtual void        destBufferSetNew(std::vector<SourceDestBuffer>& dbufs);
+    virtual uint64_t    totalRecordsCompleted() {return(currentRecordIndex_);};
+    virtual unsigned    inputProcess(const char* source, unsigned byteCount);
+    virtual void        stateReset();
+#ifdef E57_DEBUG
+    virtual void        dump(int indent = 0, std::ostream& os = std::cout);
+#endif
+protected: //================
+    uint64_t            currentRecordIndex_;
+    uint64_t            maxRecordCount_;
+
+    std::tr1::shared_ptr<SourceDestBufferImpl> destBuffer_;
+
+    bool                isScaledInteger_;
+    int64_t             minimum_;
+    double              scale_;
+    double              offset_;
 };
 
 //================================================================

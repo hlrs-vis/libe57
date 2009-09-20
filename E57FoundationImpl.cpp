@@ -30,11 +30,6 @@
 #include <fcntl.h> //???needed?
 #include <sys\stat.h>
 
-//??? where should these go?
-#define FLOAT_MIN FLT_MIN
-#define FLOAT_MAX FLT_MAX
-
-#include "E57Foundation.h"
 #include "E57FoundationImpl.h"
 using namespace e57;
 using namespace std;
@@ -169,6 +164,7 @@ shared_ptr<NodeImpl> NodeImpl::getRoot()
     return(p);
 }
 
+//??? use visitor?
 bool NodeImpl::isTypeConstrained()
 {
     /// A node is type constrained if any of its parents is an homo VECTOR or COMPRESSED_VECTOR with more than one child
@@ -178,7 +174,7 @@ bool NodeImpl::isTypeConstrained()
         p = shared_ptr<NodeImpl>(p->parent_);  //??? check if bad ptr?
 
         switch (p->type()) {
-            case VECTOR:
+            case E57_VECTOR:
                 {
                     /// Downcast to shared_ptr<VectorNodeImpl>
                     shared_ptr<VectorNodeImpl> ai(dynamic_pointer_cast<VectorNodeImpl>(p));
@@ -188,7 +184,7 @@ bool NodeImpl::isTypeConstrained()
                         return(true);
                 }
                 break;
-            case COMPRESSED_VECTOR:
+            case E57_COMPRESSED_VECTOR:
                 /// Can't make any type changes to CompressedVector prototype.  ??? what if hasn't been written to yet
                 return(true);
         }
@@ -222,15 +218,198 @@ void NodeImpl::checkBuffers(const vector<SourceDestBuffer>& sdbufs, bool allowMi
     }
 }
 
+bool NodeImpl::findTerminalPosition(shared_ptr<NodeImpl> target, uint64_t& countFromLeft)
+{
+    if (this == &*target) //??? ok?
+        return(true);
+
+    switch (type()) {
+        case E57_STRUCTURE: {
+                StructureNodeImpl* sni = dynamic_cast<StructureNodeImpl*>(this);
+
+                /// Recursively visit child nodes
+                uint64_t childCount = sni->childCount();
+                for (uint64_t i = 0; i < childCount; i++) {
+                    if (sni->get(i)->findTerminalPosition(target, countFromLeft))
+                        return(true);
+                }
+            }
+            break;
+        case E57_VECTOR: {
+                VectorNodeImpl* vni = dynamic_cast<VectorNodeImpl*>(this);
+
+                /// Recursively visit child nodes
+                uint64_t childCount = vni->childCount();
+                for (uint64_t i = 0; i < childCount; i++) {
+                    if (vni->get(i)->findTerminalPosition(target, countFromLeft))
+                        return(true);
+                }
+            }
+            break;
+        case E57_COMPRESSED_VECTOR: 
+            break;  //??? for now, don't search into contents of compressed vector
+        case E57_INTEGER:
+        case E57_SCALED_INTEGER:
+        case E57_FLOAT:
+        case E57_STRING:
+        case E57_BLOB:
+            countFromLeft++;
+            break;
+    }
+ 
+    return(false);
+}
+
+
+#if 0 //!!!================================================================
+
+//??? use visitor?
+bool NodeImpl::treeTerminalPosition(shared_ptr<NodeImpl> ni, uint64_t& countFromLeft)
+{
+    if (*this == *ni)
+        return(true);
+
+
+    switch (type_) {
+        case E57_STRUCTURE:
+            {
+                /// Recursively visit child nodes
+                uint64_t childCount = sni->childCount();
+                for (uint64_t i = 0; i < childCount; i++) {
+                    if (treeTerminalPosition(sni->get(i), countFromLeft))
+                        return;
+                }
+            }
+            break;
+        case E57_VECTOR:
+            /// 
+        case E57_COMPRESSED_VECTOR:
+            /// termialCount * recordCount
+        case E57_INTEGER:
+        case E57_SCALED_INTEGER:
+        case E57_FLOAT:
+        case E57_STRING:
+        case E57_BLOB:
+    }
+ 
+
+}
+
+//================================================================
+
+class Visitor {
+public:
+    virtual void visit(StructureNode s) = 0;
+    virtual void visit(VectorNode v) = 0;
+    virtual void visit(CompressedVectorNode cv) = 0;
+    virtual void visit(IntegerNode i) = 0;
+    virtual void visit(ScaledIntegerNode si) = 0;
+    virtual void visit(FloatNode f) = 0;
+    virtual void visit(StringNode s) = 0;
+    virtual void visit(BlobNode b) = 0;
+protected: //================
+    void acceptAllChildren(StructureNode s);
+    void acceptAllChildren(VectorNode s);
+};
+
+void Visitor::acceptAllChildren(StructureNode s)
+{
+    /// Visit child nodes of structure
+    uint64_t childCount = s.childCount();
+    for (uint64_t i = 0; i < childCount; i++)
+        s.get(i).accept(*this);
+}
+
+void Visitor::acceptAllChildren(VectorNode v)
+{
+    /// Visit child nodes of structure
+    uint64_t childCount = v.childCount();
+    for (uint64_t i = 0; i < childCount; i++)
+        v.get(i).accept(*this);
+}
+
+//================================================================
+
+TerminalsVisit
+
+AllNodesVisit
+
+class CountTerminalsFromLeft : Visitor {
+public::
+    static unsigned count(Node n, Node target) {
+        CountTerminalsFromLeft vistor(target);
+        n.accept(visitor);
+        return(terminalCount_);
+    }
+
+    virtual void visit(StructureNode s)         {terminalMatch();acceptChildren(s)};
+    virtual void visit(VectorNode v)            {terminalMatch();acceptChildren(v)};
+    virtual void visit(CompressedVectorNode cv) {terminalMatch()};
+    virtual void visit(IntegerNode i)           {terminalMatch();};
+    virtual void visit(ScaledIntegerNode i)     {terminalMatch();};
+    virtual void visit(FloatNode f)             {terminalMatch();};
+    virtual void visit(StringNode s)            {terminalMatch();};
+    virtual void visit(BlobNode b)              {terminalMatch();};
+
+protected: //================
+    void terminalMatch(){
+        if (gotMatch_)
+            return;
+        if (i == target_) {
+            gotMatch_ = true;
+            return;
+        }
+        terminalCount_++;
+    };
+
+    CountTerminalsFromLeft(Node target):gotMatch_(false),target_(target),terminalCount_(0){};
+
+    bool     gotMatch_;
+    Node     target_;
+    unsigned terminalCount_;
+};
+
+//================================================================
+
+
+class TotalTerminalsVisitor : Visitor {
+public:
+    TotalTerminalsVisitor():terminalCount_(0){};
+
+    virtual void visit(StructureNode s);
+    virtual void visit(VectorNode v);
+
+    virtual void visit(IntegerNode i){terminalCount_++;};
+    virtual void visit(ScaledIntegerNode si){terminalCount_++;};
+    virtual void visit(FloatNode f){terminalCount_++;};
+    virtual void visit(StringNode s){terminalCount_++;};
+    virtual void visit(BlobNode b){terminalCount_++;};
+
+    uint64_t terminalCount(){return(terminalCount_);};
+
+protected: //================
+    uint64_t terminalCount_;
+};
+
+void TotalTerminalsVisitor::visit(StructureNode s)
+{
+    uint64_t childCount = s.childCount();
+    for (uint64_t i = 0; i < childCount; i++)
+        s.get(i)->accept(*this);
+}
+
+#endif //!!!================================================================
+
 //================================================================================================
 StructureNodeImpl::StructureNodeImpl(weak_ptr<ImageFileImpl> fileParent)
 : NodeImpl(fileParent)
 {}
 
+//??? use visitor?
 bool StructureNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
     /// Same node type?
-    if (ni->type() != STRUCTURE)
+    if (ni->type() != E57_STRUCTURE)
         return(false);
 
     /// Downcast to shared_ptr<StructureNodeImpl>, should succeed
@@ -436,6 +615,7 @@ void StructureNodeImpl::append(shared_ptr<NodeImpl> ni)
     set(childCount(), ni);
 }
 
+//??? use visitor?
 void StructureNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, shared_ptr<NodeImpl> origin)
 {
     /// Not a leaf node, so check all our children
@@ -443,6 +623,7 @@ void StructureNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, sha
         children_.at(i)->checkLeavesInSet(pathNames, origin);
 }
 
+//??? use visitor?
 void StructureNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
 {
     ustring fname;
@@ -455,8 +636,20 @@ void StructureNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, Checke
 
     /// If this struct is the root, add name space declarations
     if (isRoot()) {
-        for (int i = 0; i < imf->extensionsCount(); i++)
-            cf << "\n" << space(indent+fname.length()+2) << "xmlns:" << imf->extensionsPrefix(i) << "=\"" << imf->extensionsUri(i) << "\"";
+        bool gotDefaultNamespace = false;
+        for (int i = 0; i < imf->extensionsCount(); i++) {
+            char* xmlnsExtension;
+            if (imf->extensionsPrefix(i) == "") {
+                gotDefaultNamespace = true;
+                xmlnsExtension = "xmlns";
+            } else
+                xmlnsExtension = "xmlns:";
+            cf << "\n" << space(indent+fname.length()+2) << xmlnsExtension << imf->extensionsPrefix(i) << "=\"" << imf->extensionsUri(i) << "\"";
+        }
+
+        /// If user didn't explicitly declare a default namespace, use the current E57 standard one.
+        if (!gotDefaultNamespace)
+            cf << "\n" << space(indent+fname.length()+2) << "xmlns=\"" << E57_V1_0_URI << "\"";
     }
     cf << ">\n";
 
@@ -468,6 +661,7 @@ void StructureNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, Checke
     cf << space(indent) << "</" << fname << ">\n";
 }
 
+//??? use visitor?
 #ifdef E57_DEBUG
 void StructureNodeImpl::dump(int indent, ostream& os)
 {
@@ -490,7 +684,7 @@ VectorNodeImpl::VectorNodeImpl(weak_ptr<ImageFileImpl> fileParent, bool allowHet
 bool VectorNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
     /// Same node type?
-    if (ni->type() != VECTOR)
+    if (ni->type() != E57_VECTOR)
         return(false);
 
     /// Downcast to shared_ptr<VectorNodeImpl>
@@ -819,7 +1013,7 @@ float SourceDestBufferImpl::getNextFloat()
             double d = *reinterpret_cast<double*>(p);
 
             ///??? silently limit here?
-            if (d < FLOAT_MIN || FLOAT_MAX < d)
+            if (d < DOUBLE_MIN || DOUBLE_MAX < d)
                 throw EXCEPTION("value not representable");
             value = static_cast<float>(d);
             break;
@@ -1051,7 +1245,7 @@ void  SourceDestBufferImpl::setNextInt64(int64_t value, double scale, double off
             if (!doConversion_)
                 throw EXCEPTION("conversion not requested");
             /// Check that exponent of result is not too big for single precision float
-            if (scaledValue < FLOAT_MIN || FLOAT_MAX < scaledValue)
+            if (scaledValue < DOUBLE_MIN || DOUBLE_MAX < scaledValue)
                 throw EXCEPTION("scaled value not representable");
             *reinterpret_cast<float*>(p) = static_cast<float>(scaledValue);
             break;
@@ -1214,7 +1408,7 @@ void SourceDestBufferImpl::setNextDouble(double value)
         case E57_REAL32:
             /// Does this count as conversion?  It loses information.
             /// Check for really large exponents that can't fit in a single precision
-            if (value < FLOAT_MIN || FLOAT_MAX < value)
+            if (value < DOUBLE_MIN || DOUBLE_MAX < value)
                 throw EXCEPTION("value not representable");
             *reinterpret_cast<float*>(p) = static_cast<float>(value);
             break;
@@ -1287,7 +1481,9 @@ void CompressedVectorNodeImpl::setPrototype(shared_ptr<NodeImpl> prototype)
 
     //??? if resetting any pointer, do need to update old value's parent?
     prototype_ = prototype;
-    prototype_->setParent(shared_from_this(), "prototype");
+
+//!!! prototype not in the tree of values.
+//!!!    prototype_->setParent(shared_from_this(), "prototype");
 }
 
 void CompressedVectorNodeImpl::setCodecs(shared_ptr<NodeImpl> codecs)
@@ -1296,7 +1492,9 @@ void CompressedVectorNodeImpl::setCodecs(shared_ptr<NodeImpl> codecs)
 
     //??? if resetting any pointer, do need to update old value's parent?
     codecs_ = codecs;
-    codecs_->setParent(shared_from_this(), "codecs");
+
+//!!! prototype not in the tree of values.
+//!!! codecs_->setParent(shared_from_this(), "codecs");
 }
 
 bool CompressedVectorNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
@@ -1304,7 +1502,7 @@ bool CompressedVectorNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
     //??? is this test a good idea?
 
     /// Same node type?
-    if (ni->type() != COMPRESSED_VECTOR)
+    if (ni->type() != E57_COMPRESSED_VECTOR)
         return(false);
 
     /// Downcast to shared_ptr<ScaledIntegerNodeImpl>
@@ -1356,9 +1554,9 @@ void CompressedVectorNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf,
     cf << "\" recordCount=\"" << recordCount_ << "\">\n";
 
     if (prototype_)
-        prototype_->writeXml(imf, cf, indent+4, NULL);
+        prototype_->writeXml(imf, cf, indent+4, "prototype");
     if (codecs_)
-        codecs_->writeXml(imf, cf, indent+4, NULL);
+        codecs_->writeXml(imf, cf, indent+4, "codecs");
     cf << space(indent) << "</"<< fname << ">\n";
 }
 
@@ -1431,7 +1629,7 @@ IntegerNodeImpl::IntegerNodeImpl(weak_ptr<ImageFileImpl> fileParent, int64_t val
 bool IntegerNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
     /// Same node type?
-    if (ni->type() != INTEGER)
+    if (ni->type() != E57_INTEGER)
         return(false);
 
     /// Downcast to shared_ptr<IntegerNodeImpl>
@@ -1503,7 +1701,7 @@ ScaledIntegerNodeImpl::ScaledIntegerNodeImpl(weak_ptr<ImageFileImpl> fileParent,
 bool ScaledIntegerNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
     /// Same node type?
-    if (ni->type() != SCALED_INTEGER)
+    if (ni->type() != E57_SCALED_INTEGER)
         return(false);
 
     /// Downcast to shared_ptr<ScaledIntegerNodeImpl>
@@ -1556,9 +1754,9 @@ void ScaledIntegerNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, Ch
     
     //???TODO need to handle case where max is largest uint64
     //??? is 16 digits right number?, try to remove trailing zeros?
-    cf << space(indent) << "<" << fname << " type=\"Integer\"";
+    cf << space(indent) << "<" << fname << " type=\"ScaledInteger\"";
     cf << " value=\"" << value_ << "\" minimum=\"" << minimum_ << "\" maximum=\"" << maximum_;
-    cf << """ scale=\"" << scale_ << "\" offset=\"" << offset_ << "\"/>\n";
+    cf << "\" scale=\"" << scale_ << "\" offset=\"" << offset_ << "\"/>\n";
 }
 
 #ifdef E57_DEBUG
@@ -1586,7 +1784,7 @@ FloatNodeImpl::FloatNodeImpl(weak_ptr<ImageFileImpl> fileParent, double value, F
 bool FloatNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
     /// Same node type?
-    if (ni->type() != FLOAT)
+    if (ni->type() != E57_FLOAT)
         return(false);
 
     /// Downcast to shared_ptr<FloatNodeImpl>
@@ -1628,7 +1826,7 @@ void FloatNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFil
     //??? is 16 digits right number?, try to remove trailing zeros?
     cf << space(indent) << "<" << fname << " type=\"Float\"";
     cf << " value=\"" << value_ << "\" ";
-    if (precision_ == SINGLE)
+    if (precision_ == E57_SINGLE)
         cf << "precision=\"Single\"/>\n";
     else
         cf << "precision=\"Double\"/>\n";
@@ -1641,7 +1839,7 @@ void FloatNodeImpl::dump(int indent, ostream& os)
     os << space(indent) << "fieldName: " << fieldName_ << endl;
     os << space(indent) << "path:      " << pathName() << endl;
     os << space(indent) << "precision: ";
-    if (precision() == SINGLE)
+    if (precision() == E57_SINGLE)
         os << "single" << endl;
     else
         os << "double" << endl;
@@ -1668,7 +1866,7 @@ StringNodeImpl::StringNodeImpl(weak_ptr<ImageFileImpl> fileParent, ustring value
 bool StringNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
     /// Same node type?
-    if (ni->type() != STRING)
+    if (ni->type() != E57_STRING)
         return(false);
 
     /// ignore value_, doesn't have to match
@@ -1733,7 +1931,7 @@ BlobNodeImpl::BlobNodeImpl(weak_ptr<ImageFileImpl> fileParent, uint64_t byteCoun
 
     /// Prepare BlobSectionHeader
     BlobSectionHeader header;
-    memset(&header, sizeof(header), 0);  /// need to init to zero, ok since no constructor
+    memset(&header, 0, sizeof(header));  /// need to init to zero, ok since no constructor
     header.sectionId = E57_BLOB_SECTION;
     header.sectionLogicalLength = binarySectionLogicalLength_;
 #ifdef E57_MAX_VERBOSE
@@ -1762,7 +1960,7 @@ BlobNodeImpl::BlobNodeImpl(weak_ptr<ImageFileImpl> fileParent, uint64_t fileOffs
 bool BlobNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
     /// Same node type?
-    if (ni->type() != BLOB)
+    if (ni->type() != E57_BLOB)
         return(false);
 
     /// Downcast to shared_ptr<BlobNodeImpl>
@@ -2090,9 +2288,9 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         double value = atof(value_str.c_str());
         FloatPrecision fprec;
         if (precision_str == "Single")
-            fprec = SINGLE;
+            fprec = E57_SINGLE;
         else if (precision_str == "Double")
-            fprec = DOUBLE;
+            fprec = E57_DOUBLE;
         else
             throw EXCEPTION("bad precision");
 
@@ -2186,21 +2384,21 @@ void E57XmlParser::endElement(const XMLCh* const uri,
 
     /// Add node to container at top of stack
     switch (container_ni->type()) {
-        case STRUCTURE: {
+        case E57_STRUCTURE: {
             shared_ptr<StructureNodeImpl> struct_ni = dynamic_pointer_cast<StructureNodeImpl>(container_ni);
 
             /// Add named child to structure
             struct_ni->set(toUString(qname), ni);
             }
             break;
-        case VECTOR: {
+        case E57_VECTOR: {
             shared_ptr<VectorNodeImpl> vector_ni = dynamic_pointer_cast<VectorNodeImpl>(container_ni);
 
             /// Add unnamed child to vector 
             vector_ni->append(ni);
             }
             break;
-        case COMPRESSED_VECTOR: {
+        case E57_COMPRESSED_VECTOR: {
             shared_ptr<CompressedVectorNodeImpl> cv_ni = dynamic_pointer_cast<CompressedVectorNodeImpl>(container_ni);
                 ustring uQname = toUString(qname);
 
@@ -2327,6 +2525,7 @@ void ImageFileImpl::construct2(const ustring& fname, const ustring& mode, const 
         throw "unknown ImageFile mode";
 
     /// If mode is read, do it
+    file_ = NULL;
     if (!isWriter_) {
         try {
             /// Open file for reading. !!!remember to close, try block here?
@@ -2351,12 +2550,12 @@ void ImageFileImpl::construct2(const ustring& fname, const ustring& mode, const 
                 throw EXCEPTION("bad file signature");
 
             /// Check file version compatibility ???
-            if (header.majorVersion != E57_MAJOR_VERSION)
+            if (header.majorVersion != E57_VERSION_MAJOR)
                 throw EXCEPTION("bad file version");
 
             /// If is a prototype version (majorVersion==0), then minorVersion has to match too.
             /// In production versions (majorVersion>=1), should be able to handle any minor version.
-            if (header.majorVersion == 0 && header.minorVersion != E57_MINOR_VERSION)
+            if (header.majorVersion == 0 && header.minorVersion != E57_VERSION_MINOR)
                 throw EXCEPTION("bad file version");
 
             ///??? stash major,minor numbers for API?
@@ -2422,9 +2621,6 @@ void ImageFileImpl::construct2(const ustring& fname, const ustring& mode, const 
         file_ = new CheckedFile(fname_, CheckedFile::writeCreate);
 
         unusedLogicalStart_ = sizeof(E57FileHeader);
-
-        /// Init default namespaces:
-        extensionsAdd("e57", "http://astm.org/E57/2009/Jul/3DDataFormat/v0.01");  //!!! needed?, add default?, date in uri
     }
 }
 
@@ -2461,10 +2657,10 @@ void ImageFileImpl::close()
 
         /// Init header contents
         E57FileHeader header;
-        memset(&header, sizeof(header), 0);  /// need to init to zero, ok since no constructor
+        memset(&header, 0, sizeof(header));  /// need to init to zero, ok since no constructor
         memcpy(&header.fileSignature, "ASTM-E57", 8);
-        header.majorVersion       = E57_MAJOR_VERSION;
-        header.minorVersion       = E57_MINOR_VERSION;
+        header.majorVersion       = E57_VERSION_MAJOR;
+        header.minorVersion       = E57_VERSION_MINOR;
         header.filePhysicalLength = file_->length(CheckedFile::physical);
         header.xmlPhysicalOffset  = xmlPhysicalOffset;
         header.xmlLogicalLength   = xmlLogicalLength_;
@@ -3010,7 +3206,7 @@ void CheckedFile::extend(uint64_t newLength, OffsetMode omode)
 #ifdef E57_MAX_VERBOSE
         // cout << "extend " << n << "bytes on page=" << page << " pageOffset=" << pageOffset << endl; //???
 #endif
-        memset(page_buffer+pageOffset, n, 0);
+        memset(page_buffer+pageOffset, 0, n);
         writePhysicalPage(page_buffer, page);
 
         nWrite -= n;
@@ -3221,7 +3417,7 @@ CompressedVectorSectionHeader::CompressedVectorSectionHeader()
 
     /// Now confident we have correct size, zero header.
     /// This guarantees that headers are always completely initialized to zero.
-    memset(this, sizeof(*this), 0);
+    memset(this, 0, sizeof(*this));
 }
 
 void CompressedVectorSectionHeader::verify(uint64_t filePhysicalSize)
@@ -3283,7 +3479,7 @@ DataPacketHeader::DataPacketHeader()
 
     /// Now confident we have correct size, zero packet.
     /// This guarantees that data packet headers are always completely initialized to zero.
-    memset(this, sizeof(*this), 0);
+    memset(this, 0, sizeof(*this));
 }
 
 void DataPacketHeader::verify(unsigned bufferLength)
@@ -3345,7 +3541,7 @@ DataPacket::DataPacket()
 
     /// Now confident we have correct size, zero packet.
     /// This guarantees that data packets are always completely initialized to zero.
-    memset(this, sizeof(*this), 0);
+    memset(this, 0, sizeof(*this));
 }
 
 void DataPacket::verify(unsigned bufferLength)
@@ -3380,14 +3576,18 @@ void DataPacket::verify(unsigned bufferLength)
     }
 }
 
-char* DataPacket::getBytestream(unsigned streamNumber, unsigned& byteCount)
+char* DataPacket::getBytestream(unsigned bytestreamNumber, unsigned& byteCount)
 {
+#ifdef E57_MAX_VERBOSE
+    cout << "getBytestream called, bytestreamNumber=" << bytestreamNumber << endl;
+#endif
+
     /// Verify that packet is correct type
     if (packetType != E57_DATA_PACKET)
         throw EXCEPTION("packet not type not DATA");
 
-    /// Check streamNumber in bounds
-    if (streamNumber >= bytestreamCount)
+    /// Check bytestreamNumber in bounds
+    if (bytestreamNumber >= bytestreamCount)
         throw EXCEPTION("stream index out of bounds");
 
     /// Calc positions in packet
@@ -3396,10 +3596,10 @@ char* DataPacket::getBytestream(unsigned streamNumber, unsigned& byteCount)
 
     /// Sum size of preceeding stream buffers to get position
     unsigned totalPreceeding = 0;
-    for (unsigned i=0; i < streamNumber; i++)
+    for (unsigned i=0; i < bytestreamNumber; i++)
         totalPreceeding += bsbLength[i];
 
-    byteCount = bsbLength[streamNumber];
+    byteCount = bsbLength[bytestreamNumber];
 
     /// Double check buffer is completely within packet
     if (sizeof(DataPacketHeader) + 2*bytestreamCount + totalPreceeding + byteCount > packetLogicalLengthMinus1 + 1U)
@@ -3409,11 +3609,11 @@ char* DataPacket::getBytestream(unsigned streamNumber, unsigned& byteCount)
     return(&streamBase[totalPreceeding]);
 }
 
-unsigned DataPacket::getBytestreamBufferLength(unsigned streamNumber)
+unsigned DataPacket::getBytestreamBufferLength(unsigned bytestreamNumber)
 {
     //??? for now:
     unsigned byteCount;
-    (void) getBytestream(streamNumber, byteCount);
+    (void) getBytestream(bytestreamNumber, byteCount);
     return(byteCount);
 }
 
@@ -3461,12 +3661,13 @@ void DataPacket::dump(int indent, std::ostream& os)
     for (unsigned i=0; i < bytestreamCount; i++) {
         os << space(indent) << "bytestream[" << i << "]:" << endl;
         os << space(indent+4) << "length: " << bsbLength[i] << endl;
+/*!!!!
         unsigned j;
         for (j=0; j < bsbLength[i] && j < 10; j++)
             os << space(indent+4) << "byte[" << j << "]=" << (unsigned)p[j] << endl;
         if (j < bsbLength[i])
             os << space(indent+4) << bsbLength[i]-j << " more unprinted..." << endl;
-
+!!!!*/
         p += bsbLength[i];
         if (p - reinterpret_cast<uint8_t*>(this) > E57_DATA_PACKET_MAX)
             throw EXCEPTION("internal error");
@@ -3484,7 +3685,7 @@ IndexPacket::IndexPacket()
 
     /// Now confident we have correct size, zero packet.
     /// This guarantees that index packets are always completely initialized to zero.
-    memset(this, sizeof(*this), 0);
+    memset(this, 0, sizeof(*this));
 }
 
 void IndexPacket::verify(unsigned bufferLength, uint64_t totalRecordCount, uint64_t fileSize)
@@ -3626,7 +3827,7 @@ EmptyPacketHeader::EmptyPacketHeader()
 
     /// Now confident we have correct size, zero packet.
     /// This guarantees that EmptyPacket headers are always completely initialized to zero.
-    memset(this, sizeof(*this), 0);
+    memset(this, 0, sizeof(*this));
 }
 
 void EmptyPacketHeader::verify(unsigned bufferLength)
@@ -3667,6 +3868,12 @@ void EmptyPacketHeader::dump(int indent, std::ostream& os)
 
 ///================================================================
 
+struct SortByBytestreamNumber {
+    bool operator () (Encoder* lhs , Encoder* rhs) const {
+        return(lhs->bytestreamNumber() < rhs->bytestreamNumber());
+    }
+};
+
 CompressedVectorWriterImpl::CompressedVectorWriterImpl(shared_ptr<CompressedVectorNodeImpl> ni, vector<SourceDestBuffer>& sbufs)
 : cVector_(ni),
   seekIndex_()      /// Init seek index for random access to beginning of chunks
@@ -3680,7 +3887,7 @@ CompressedVectorWriterImpl::CompressedVectorWriterImpl(shared_ptr<CompressedVect
     setBuffers(sbufs); //??? copy code here?
 
     /// Zero dataPacket_ at start
-    memset(&dataPacket_, sizeof(dataPacket_), 0);
+    memset(&dataPacket_, 0, sizeof(dataPacket_));
 
     /// For each individual sbuf, create an appropriate Encoder based on the cVector_ attributes
     for (unsigned i=0; i < sbufs_.size(); i++) {
@@ -3690,10 +3897,26 @@ CompressedVectorWriterImpl::CompressedVectorWriterImpl(shared_ptr<CompressedVect
 
         ustring codecPath = sbufs_.at(i).pathName();
 
+        /// Calc which stream the given path belongs to.  This depends on position of the node in the proto tree.
+        shared_ptr<NodeImpl> readNode = proto_->get(sbufs.at(i).pathName());
+        uint64_t bytestreamNumber = 0;
+        if (!proto_->findTerminalPosition(readNode, bytestreamNumber))
+            throw EXCEPTION("internal error");
+
         /// EncoderFactory picks the appropriate encoder to match type declared in prototype
-        channels_.push_back(Encoder::EncoderFactory(i, cVector_, vTemp, codecPath));
+        bytestreams_.push_back(Encoder::EncoderFactory(static_cast<unsigned>(bytestreamNumber), cVector_, vTemp, codecPath));
     }
 
+    /// The bytestreams_ vector must be ordered by bytestreamNumber, not by order called specified sbufs, so sort it.
+    sort(bytestreams_.begin(), bytestreams_.end(), SortByBytestreamNumber());
+#ifdef E57_MAX_DEBUG
+    /// Double check that all bytestreams are specified
+    for (unsigned i=0; i < bytestreams_.size(); i++) {
+        if (bytestreams_.at(i)->bytestreamNumber() != i)
+            throw EXCEPTION("internal error");
+    }
+#endif
+    
     shared_ptr<ImageFileImpl> imf(ni->fileParent_);
 
     /// Reserve space for CompressedVector binary section header, record location so can save to when writer closes.
@@ -3715,12 +3938,16 @@ CompressedVectorWriterImpl::~CompressedVectorWriterImpl()
     cout << "~CompressedVectorWriterImpl() called" << endl; //???
 #endif
 
-    if (isOpen_)
-        close();
+    try {
+        if (isOpen_)
+            close();
+    } catch (...) {
+        //??? report?
+    }
 
     /// Free allocated channels
-    for (unsigned i=0; i < channels_.size(); i++)
-        delete channels_.at(i);
+    for (unsigned i=0; i < bytestreams_.size(); i++)
+        delete bytestreams_.at(i);
 }
 
 void CompressedVectorWriterImpl::close()
@@ -3730,6 +3957,9 @@ void CompressedVectorWriterImpl::close()
 #endif
     if (!isOpen_)
         return;
+
+    /// Set closed before do anything, so if get fault and start unwinding, don't try to close again.
+    isOpen_ = false;
 
     /// If have any data, write packet
     /// Write all remaining ioBuffers and internal encoder register cache into file.
@@ -3768,7 +3998,6 @@ void CompressedVectorWriterImpl::close()
     cVector_->setRecordCount(recordCount_);
     cVector_->setBinarySectionLogicalStart(sectionHeaderLogicalStart_);
 
-    isOpen_ = false;
 #ifdef E57_MAX_VERBOSE
     cout << "  CompressedVectorWriter:" << endl;
     dump(4);
@@ -3819,8 +4048,8 @@ void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
     for (;;) {
         /// Calc remaining record counts for all channels
         uint64_t totalElementCount = 0;
-        for (unsigned i=0; i < channels_.size(); i++)
-            totalElementCount += endRecordIndex - channels_.at(i)->currentRecordIndex();
+        for (unsigned i=0; i < bytestreams_.size(); i++)
+            totalElementCount += endRecordIndex - bytestreams_.at(i)->currentRecordIndex();
 #ifdef E57_MAX_VERBOSE
         cout << "  totalElementCount=" << totalElementCount << endl; //???
 #endif
@@ -3833,18 +4062,19 @@ void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
         /// Efficient packet length is >= 75% of maximum packet length.
         /// It is OK if get too much data (more than one packet) in an iteration.
         /// Reader will be able to handle packets whose streams are not exactly synchronized to the record boundaries.
-        /// But try to do a good job of keeping the stream synchronization "close enough" (so a reader that can buffer only two packets is efficient).
+        /// But try to do a good job of keeping the stream synchronization "close enough" (so a reader that can cache only two packets is efficient).
 
 #ifdef E57_MAX_VERBOSE
         cout << "  currentPacketSize()=" << currentPacketSize() << endl; //???
 #endif
 
 #if E57_WRITE_CRAZY_PACKET_MODE
-#  define E57_TARGET_PACKET_SIZE    (E57_DATA_PACKET_MAX*3/4)
+///??? depends on number of streams
+#  define E57_TARGET_PACKET_SIZE    500
 #else
-#  define E57_TARGET_PACKET_SIZE    50
+#  define E57_TARGET_PACKET_SIZE    (E57_DATA_PACKET_MAX*3/4)
 #endif
-        /// If have more than half a packet's worth, send it now
+        /// If have more than target fraction of packet, send it now
         if (currentPacketSize() >= E57_TARGET_PACKET_SIZE) {  //??? 
             packetWrite();
             continue;  /// restart loop so recalc statistics (packet size may not be zero after write, if have too much data)
@@ -3853,27 +4083,33 @@ void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
         ///??? useful?
         /// Get approximation of number of bytes per record of CompressedVector and total of bytes used
         float totalBitsPerRecord = 0;  // an estimate of future performance
-        for (unsigned i=0; i < channels_.size(); i++)
-            totalBitsPerRecord += channels_.at(i)->bitsPerRecord();
-        float totalBytesPerRecord = totalBitsPerRecord/8;
+        for (unsigned i=0; i < bytestreams_.size(); i++)
+            totalBitsPerRecord += bytestreams_.at(i)->bitsPerRecord();
+        float totalBytesPerRecord = max(totalBitsPerRecord/8, 0.1F); //??? trust 
+            
 #ifdef E57_MAX_VERBOSE
         cout << "  totalBytesPerRecord=" << totalBytesPerRecord << endl; //???
 #endif
+
+
+//!!!        unsigned spaceRemaining = E57_DATA_PACKET_MAX - currentPacketSize();
+//!!!        unsigned appoxRecordsNeeded = static_cast<unsigned>(floor(spaceRemaining / totalBytesPerRecord)); //??? divide by zero if all constants
+
 
         /// Don't allow straggler to get too far behind. ???
         /// Don't allow a single channel to get too far ahead ???
         /// Process channels that are furthest behind first. ???
 
         ///!!!! For now just process one record per loop until packet is full enough, or completed request
-        for (unsigned i=0; i < channels_.size(); i++) {
-             if (channels_.at(i)->currentRecordIndex() < endRecordIndex) {
+        for (unsigned i=0; i < bytestreams_.size(); i++) {
+             if (bytestreams_.at(i)->currentRecordIndex() < endRecordIndex) {
 #if 0
-                channels_.at(i)->processRecords(1);
+                bytestreams_.at(i)->processRecords(1);
 #else
 //!!! for now, process upto 50 records at a time
-                uint64_t recordCount = endRecordIndex - channels_.at(i)->currentRecordIndex();
+                uint64_t recordCount = endRecordIndex - bytestreams_.at(i)->currentRecordIndex();
                 recordCount = min(recordCount, 50ULL);
-                channels_.at(i)->processRecords((unsigned)recordCount);
+                bytestreams_.at(i)->processRecords((unsigned)recordCount);
 #endif
             }
         }
@@ -3887,8 +4123,8 @@ void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
 unsigned CompressedVectorWriterImpl::totalOutputAvailable()
 {
     unsigned total = 0;
-    for (unsigned i=0; i < channels_.size(); i++) {
-        total += channels_.at(i)->outputAvailable();
+    for (unsigned i=0; i < bytestreams_.size(); i++) {
+        total += bytestreams_.at(i)->outputAvailable();
     }
     return(total);
 }
@@ -3896,7 +4132,7 @@ unsigned CompressedVectorWriterImpl::totalOutputAvailable()
 unsigned CompressedVectorWriterImpl::currentPacketSize()
 {
     /// Calc current packet size
-    return(sizeof(DataPacketHeader) + channels_.size()*sizeof(uint16_t) + totalOutputAvailable());
+    return(sizeof(DataPacketHeader) + bytestreams_.size()*sizeof(uint16_t) + totalOutputAvailable());
 }
 
 uint64_t CompressedVectorWriterImpl::packetWrite()
@@ -3914,30 +4150,30 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 #endif
 
     /// Calc maximum number of bytestream values can put in data packet.
-    unsigned packetMaxPayloadBytes = E57_DATA_PACKET_MAX - sizeof(DataPacketHeader) - channels_.size()*sizeof(uint16_t);
+    unsigned packetMaxPayloadBytes = E57_DATA_PACKET_MAX - sizeof(DataPacketHeader) - bytestreams_.size()*sizeof(uint16_t);
 #ifdef E57_MAX_VERBOSE
     cout << "  packetMaxPayloadBytes=" << packetMaxPayloadBytes << endl; //???
 #endif
 
-    /// Allocate vector for number of bytes that each channel will write to file.
-    vector<unsigned> count(channels_.size());
+    /// Allocate vector for number of bytes that each bytestream will write to file.
+    vector<unsigned> count(bytestreams_.size());
 
     /// See if we can fit into a single data packet
     if (totalOutput < packetMaxPayloadBytes) {
         /// We can fit everything in one packet
-        for (unsigned i=0; i < channels_.size(); i++)
-            count.at(i) = channels_.at(i)->outputAvailable();
+        for (unsigned i=0; i < bytestreams_.size(); i++)
+            count.at(i) = bytestreams_.at(i)->outputAvailable();
     } else {
-        /// We have too much data for one packet.  Send proportional amounts from each channel.
+        /// We have too much data for one packet.  Send proportional amounts from each bytestream.
         /// Adjust packetMaxPayloadBytes down by one so have a little slack for floating point weirdness.
         float fractionToSend =  (packetMaxPayloadBytes-1) / static_cast<float>(totalOutput);   
-        for (unsigned i=0; i < channels_.size(); i++) {
+        for (unsigned i=0; i < bytestreams_.size(); i++) {
             /// Round down here so sum <= packetMaxPayloadBytes
-            count.at(i) = static_cast<unsigned>(floor(fractionToSend * channels_.at(i)->outputAvailable()));
+            count.at(i) = static_cast<unsigned>(floor(fractionToSend * bytestreams_.at(i)->outputAvailable()));
         }
     }        
 #ifdef E57_MAX_VERBOSE
-    for (unsigned i=0; i < channels_.size(); i++)
+    for (unsigned i=0; i < bytestreams_.size(); i++)
         cout << "  count[" << i << "]=" << count.at(i) << endl; //???
 #endif
 
@@ -3960,28 +4196,28 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 #endif
 
     /// To be safe, clear header part of packet
-    memset(packet, sizeof(DataPacketHeader), 0);
+    memset(packet, 0, sizeof(DataPacketHeader));
 
     /// Write bytestreamBufferLength[bytestreamCount] after header, in dataPacket_
     uint16_t* bsbLength = reinterpret_cast<uint16_t*>(&packet[sizeof(DataPacketHeader)]);
 #ifdef E57_MAX_VERBOSE
     cout << "  bsbLength=" << (unsigned)bsbLength << endl; //???
 #endif
-    for (unsigned i=0; i < channels_.size(); i++) {
+    for (unsigned i=0; i < bytestreams_.size(); i++) {
         bsbLength[i] = count.at(i);
 #ifdef E57_MAX_VERBOSE
-        cout << "  Writing " << bsbLength[i] << " bytes into channel " << i << endl; //???
+        cout << "  Writing " << bsbLength[i] << " bytes into bytestream " << i << endl; //???
 #endif
     }
 
     /// Get pointer to end of data so far
-    char* p = reinterpret_cast<char*>(&bsbLength[channels_.size()]);
+    char* p = reinterpret_cast<char*>(&bsbLength[bytestreams_.size()]);
 #ifdef E57_MAX_VERBOSE
     cout << "  after bsbLength, p=" << (unsigned)p << endl; //???
 #endif
 
     /// Write contents of each bytestream in dataPacket_
-    for (unsigned i=0; i < channels_.size(); i++) {
+    for (unsigned i=0; i < bytestreams_.size(); i++) {
         unsigned n = count.at(i);
 
 #ifdef E57_DEBUG
@@ -3991,7 +4227,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 #endif
 
         /// Read from encoder output into packet
-        channels_.at(i)->outputRead(p, n);
+        bytestreams_.at(i)->outputRead(p, n);
         
         /// Move pointer to end of current data
         p += n;
@@ -4005,7 +4241,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 
 #ifdef E57_DEBUG
     /// Double check that packetLength is what we expect
-    if (packetLength != sizeof(DataPacketHeader) + channels_.size()*sizeof(uint16_t) + totalByteCount)
+    if (packetLength != sizeof(DataPacketHeader) + bytestreams_.size()*sizeof(uint16_t) + totalByteCount)
         throw EXCEPTION("internal error");
 #endif
 
@@ -4025,7 +4261,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
     dataPacket_.packetType = E57_DATA_PACKET;
     dataPacket_.packetFlags = 0;
     dataPacket_.packetLogicalLengthMinus1 = static_cast<uint16_t>(packetLength-1);
-    dataPacket_.bytestreamCount = channels_.size();
+    dataPacket_.bytestreamCount = bytestreams_.size();
 
     /// Double check that data packet is well formed
     dataPacket_.verify(packetLength);
@@ -4041,6 +4277,9 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
     imf->file_->seek(packetLogicalOffset);  //??? have seekLogical and seekPhysical instead? more explicit
     imf->file_->write(packet, packetLength);
     
+//cout << "data packet:" << endl; //!!!!
+//dataPacket_.dump(4); //!!!!
+
     /// If first data packet written for this CompressedVector binary section, save address to put in section header
     ///??? what if no data packets?
     ///??? what if have exceptions while write, what is state of file?  will close report file good/bad?
@@ -4056,8 +4295,8 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 
 void CompressedVectorWriterImpl::flush()
 {
-    for (unsigned i=0; i < channels_.size(); i++)
-        channels_.at(i)->registerFlushToOutput();
+    for (unsigned i=0; i < bytestreams_.size(); i++)
+        bytestreams_.at(i)->registerFlushToOutput();
 }
 
 void CompressedVectorWriterImpl::dump(int indent, std::ostream& os)
@@ -4073,9 +4312,9 @@ void CompressedVectorWriterImpl::dump(int indent, std::ostream& os)
     os << space(indent) << "proto:" << endl;
     proto_->dump(indent+4, os);
 
-    for (unsigned i = 0; i < channels_.size(); i++) {
-        os << space(indent) << "channels[" << i << "]:" << endl;
-        channels_.at(i)->dump(indent+4, os);
+    for (unsigned i = 0; i < bytestreams_.size(); i++) {
+        os << space(indent) << "bytestreams[" << i << "]:" << endl;
+        bytestreams_.at(i)->dump(indent+4, os);
     }
 
     os << space(indent) << "seekIndex:" << endl;
@@ -4131,7 +4370,13 @@ CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVect
 
         Decoder* decoder =  Decoder::DecoderFactory(i, cVector_, theDbuf, ustring());
 
-        channels_.push_back(DecodeChannel(dbufs.at(i), decoder, i, cVector_->childCount()));
+        /// Calc which stream the given path belongs to.  This depends on position of the node in the proto tree.
+        shared_ptr<NodeImpl> readNode = proto_->get(dbufs.at(i).pathName());
+        uint64_t bytestreamNumber = 0;
+        if (!proto_->findTerminalPosition(readNode, bytestreamNumber))
+            throw EXCEPTION("internal error");
+
+        channels_.push_back(DecodeChannel(dbufs.at(i), decoder, static_cast<unsigned>(bytestreamNumber), cVector_->childCount()));
     }
 
     recordCount_ = 0;
@@ -4185,7 +4430,6 @@ CompressedVectorReaderImpl::~CompressedVectorReaderImpl()
 #ifdef E57_MAX_VERBOSE
     cout << "~CompressedVectorReaderImpl() called" << endl; //???
 #endif
-
 #ifdef E57_MAX_VERBOSE
     //cout << "CompressedVectorWriterImpl:" << endl;
     //dump(4);
@@ -4223,144 +4467,165 @@ unsigned CompressedVectorReaderImpl::read()
 
     /// Rewind all dbufs so start writing to them at beginning
     for (unsigned i=0; i < dbufs_.size(); i++)
-        dbufs_.at(i).impl()->rewind();
+        dbufs_[i].impl()->rewind();
 
-    /// Loop until every dbuf is full or have reached end of binary section
-    for (;;) {
-        /// Find earliest packet for any channel with unblocked output
-        bool gotUnblockedOutput = false;
-        bool gotUnfinished = false;
-        uint64_t currentPacketLogicalOffset = UINT64_MAX;
-        for (unsigned i = 0; i < channels_.size(); i++) {
-            DecodeChannel* chan = &channels_.at(i);
-            if (!chan->isOutputBlocked()) {
-                gotUnblockedOutput = true;
+    /// Allow decoders to use data they already have in their queue to fill newly empty dbufs
+    /// This helps to keep decoder input queues smaller, which reduces backtracking in the packet cache.
+    for (unsigned i = 0; i < channels_.size(); i++)
+        channels_[i].decoder->inputProcess(NULL, 0);
 
-                /// Check if earliest so far
-                if (chan->currentPacketLogicalOffset < currentPacketLogicalOffset)
-                    currentPacketLogicalOffset = chan->currentPacketLogicalOffset;
-            }
+    /// Loop until every dbuf is full or we have reached end of the binary section.
+    while (1) {
+        /// Find the earliest packet position for channels that are still hungry
+        /// It's important to call inputProcess of the decoders before this call, so current hungriness level is reflected.
+        uint64_t earliestPacketLogicalOffset = earliestPacketNeededForInput();
 
-            if (!chan->inputFinished)
-                gotUnfinished = true;
-        }
-#ifdef E57_MAX_VERBOSE
-cout << "  gotUnblockedOutput=" << gotUnblockedOutput << " gotUnfinished=" << gotUnfinished << " (earliest):currentPacketLogicalOffset=" << currentPacketLogicalOffset << endl; //???
-#endif
-        /// If all channel outputs are blocked, or all channels reached end of file, then we are done filling the dest buffers
-        if (!gotUnblockedOutput || !gotUnfinished) {
-#ifdef E57_MAX_VERBOSE
-            cout << "  done filling buffers, state:" << endl;
-            dump(4);
-            cout << "  decoder channel state:" << endl;
-            for (unsigned i = 0; i < channels_.size(); i++) {
-                DecodeChannel* chan = &channels_.at(i);
-                cout << "    decoder channel[" << i << "]:" << endl;
-                chan->dump(8);
-            }
-#endif
+        /// If nobody's hungry, we are done with the read
+        if (earliestPacketLogicalOffset == UINT64_MAX)
             break;
+
+        /// Feed packet to the hungry decoders
+        feedPacketToDecoders(earliestPacketLogicalOffset);
+    }
+
+    /// Verify that each channel produced the same number of records
+    unsigned outputCount = 0;
+    for (unsigned i = 0; i < channels_.size(); i++) {
+        DecodeChannel* chan = &channels_[i];
+        if (i == 0)
+            outputCount = chan->dbuf.impl()->nextIndex();
+        else {
+            if (outputCount != chan->dbuf.impl()->nextIndex())
+                throw EXCEPTION("internal error");
+        }
+    }
+
+    /// Return number of records transferred to each dbuf.
+    return(outputCount);
+}
+
+uint64_t CompressedVectorReaderImpl::earliestPacketNeededForInput()
+{
+    uint64_t earliestPacketLogicalOffset = UINT64_MAX;
+    unsigned earliestChannel = 0;
+    for (unsigned i = 0; i < channels_.size(); i++) {
+        DecodeChannel* chan = &channels_[i];
+
+        /// Test if channel needs more input.
+        /// Important to call inputProcess just before this, so these tests work.
+        if (!chan->isOutputBlocked() && !chan->inputFinished) {
+            /// Check if earliest so far
+            if (chan->currentPacketLogicalOffset < earliestPacketLogicalOffset) {
+                earliestPacketLogicalOffset = chan->currentPacketLogicalOffset;
+                earliestChannel = i;
+            }
+        }
+    }
+#ifdef E57_MAX_VERBOSE
+    if (earliestPacketLogicalOffset == UINT64_MAX)
+        cout << "earliestPacketNeededForInput returning none found" << endl;
+    else
+        cout << "earliestPacketNeededForInput returning " << earliestPacketLogicalOffset << " for channel[" << earliestChannel << "]" << endl;
+#endif
+    return(earliestPacketLogicalOffset);
+}
+
+void CompressedVectorReaderImpl::feedPacketToDecoders(uint64_t currentPacketLogicalOffset)
+{
+    /// Read earliest packet into cache and send data to decoders with unblocked output
+    bool channelHasExhaustedPacket = false;
+    uint64_t nextPacketLogicalOffset = UINT64_MAX;
+    {
+        /// Get packet at currentPacketLogicalOffset into memory.
+        char* anyPacket = NULL;  
+        auto_ptr<PacketLock> packetLock = cache_->lock(currentPacketLogicalOffset, anyPacket);
+        DataPacket* dpkt = reinterpret_cast<DataPacket*>(anyPacket);
+
+        /// Double check that have a data packet.  Should have already determined this.
+        if (dpkt->packetType != E57_DATA_PACKET)
+            throw EXCEPTION("internal error");//!!!
+
+        /// Feed bytestreams to channels with unblocked output that are reading from this packet
+        for (unsigned i = 0; i < channels_.size(); i++) {
+            DecodeChannel* chan = &channels_[i];
+
+            /// Skip channels that have already read this packet.
+            if (chan->currentPacketLogicalOffset != currentPacketLogicalOffset || chan->isOutputBlocked())
+                continue;
+
+            /// Get bytestream buffer for this channel from packet
+            unsigned bsbLength;
+            char* bsbStart = dpkt->getBytestream(chan->bytestreamNumber, bsbLength);
+
+            /// Calc where we are in the buffer
+            char* uneatenStart = &bsbStart[chan->currentBytestreamBufferIndex];
+            unsigned uneatenLength = bsbLength - chan->currentBytestreamBufferIndex;
+
+            /// Double check we are not off end of buffer
+            if (chan->currentBytestreamBufferIndex > bsbLength)
+                throw EXCEPTION("internal error");
+            if (&uneatenStart[uneatenLength] > &bsbStart[bsbLength])
+                throw EXCEPTION("internal error");
+#ifdef E57_VERBOSE
+            cout << "  stream[" << chan->bytestreamNumber << "]: feeding decoder " << uneatenLength << " bytes" << endl;
+            if (uneatenLength == 0)
+                chan->dump(8); //!!!
+#endif
+            /// Feed into decoder
+            unsigned bytesProcessed = chan->decoder->inputProcess(uneatenStart, uneatenLength);
+#ifdef E57_VERBOSE
+            cout << "  stream[" << chan->bytestreamNumber << "]: bytesProcessed=" << bytesProcessed << endl;
+#endif
+            /// Adjust counts of bytestream location
+            chan->currentBytestreamBufferIndex += bytesProcessed;
+
+            /// Check if this channel has exhausted its bytestream buffer in this packet
+            if (chan->isInputBlocked()) {
+#ifdef E57_VERBOSE
+                cout << "  stream[" << chan->bytestreamNumber << "] has exhausted its input in current packet" << endl;
+#endif
+                channelHasExhaustedPacket = true;
+                nextPacketLogicalOffset = currentPacketLogicalOffset + dpkt->packetLogicalLengthMinus1 + 1;
+            }
         }
 
-        /// Read earliest packet into cache and send data to decoders with unblocked output
-        bool channelHasExhaustedPacket = false;
-        uint64_t nextPacketLogicalOffset = 0;
-        {
+    }
+
+    /// Skip over any index or empty packets to next data packet.
+    nextPacketLogicalOffset = findNextDataPacket(nextPacketLogicalOffset);
+
+    /// If some channel has exhausted this packet, find next data packet and update currentPacketLogicalOffset for all interested channels.
+    if (channelHasExhaustedPacket) {
+        if (nextPacketLogicalOffset < UINT64_MAX) {
+            /// Get packet at nextPacketLogicalOffset into memory.
             char* anyPacket = NULL;  
-            auto_ptr<PacketLock> packetLock = cache_->lock(currentPacketLogicalOffset, anyPacket);
-        
+            auto_ptr<PacketLock> packetLock = cache_->lock(nextPacketLogicalOffset, anyPacket);
             DataPacket* dpkt = reinterpret_cast<DataPacket*>(anyPacket);
 
-            /// Double check that have a data packet
-            if (dpkt->packetType != E57_DATA_PACKET)
-                throw EXCEPTION("internal error");//!!!
-
-            /// Feed bytestreams to channels with unblocked output that are reading from this packet
+            /// Got a data packet, update the channels with exhausted input
             for (unsigned i = 0; i < channels_.size(); i++) {
-                DecodeChannel* chan = &channels_.at(i);
-                if (chan->currentPacketLogicalOffset == currentPacketLogicalOffset && !chan->isOutputBlocked()) {
-                    /// Get bytestream buffer for this channel from packet
-                    unsigned bsbLength;
-                    char* bsbStart = dpkt->getBytestream(i, bsbLength);
+                DecodeChannel* chan = &channels_[i];
+                if (chan->currentPacketLogicalOffset == currentPacketLogicalOffset && chan->isInputBlocked()) {
+                    chan->currentPacketLogicalOffset = nextPacketLogicalOffset;
+                    chan->currentBytestreamBufferIndex = 0;
 
-                    /// Calc where we are in the buffer
-                    char* uneatenStart = &bsbStart[chan->currentBytestreamBufferIndex];
-                    unsigned uneatenLength = bsbLength - chan->currentBytestreamBufferIndex;
+                    /// It is OK if the next packet doesn't contain any data for this channel, will skip packet on next iter of loop
+                    chan->currentBytestreamBufferLength = dpkt->getBytestreamBufferLength(chan->bytestreamNumber);
 
-                    /// Double check we are not off end of buffer
-                    if (chan->currentBytestreamBufferIndex > bsbLength)
-                        throw EXCEPTION("internal error");
-                    if (&uneatenStart[uneatenLength] > &bsbStart[bsbLength])
-                        throw EXCEPTION("internal error");
 #ifdef E57_MAX_VERBOSE
-                    cout << "  feeding decoder " << uneatenLength << "bytes" << endl;
+                    cout << "  set new stream buffer for channel[" << i << "], length=" << chan->currentBytestreamBufferLength << endl;
 #endif
-                    /// Feed into decoder
-                    unsigned bytesProcessed = chan->decoder->inputProcess(uneatenStart, uneatenLength);
-#ifdef E57_MAX_VERBOSE
-                    cout << "  bytesProcessed=" << bytesProcessed << endl;
-#endif
-                    /// Adjust counts of bytestream location
-                    chan->currentBytestreamBufferIndex += bytesProcessed;
-
-                    /// Check if this channel has exhausted its bytestream buffer in this packet
-                    if (chan->isInputBlocked()) {
-#ifdef E57_MAX_VERBOSE
-                        cout << "  channel[" << i << "] has exhausted its input" << endl;
-#endif
-                        channelHasExhaustedPacket = true;
-                        nextPacketLogicalOffset = currentPacketLogicalOffset + dpkt->packetLogicalLengthMinus1 + 1;
-#ifdef E57_MAX_VERBOSE
-                        cout << "  nextPacketLogicalOffset=" << nextPacketLogicalOffset << endl;
-#endif
-                    }
+                    /// ??? perform flush if new packet flag set?
                 }
             }
-        }
-
-        /// If some channel has exhausted a packet, find next data packet (most likely immediately following the current one).
-        if (channelHasExhaustedPacket) {
-            /// Starting at nextPacketLogicalOffset, search for next data packet until hit end of binary section.
+        } else {
+            /// Reached end without finding data packet, mark exhausted channels as finished
 #ifdef E57_MAX_VERBOSE
-            cout << "  searching for next data packet, nextPacketLogicalOffset=" << nextPacketLogicalOffset << " sectionEndLogicalOffset=" << sectionEndLogicalOffset_ << endl;
-#endif
-            while (nextPacketLogicalOffset < sectionEndLogicalOffset_) {
-                char* anyPacket = NULL;  
-                auto_ptr<PacketLock> packetLock = cache_->lock(nextPacketLogicalOffset, anyPacket);
-        
-                /// Guess it's a data packet, if not continue to next packet
-                DataPacket* dpkt = reinterpret_cast<DataPacket*>(anyPacket);
-                if (dpkt->packetType == E57_DATA_PACKET) {
-#ifdef E57_MAX_VERBOSE
-                    cout << "  Found next data packet at nextPacketLogicalOffset=" << nextPacketLogicalOffset << endl;
-#endif
-                    /// Got a data packet, update the channels with exhausted input
-                    for (unsigned i = 0; i < channels_.size(); i++) {
-                        DecodeChannel* chan = &channels_.at(i);
-                        if (chan->currentPacketLogicalOffset == currentPacketLogicalOffset && chan->isInputBlocked()) {
-                            chan->currentPacketLogicalOffset = nextPacketLogicalOffset;
-                            chan->currentBytestreamBufferIndex = 0;
-
-                            /// It is OK if the next packet doesn't contain any data for this channel, will skip packet on next iter of loop
-                            chan->currentBytestreamBufferLength = dpkt->getBytestreamBufferLength(chan->bytestreamNumber);
-    
-                            /// ??? perform flush if new packet flag set?
-                        }
-                    }
-                    break;
-                }
-
-                /// All packets have length in same place, so can use the field to skip to next packet.
-                nextPacketLogicalOffset += dpkt->packetLogicalLengthMinus1 + 1;
-            }                
-
-            /// If reached end without finding data packet, mark exhausted channels as finished
-#ifdef E57_MAX_VERBOSE
-            cout << "  nextPacketLogicalOffset=" << nextPacketLogicalOffset << "  sectionEndLogicalOffset=" << sectionEndLogicalOffset_ << endl;
+            cout << "  at end of data packets" << endl;
 #endif
             if (nextPacketLogicalOffset >= sectionEndLogicalOffset_) {
                 for (unsigned i = 0; i < channels_.size(); i++) {
-                    DecodeChannel* chan = &channels_.at(i);
+                    DecodeChannel* chan = &channels_[i];
                     if (chan->currentPacketLogicalOffset == currentPacketLogicalOffset && chan->isInputBlocked()) {
 #ifdef E57_MAX_VERBOSE
                         cout << "  Marking channel[" << i << "] as finished" << endl;
@@ -4370,28 +4635,36 @@ cout << "  gotUnblockedOutput=" << gotUnblockedOutput << " gotUnfinished=" << go
                 }
             }
         }
+    }
+}
 
+uint64_t CompressedVectorReaderImpl::findNextDataPacket(uint64_t nextPacketLogicalOffset)
+{
 #ifdef E57_MAX_VERBOSE
-        cout << "  End of loop, reader state:" << endl;
-        dump(4);
+    cout << "  searching for next data packet, nextPacketLogicalOffset=" << nextPacketLogicalOffset 
+         << " sectionEndLogicalOffset=" << sectionEndLogicalOffset_ << endl;
 #endif
-        ///???check for progress
-    }
 
-    /// Verify that each channel produced the same number of records
-    unsigned outputCount = 0;
-    for (unsigned i = 0; i < channels_.size(); i++) {
-        DecodeChannel* chan = &channels_.at(i);
+    /// Starting at nextPacketLogicalOffset, search for next data packet until hit end of binary section.
+    while (nextPacketLogicalOffset < sectionEndLogicalOffset_) {
+        char* anyPacket = NULL;  
+        auto_ptr<PacketLock> packetLock = cache_->lock(nextPacketLogicalOffset, anyPacket);
 
-        if (i == 0)
-            outputCount = chan->dbuf.impl()->nextIndex();
-        else {
-            if (outputCount != chan->dbuf.impl()->nextIndex())
-                throw EXCEPTION("internal error");
+        /// Guess it's a data packet, if not continue to next packet
+        DataPacket* dpkt = reinterpret_cast<DataPacket*>(anyPacket);
+        if (dpkt->packetType == E57_DATA_PACKET) {
+#ifdef E57_MAX_VERBOSE
+            cout << "  Found next data packet at nextPacketLogicalOffset=" << nextPacketLogicalOffset << endl;
+#endif
+            return(nextPacketLogicalOffset);
         }
-    }
 
-    return(outputCount);
+        /// All packets have length in same place, so can use the field to skip to next packet.
+        nextPacketLogicalOffset += dpkt->packetLogicalLengthMinus1 + 1;
+    }                
+
+    /// Ran off end of section, so return failure code.
+    return(UINT64_MAX);
 }
 
 void CompressedVectorReaderImpl::seek(uint64_t recordNumber)
@@ -4410,7 +4683,7 @@ void CompressedVectorReaderImpl::dump(int indent, std::ostream& os)
 {
     for (unsigned i = 0; i < dbufs_.size(); i++) {
         os << space(indent) << "dbufs[" << i << "]:" << endl;
-        dbufs_.at(i).dump(indent+4, os);
+        dbufs_[i].dump(indent+4, os);
     }
 
     os << space(indent) << "cVector:" << endl;
@@ -4421,7 +4694,7 @@ void CompressedVectorReaderImpl::dump(int indent, std::ostream& os)
 
     for (unsigned i = 0; i < channels_.size(); i++) {
         os << space(indent) << "channels[" << i << "]:" << endl;
-        channels_.at(i).dump(indent+4, os);
+        channels_[i].dump(indent+4, os);
     }
 
     os << space(indent) << "recordCount:             " << recordCount_ << endl;
@@ -4433,7 +4706,7 @@ void CompressedVectorReaderImpl::dump(int indent, std::ostream& os)
 //================================================================
 //================================================================
 
-Encoder* Encoder::EncoderFactory(unsigned channelIndex,
+Encoder* Encoder::EncoderFactory(unsigned bytestreamNumber,
                                  shared_ptr<CompressedVectorNodeImpl> cVector,
                                  vector<SourceDestBuffer>& sbufs,
                                  ustring& codecPath)
@@ -4453,7 +4726,7 @@ Encoder* Encoder::EncoderFactory(unsigned channelIndex,
     encodeNode->dump(2);
 #endif
     switch (encodeNode->type()) {
-        case INTEGER: {
+        case E57_INTEGER: {
             shared_ptr<IntegerNodeImpl> ini = dynamic_pointer_cast<IntegerNodeImpl>(encodeNode);  // downcast to correct type
 
             /// Get pointer to parent ImageFileImpl, to call bitsNeeded()
@@ -4463,21 +4736,23 @@ Encoder* Encoder::EncoderFactory(unsigned channelIndex,
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
             /// Constuct Integer encoder with appropriate register size, based on number of bits stored.
-            if (bitsPerRecord <= 8) {
-                return(new BitpackIntegerEncoder<uint8_t>(false, channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
+            if (bitsPerRecord == 0) {
+                return(new ConstantIntegerEncoder(bytestreamNumber, sbuf, ini->minimum()));
+            } else if (bitsPerRecord <= 8) {
+                return(new BitpackIntegerEncoder<uint8_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                           ini->minimum(), ini->maximum(), 1.0, 0.0));
             } else if (bitsPerRecord <= 16) {
-                return(new BitpackIntegerEncoder<uint16_t>(false, channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint16_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
                                                            ini->minimum(), ini->maximum(), 1.0, 0.0));
             } else if (bitsPerRecord <= 32) {
-                return(new BitpackIntegerEncoder<uint32_t>(false, channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint32_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
                                                            ini->minimum(), ini->maximum(), 1.0, 0.0));
             } else {
-                return(new BitpackIntegerEncoder<uint64_t>(false, channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint64_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
                                                            ini->minimum(), ini->maximum(), 1.0, 0.0));
             }
         }
-        case SCALED_INTEGER: {
+        case E57_SCALED_INTEGER: {
             shared_ptr<ScaledIntegerNodeImpl> sini = dynamic_pointer_cast<ScaledIntegerNodeImpl>(encodeNode);  // downcast to correct type
 
             /// Get pointer to parent ImageFileImpl, to call bitsNeeded()
@@ -4487,27 +4762,29 @@ Encoder* Encoder::EncoderFactory(unsigned channelIndex,
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
             /// Constuct ScaledInteger encoder with appropriate register size, based on number of bits stored.
-            if (bitsPerRecord <= 8) {
-                return(new BitpackIntegerEncoder<uint8_t>(true, channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
+            if (bitsPerRecord == 0) {
+                return(new ConstantIntegerEncoder(bytestreamNumber, sbuf, sini->minimum()));
+            } else if (bitsPerRecord <= 8) {
+                return(new BitpackIntegerEncoder<uint8_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                           sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
             } else if (bitsPerRecord <= 16) {
-                return(new BitpackIntegerEncoder<uint16_t>(true, channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint16_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
                                                            sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
             } else if (bitsPerRecord <= 32) {
-                return(new BitpackIntegerEncoder<uint32_t>(true, channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint32_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
                                                            sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
             } else {
-                return(new BitpackIntegerEncoder<uint64_t>(true, channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint64_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
                                                            sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
             }
         }
-        case FLOAT: {
+        case E57_FLOAT: {
             shared_ptr<FloatNodeImpl> fni = dynamic_pointer_cast<FloatNodeImpl>(encodeNode);  // downcast to correct type
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
-            return(new BitpackFloatEncoder(channelIndex, sbuf, E57_DATA_PACKET_MAX/*!!!*/, fni->precision()));
+            return(new BitpackFloatEncoder(bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, fni->precision()));
         }
-        case STRING: {
+        case E57_STRING: {
             throw EXCEPTION("not implemented yet"); //???
         }
         default:
@@ -4515,17 +4792,21 @@ Encoder* Encoder::EncoderFactory(unsigned channelIndex,
     }
 }
 
+Encoder::Encoder(unsigned bytestreamNumber)
+: bytestreamNumber_(bytestreamNumber)
+{}
+
 #ifdef E57_DEBUG
 void Encoder::dump(int indent, std::ostream& os)
 {
-    os << space(indent) << "channelIndex:             " << channelIndex_ << endl;
+    os << space(indent) << "bytestreamNumber:       " << bytestreamNumber_ << endl;
 }
 #endif
 
 ///================
 
-BitpackEncoder::BitpackEncoder(unsigned channelIndex, SourceDestBuffer& sbuf, unsigned outputMaxSize, unsigned alignmentSize)
-: Encoder(channelIndex),
+BitpackEncoder::BitpackEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, unsigned outputMaxSize, unsigned alignmentSize)
+: Encoder(bytestreamNumber),
   sourceBuffer_(sbuf.impl()),
   outBuffer_(outputMaxSize),
   outBufferFirst_(0),
@@ -4667,8 +4948,8 @@ void BitpackEncoder::dump(int indent, std::ostream& os)
 
 //================
 
-BitpackFloatEncoder::BitpackFloatEncoder(unsigned channelIndex, SourceDestBuffer& sbuf, unsigned outputMaxSize, FloatPrecision precision)
-: BitpackEncoder(channelIndex, sbuf, outputMaxSize, (precision==SINGLE) ? sizeof(float) : sizeof(double)),
+BitpackFloatEncoder::BitpackFloatEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, unsigned outputMaxSize, FloatPrecision precision)
+: BitpackEncoder(bytestreamNumber, sbuf, outputMaxSize, (precision==E57_SINGLE) ? sizeof(float) : sizeof(double)),
   precision_(precision)
 {
 }
@@ -4683,7 +4964,7 @@ uint64_t BitpackFloatEncoder::processRecords(unsigned recordCount)
     /// This leaves outBufferEnd_ at a natural boundary.
     outBufferShiftDown();
 
-    unsigned typeSize = (precision_ == SINGLE) ? sizeof(float) : sizeof(double);
+    unsigned typeSize = (precision_ == E57_SINGLE) ? sizeof(float) : sizeof(double);
 
 #ifdef E57_DEBUG
      /// Verify that outBufferEnd_ is multiple of typeSize (so transfers of floats are aligned naturally in memory).
@@ -4698,7 +4979,7 @@ uint64_t BitpackFloatEncoder::processRecords(unsigned recordCount)
     if (recordCount > maxOutputRecords)
          recordCount = maxOutputRecords;
 
-    if (precision_ == SINGLE) {
+    if (precision_ == E57_SINGLE) {
         /// Form the starting address for next available location in outBuffer
         float* outp = reinterpret_cast<float*>(&outBuffer_[outBufferEnd_]);
 
@@ -4710,7 +4991,7 @@ uint64_t BitpackFloatEncoder::processRecords(unsigned recordCount)
 #endif
             SWAB(&outp[i]);  /// swab if neccesary
         }
-    } else {  /// DOUBLE precision
+    } else {  /// E57_DOUBLE precision
         /// Form the starting address for next available location in outBuffer
         double* outp = reinterpret_cast<double*>(&outBuffer_[outBufferEnd_]);
 
@@ -4741,23 +5022,23 @@ bool BitpackFloatEncoder::registerFlushToOutput()
 
 float BitpackFloatEncoder::bitsPerRecord()
 {
-    return((precision_ == SINGLE) ? 32.0F: 64.0F);
+    return((precision_ == E57_SINGLE) ? 32.0F: 64.0F);
 }
 
 #ifdef E57_DEBUG
 void BitpackFloatEncoder::dump(int indent, std::ostream& os)
 {
     BitpackEncoder::dump(indent, os);
-    if (precision_ == SINGLE)
-        os << space(indent) << "precision:                SINGLE" << endl;
+    if (precision_ == E57_SINGLE)
+        os << space(indent) << "precision:                E57_SINGLE" << endl;
     else
-        os << space(indent) << "precision:                DOUBLE" << endl;
+        os << space(indent) << "precision:                E57_DOUBLE" << endl;
 }
 #endif
 
 //================================================================
 
-Decoder* Decoder::DecoderFactory(unsigned channelIndex, //!!! name ok?
+Decoder* Decoder::DecoderFactory(unsigned bytestreamNumber, //!!! name ok?
                                  shared_ptr<CompressedVectorNodeImpl> cVector,
                                  vector<SourceDestBuffer>& dbufs,
                                  ustring& codecPath)
@@ -4778,7 +5059,7 @@ Decoder* Decoder::DecoderFactory(unsigned channelIndex, //!!! name ok?
     uint64_t  maxRecordCount = cVector->childCount();
 
     switch (decodeNode->type()) {
-        case INTEGER: {
+        case E57_INTEGER: {
             shared_ptr<IntegerNodeImpl> ini = dynamic_pointer_cast<IntegerNodeImpl>(decodeNode);  // downcast to correct type
 
             /// Get pointer to parent ImageFileImpl, to call bitsNeeded()
@@ -4787,18 +5068,20 @@ Decoder* Decoder::DecoderFactory(unsigned channelIndex, //!!! name ok?
             unsigned bitsPerRecord = imf->bitsNeeded(ini->minimum(), ini->maximum());
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
-            /// Constuct Integer encoder with appropriate register size, based on number of bits stored.
-            if (bitsPerRecord <= 8)
-                return(new BitpackIntegerDecoder<uint8_t>(false, channelIndex, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
+            /// Constuct Integer decoder with appropriate register size, based on number of bits stored.
+            if (bitsPerRecord == 0)
+                return(new ConstantIntegerDecoder(false, bytestreamNumber, dbufs.at(0), ini->minimum(), 1.0, 0.0, maxRecordCount));
+            else if (bitsPerRecord <= 8)
+                return(new BitpackIntegerDecoder<uint8_t>(false, bytestreamNumber, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
             else if (bitsPerRecord <= 16)
-                return(new BitpackIntegerDecoder<uint16_t>(false, channelIndex, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
+                return(new BitpackIntegerDecoder<uint16_t>(false, bytestreamNumber, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
             else if (bitsPerRecord <= 32)
-                return(new BitpackIntegerDecoder<uint32_t>(false, channelIndex, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
+                return(new BitpackIntegerDecoder<uint32_t>(false, bytestreamNumber, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
             else
-                return(new BitpackIntegerDecoder<uint64_t>(false, channelIndex, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
+                return(new BitpackIntegerDecoder<uint64_t>(false, bytestreamNumber, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
 
         }
-        case SCALED_INTEGER: {
+        case E57_SCALED_INTEGER: {
             shared_ptr<ScaledIntegerNodeImpl> sini = dynamic_pointer_cast<ScaledIntegerNodeImpl>(decodeNode);  // downcast to correct type
 
             /// Get pointer to parent ImageFileImpl, to call bitsNeeded()
@@ -4808,22 +5091,24 @@ Decoder* Decoder::DecoderFactory(unsigned channelIndex, //!!! name ok?
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
             /// Constuct ScaledInteger dencoder with appropriate register size, based on number of bits stored.
-            if (bitsPerRecord <= 8)
-                return(new BitpackIntegerDecoder<uint8_t>(true, channelIndex, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
+            if (bitsPerRecord == 0)
+                return(new ConstantIntegerDecoder(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->scale(), sini->offset(), maxRecordCount));
+            else if (bitsPerRecord <= 8)
+                return(new BitpackIntegerDecoder<uint8_t>(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
             else if (bitsPerRecord <= 16)
-                return(new BitpackIntegerDecoder<uint16_t>(true, channelIndex, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
+                return(new BitpackIntegerDecoder<uint16_t>(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
             else if (bitsPerRecord <= 32)
-                return(new BitpackIntegerDecoder<uint32_t>(true, channelIndex, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
+                return(new BitpackIntegerDecoder<uint32_t>(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
             else
-                return(new BitpackIntegerDecoder<uint64_t>(true, channelIndex, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
+                return(new BitpackIntegerDecoder<uint64_t>(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
 
         }
-        case FLOAT: {
+        case E57_FLOAT: {
             shared_ptr<FloatNodeImpl> fni = dynamic_pointer_cast<FloatNodeImpl>(decodeNode);  // downcast to correct type
 
-            return(new BitpackFloatDecoder(channelIndex, dbufs.at(0), fni->precision(), maxRecordCount));
+            return(new BitpackFloatDecoder(bytestreamNumber, dbufs.at(0), fni->precision(), maxRecordCount));
         }
-        case STRING: {
+        case E57_STRING: {
             throw EXCEPTION("not implemented yet"); //???
         }
         default:
@@ -4831,8 +5116,16 @@ Decoder* Decoder::DecoderFactory(unsigned channelIndex, //!!! name ok?
     }
 }
 
-BitpackDecoder::BitpackDecoder(unsigned channelIndex, SourceDestBuffer& dbuf, unsigned alignmentSize, uint64_t maxRecordCount)
-: Decoder(channelIndex),
+//================================================================
+
+Decoder::Decoder(unsigned bytestreamNumber)
+: bytestreamNumber_(bytestreamNumber)
+{}
+
+//================================================================
+
+BitpackDecoder::BitpackDecoder(unsigned bytestreamNumber, SourceDestBuffer& dbuf, unsigned alignmentSize, uint64_t maxRecordCount)
+: Decoder(bytestreamNumber),
   inBuffer_(1024/*!!!*/),            //??? need to pick smarter channel buffer sizes
   destBuffer_(dbuf.impl())
 {
@@ -4845,66 +5138,75 @@ BitpackDecoder::BitpackDecoder(unsigned channelIndex, SourceDestBuffer& dbuf, un
     bytesPerWord_           = alignmentSize;
 }
 
-BitpackDecoder::~BitpackDecoder()
-{
-    //??? need to do anything?
-}
-
 void BitpackDecoder::destBufferSetNew(vector<SourceDestBuffer>& dbufs)
 {
-    //!!! check only one
-
+    if (dbufs.size() != 1)
+        throw EXCEPTION("internal error");
     destBuffer_ = dbufs.at(0).impl();
 }
 
-unsigned BitpackDecoder::inputProcess(const char* source, unsigned byteCount)
+unsigned BitpackDecoder::inputProcess(const char* source, unsigned availableByteCount)
 {
 #ifdef E57_MAX_VERBOSE
-    cout << "BitpackDecoder::inputprocess() called, source=" << (unsigned)source << " byteCount="<< byteCount << endl; //???
+    cout << "BitpackDecoder::inputprocess() called, source=" << (unsigned)source << " availableByteCount="<< availableByteCount << endl;
 #endif
+    unsigned bytesUnsaved = availableByteCount;
+    unsigned bitsEaten = 0;
+    do {
+        unsigned byteCount = min(bytesUnsaved, inBuffer_.size() - inBufferEndByte_);
 
-    /// Check we have enough space
-    if (byteCount > inBuffer_.size() - inBufferEndByte_)
-        throw EXCEPTION("input overflow");
+        /// Copy input bytes from caller, if any
+        if (byteCount > 0) {
+            memcpy(&inBuffer_[inBufferEndByte_], source, byteCount);
 
-    /// Copy input bytes from caller
-    memcpy(&inBuffer_[inBufferEndByte_], source, byteCount);
+            /// Advance tail pointer.
+            inBufferEndByte_ += byteCount;
 
-    /// Advance tail pointer.
-    inBufferEndByte_ += byteCount;
-
+            /// Update amount available from caller
+            bytesUnsaved -= byteCount;
+            source += byteCount;
+        }
 #ifdef E57_MAX_VERBOSE
-{
-    unsigned i;
-    unsigned firstByte = inBufferFirstBit_/8;
-    for (i = 0; i < byteCount && i < 20; i++)
-        cout << "  inBuffer[" << firstByte+i << "]=" << (unsigned)(unsigned char)(inBuffer_[firstByte+i]) << endl;
-    if (i < byteCount)
-        cout << "  " << byteCount-i << "source bytes unprinted..." << endl;
-}
+        {
+            unsigned i;
+            unsigned firstByte = inBufferFirstBit_/8;
+            for (i = 0; i < byteCount && i < 20; i++)
+                cout << "  inBuffer[" << firstByte+i << "]=" << (unsigned)(unsigned char)(inBuffer_[firstByte+i]) << endl;
+            if (i < byteCount)
+                cout << "  " << byteCount-i << "source bytes unprinted..." << endl;
+        }
 #endif
 
-    /// ??? fix doc for new bit interface
-    /// Now that we have input stored in an aligned buffer, call derived class to try to eat some
-    /// Note that end of filled buffer may not be at a natural boundary.
-    /// The subclass may transfer this partial word in a full word transfer, but it must be carefull to only use the defined bits.
-    /// inBuffer_ is a multiple of largest word size, so this full word transfer off the end will always be in defined memory.
+        /// ??? fix doc for new bit interface
+        /// Now that we have input stored in an aligned buffer, call derived class to try to eat some
+        /// Note that end of filled buffer may not be at a natural boundary.
+        /// The subclass may transfer this partial word in a full word transfer, but it must be carefull to only use the defined bits.
+        /// inBuffer_ is a multiple of largest word size, so this full word transfer off the end will always be in defined memory.
 
-    unsigned firstWord = inBufferFirstBit_ / bitsPerWord_;
-    unsigned firstNaturalBit = firstWord * bitsPerWord_;
-    unsigned endBit = inBufferEndByte_ * 8;
-    unsigned bitsEaten = inputProcessAligned(&inBuffer_[firstWord * bytesPerWord_], inBufferFirstBit_ - firstNaturalBit, endBit - firstNaturalBit);
+        unsigned firstWord = inBufferFirstBit_ / bitsPerWord_;
+        unsigned firstNaturalBit = firstWord * bitsPerWord_;
+        unsigned endBit = inBufferEndByte_ * 8;
+#ifdef E57_MAX_VERBOSE
+    cout << "  feeding aligned decoder " << endBit - inBufferFirstBit_ << " bits." << endl;
+#endif
+        bitsEaten = inputProcessAligned(&inBuffer_[firstWord * bytesPerWord_], inBufferFirstBit_ - firstNaturalBit, endBit - firstNaturalBit);
+#ifdef E57_MAX_VERBOSE
+    cout << "  bitsEaten=" << bitsEaten << " firstWord=" << firstWord << " firstNaturalBit=" << firstNaturalBit << " endBit=" << endBit << endl;
+#endif
 #ifdef E57_DEBUG
-    if (bitsEaten > endBit - inBufferFirstBit_)
-        throw EXCEPTION("internal error");
+        if (bitsEaten > endBit - inBufferFirstBit_)
+            throw EXCEPTION("internal error");
 #endif
-    inBufferFirstBit_ += bitsEaten;
+        inBufferFirstBit_ += bitsEaten;
 
-    /// Shift uneaten data to beginning of inBuffer_, keep on natural word boundaries.
-    inBufferShiftDown();
+        /// Shift uneaten data to beginning of inBuffer_, keep on natural word boundaries.
+        inBufferShiftDown();
 
-    /// No matter how many bytes derived class ate, we tell caller we have eaten all they sent (because we saved the rest).
-    return(byteCount);
+        /// If the lower level processing didn't eat anything on this iteration, stop looping and tell caller how much we ate or stored.
+    } while (bytesUnsaved > 0 && bitsEaten > 0);
+
+    /// Return the number of bytes we ate/saved.
+    return(availableByteCount - bytesUnsaved);
 }
 
 void BitpackDecoder::stateReset()
@@ -4925,7 +5227,8 @@ void BitpackDecoder::inBufferShiftDown()
         throw EXCEPTION("internal error");
 #endif
     unsigned byteCount          = inBufferEndByte_ - firstNaturalByte;
-    memmove(&inBuffer_[0], &inBuffer_[firstNaturalByte], byteCount);  /// Overlapping regions ok with memmove().
+    if (byteCount > 0)
+        memmove(&inBuffer_[0], &inBuffer_[firstNaturalByte], byteCount);  /// Overlapping regions ok with memmove().
 
     /// Update indexes
     inBufferEndByte_  = byteCount;
@@ -4935,7 +5238,7 @@ void BitpackDecoder::inBufferShiftDown()
 #ifdef E57_DEBUG
 void BitpackDecoder::dump(int indent, std::ostream& os)
 {
-    os << space(indent) << "channelIndex:             " << channelIndex_ << endl;
+    os << space(indent) << "bytestreamNumber:         " << bytestreamNumber_ << endl;
     os << space(indent) << "currentRecordIndex:       " << currentRecordIndex_ << endl;
     os << space(indent) << "maxRecordCount:           " << maxRecordCount_ << endl;
     os << space(indent) << "destBuffer:" << endl;
@@ -4956,8 +5259,8 @@ void BitpackDecoder::dump(int indent, std::ostream& os)
 
 //================================================================
 
-BitpackFloatDecoder::BitpackFloatDecoder(unsigned channelIndex, SourceDestBuffer& dbuf, FloatPrecision precision, uint64_t maxRecordCount)
-: BitpackDecoder(channelIndex, dbuf, (precision==SINGLE) ? sizeof(float) : sizeof(double), maxRecordCount),
+BitpackFloatDecoder::BitpackFloatDecoder(unsigned bytestreamNumber, SourceDestBuffer& dbuf, FloatPrecision precision, uint64_t maxRecordCount)
+: BitpackDecoder(bytestreamNumber, dbuf, (precision==E57_SINGLE) ? sizeof(float) : sizeof(double), maxRecordCount),
   precision_(precision)
 {
 }
@@ -4973,7 +5276,7 @@ unsigned BitpackFloatDecoder::inputProcessAligned(const char* inbuf, unsigned fi
 
     unsigned n = destBuffer_->capacity() - destBuffer_->nextIndex();
 
-    unsigned typeSize = (precision_ == SINGLE) ? sizeof(float) : sizeof(double);
+    unsigned typeSize = (precision_ == E57_SINGLE) ? sizeof(float) : sizeof(double);
 
 #ifdef E57_DEBUG
     /// Verify that inbuf is naturally aligned to correct boundary (4 or 8 bytes).  Base class should be doing this for us.
@@ -5000,7 +5303,7 @@ unsigned BitpackFloatDecoder::inputProcessAligned(const char* inbuf, unsigned fi
     cout << "  n:" << n << endl; //???
 #endif
 
-    if (precision_ == SINGLE) {
+    if (precision_ == E57_SINGLE) {
         /// Form the starting address for first data location in inBuffer
         const float* inp = reinterpret_cast<const float*>(inbuf);
 
@@ -5014,7 +5317,7 @@ unsigned BitpackFloatDecoder::inputProcessAligned(const char* inbuf, unsigned fi
             destBuffer_->setNextFloat(value);
             inp++;
         }
-    } else {  /// DOUBLE precision
+    } else {  /// E57_DOUBLE precision
         /// Form the starting address for first data location in inBuffer
         const double* inp = reinterpret_cast<const double*>(inbuf);
 
@@ -5041,10 +5344,76 @@ unsigned BitpackFloatDecoder::inputProcessAligned(const char* inbuf, unsigned fi
 void BitpackFloatDecoder::dump(int indent, std::ostream& os)
 {
     BitpackDecoder::dump(indent, os);
-    if (precision_ == SINGLE)
-        os << space(indent) << "precision:                SINGLE" << endl;
+    if (precision_ == E57_SINGLE)
+        os << space(indent) << "precision:                E57_SINGLE" << endl;
     else
-        os << space(indent) << "precision:                DOUBLE" << endl;
+        os << space(indent) << "precision:                E57_DOUBLE" << endl;
+}
+#endif
+
+//================================================================
+
+ConstantIntegerDecoder::ConstantIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf, 
+                                               int64_t minimum, double scale, double offset, uint64_t maxRecordCount)
+: Decoder(bytestreamNumber),
+  destBuffer_(dbuf.impl())
+{
+    currentRecordIndex_ = 0;
+    maxRecordCount_     = maxRecordCount;
+    isScaledInteger_    = isScaledInteger;
+    minimum_            = minimum;
+    scale_              = scale;
+    offset_             = offset;
+}
+
+void ConstantIntegerDecoder::destBufferSetNew(vector<SourceDestBuffer>& dbufs)
+{
+    if (dbufs.size() != 1)
+        throw EXCEPTION("internal error");
+    destBuffer_ = dbufs.at(0).impl();
+}
+
+unsigned ConstantIntegerDecoder::inputProcess(const char* source, unsigned availableByteCount)
+{
+#ifdef E57_MAX_VERBOSE
+    cout << "ConstantIntegerDecoder::inputprocess() called, source=" << (unsigned)source << " availableByteCount=" << availableByteCount << endl;
+#endif
+    
+    /// We don't need any input bytes to produce output, so ignore source and availableByteCount.
+
+    /// Fill dest buffer unless get to maxRecordCount
+    unsigned count = destBuffer_->capacity() - destBuffer_->nextIndex();
+    uint64_t remainingRecordCount = maxRecordCount_ - currentRecordIndex_;
+    if (static_cast<uint64_t>(count) > remainingRecordCount)
+        count = static_cast<unsigned>(remainingRecordCount);
+
+    if (isScaledInteger_) {
+        for (unsigned i = 0; i < count; i++)
+            destBuffer_->setNextInt64(minimum_, scale_, offset_);
+    } else {
+        for (unsigned i = 0; i < count; i++)
+            destBuffer_->setNextInt64(minimum_);
+    }
+    currentRecordIndex_ += count;
+    return(count);
+}
+        
+void ConstantIntegerDecoder::stateReset()
+{
+}
+
+#ifdef E57_DEBUG
+void ConstantIntegerDecoder::dump(int indent, std::ostream& os)
+{
+    os << space(indent) << "bytestreamNumber:   " << bytestreamNumber_ << endl;
+    os << space(indent) << "currentRecordIndex: " << currentRecordIndex_ << endl;
+    os << space(indent) << "maxRecordCount:     " << maxRecordCount_ << endl;
+    os << space(indent) << "isScaledInteger:    " << isScaledInteger_ << endl;
+    os << space(indent) << "minimum:            " << minimum_ << endl;
+    os << space(indent) << "scale:              " << scale_ << endl;
+    os << space(indent) << "offset:             " << offset_ << endl;
+    os << space(indent) << "destBuffer:" << endl;
+    destBuffer_->dump(indent+4, os);
 }
 #endif
 
@@ -5064,8 +5433,12 @@ PacketLock::~PacketLock()
 #ifdef E57_MAX_VERBOSE
     cout << "~PacketLock() called" << endl;
 #endif
-    /// Note cache must live longer than lock, this is reasonable assumption.
-    cache_->unlock(cacheIndex_);
+    try {
+        /// Note cache must live longer than lock, this is reasonable assumption.
+        cache_->unlock(cacheIndex_);
+    } catch (...) {
+        //??? report?
+    }
 }
 
 PacketReadCache::PacketReadCache(CheckedFile* cFile, unsigned packetCount)
@@ -5346,9 +5719,9 @@ void DecodeChannel::dump(int indent, std::ostream& os)
 //================================================================
 
 template <typename RegisterT>
-BitpackIntegerEncoder<RegisterT>::BitpackIntegerEncoder(bool isScaledInteger, unsigned channelIndex, SourceDestBuffer& sbuf,
+BitpackIntegerEncoder<RegisterT>::BitpackIntegerEncoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& sbuf,
                                                        unsigned outputMaxSize, int64_t minimum, int64_t maximum, double scale, double offset)
-: BitpackEncoder(channelIndex, sbuf, outputMaxSize, sizeof(RegisterT))
+: BitpackEncoder(bytestreamNumber, sbuf, outputMaxSize, sizeof(RegisterT))
 {
     /// Get pointer to parent ImageFileImpl
     shared_ptr<ImageFileImpl> imf(sbuf.impl()->fileParent_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
@@ -5536,9 +5909,105 @@ void BitpackIntegerEncoder<RegisterT>::dump(int indent, std::ostream& os)
 
 //================================================================
 
+ConstantIntegerEncoder::ConstantIntegerEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, int64_t minimum)
+: Encoder(bytestreamNumber),
+  sourceBuffer_(sbuf.impl()),
+  currentRecordIndex_(0),
+  minimum_(minimum)
+{}
+
+uint64_t ConstantIntegerEncoder::processRecords(unsigned recordCount)
+{
+#ifdef E57_MAX_VERBOSE
+    cout << "ConstantIntegerEncoder::processRecords() called, recordCount=" << recordCount << endl;
+    dump(4);
+#endif
+
+    /// Check that all source values are == minimum_
+    for (unsigned i = 0; i < recordCount; i++) {
+        if (sourceBuffer_->getNextInt64() != minimum_)
+            throw EXCEPTION("value out of specified min/max bounds");
+    }
+
+    /// Update counts of records processed
+    currentRecordIndex_ += recordCount;
+
+    return(currentRecordIndex_);
+}
+
+unsigned ConstantIntegerEncoder::sourceBufferNextIndex()
+{
+    return(sourceBuffer_->nextIndex());
+}
+
+uint64_t ConstantIntegerEncoder::currentRecordIndex()
+{
+    return(currentRecordIndex_);
+}
+
+float ConstantIntegerEncoder::bitsPerRecord()
+{
+    /// We don't produce any output
+    return(0.0);
+}
+
+bool ConstantIntegerEncoder::registerFlushToOutput()
+{
+    return(true);
+}
+
+unsigned ConstantIntegerEncoder::outputAvailable()
+{
+    /// We don't produce any output
+    return(0);
+}
+
+void ConstantIntegerEncoder::outputRead(char* dest, unsigned byteCount)
+{
+    /// Should never request any output data
+    if (byteCount > 0)
+        throw EXCEPTION("internal error");
+}
+
+void ConstantIntegerEncoder::outputClear()
+{}
+
+void ConstantIntegerEncoder::sourceBufferSetNew(std::vector<SourceDestBuffer>& sbufs)
+{
+    /// Verify that this encoder only has single input buffer
+    if (sbufs.size() != 1)
+        throw EXCEPTION("internal error");
+
+    sourceBuffer_ = sbufs.at(0).impl();
+}
+
+unsigned ConstantIntegerEncoder::outputGetMaxSize()
+{
+    /// We don't produce any output
+    return(0);
+}
+
+void ConstantIntegerEncoder::outputSetMaxSize(unsigned byteCount)
+{
+    /// Ignore, since don't produce any output
+}
+
+#ifdef E57_DEBUG
+void ConstantIntegerEncoder::dump(int indent, std::ostream& os)
+{
+    Encoder::dump(indent, os);
+    os << space(indent) << "currentRecordIndex:  " << currentRecordIndex_ << endl;
+    os << space(indent) << "minimum:             " << minimum_ << endl;
+    os << space(indent) << "sourceBuffer:" << endl;
+    sourceBuffer_->dump(indent+4, os);
+}
+#endif
+
+//================================================================
+
 template <typename RegisterT>
-BitpackIntegerDecoder<RegisterT>::BitpackIntegerDecoder(bool isScaledInteger, unsigned channelIndex, SourceDestBuffer& dbuf, int64_t minimum, int64_t maximum, double scale, double offset, uint64_t maxRecordCount)
-: BitpackDecoder(channelIndex, dbuf, sizeof(RegisterT), maxRecordCount)
+BitpackIntegerDecoder<RegisterT>::BitpackIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf, int64_t minimum, int64_t maximum, double scale, double offset, uint64_t maxRecordCount)
+: BitpackDecoder(bytestreamNumber, dbuf, sizeof(RegisterT), maxRecordCount)
 {
     /// Get pointer to parent ImageFileImpl
     shared_ptr<ImageFileImpl> imf(dbuf.impl()->fileParent_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
@@ -5614,9 +6083,21 @@ unsigned BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf
         RegisterT high = inp[wordPosition+1];
         SWAB(&high);  // swab if necessary
 
-        /// Shift high to just above the lower bits, shift low LSBit to bit0, OR together.
-        /// Note shifts are logical (not arithmetic) because using unsigned variables.
-        RegisterT w = (high << (8*sizeof(RegisterT) - bitOffset)) | (low >> bitOffset);
+        RegisterT w;
+        if (bitOffset > 0) {
+            /// Shift high to just above the lower bits, shift low LSBit to bit0, OR together.
+            /// Note shifts are logical (not arithmetic) because using unsigned variables.
+            w = (high << (8*sizeof(RegisterT) - bitOffset)) | (low >> bitOffset);
+        } else {
+            /// The left shift (used above) is not defined if shift is >= size of word
+            w = low;
+        }
+#ifdef E57_MAX_VERBOSE
+        cout << "  bitOffset: " << bitOffset << endl;
+        cout << "  low: " << binaryString(low) << endl;
+        cout << "  high:" << binaryString(high) << endl;
+        cout << "  w:   " << binaryString(w) << endl;
+#endif
 
         /// Mask off uninteresting bits
         w &= destBitMask_;

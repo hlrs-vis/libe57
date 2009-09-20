@@ -33,8 +33,8 @@ int main(int argc, char** argv)
         /// Set per-file properties.
         /// Path names: "/formatName", "/majorVersion", "/minorVersion", "/creationDateTime"
         root.set("formatName", StringNode(imf, "ASTM E57 3D Image File"));
-        root.set("majorVersion", IntegerNode(imf, 0));
-        root.set("minorVersion", IntegerNode(imf, 1));
+        root.set("majorVersion", IntegerNode(imf, 0)); //!!! versionMajor
+        root.set("minorVersion", IntegerNode(imf, 2));
         root.set("creationDateTime", FloatNode(imf, 123.456));
 
         /// Create 3D image area.
@@ -61,19 +61,19 @@ int main(int argc, char** argv)
         /// The prototype is a flat structure containing each field.
         /// Using this proto in a CompressedVector will form path names like: "/images3D/0/points/0/cartesianX".
         StructureNode proto = StructureNode(imf);
-        proto.set("cartesianX",  FloatNode(imf, 0.0, SINGLE));
-        proto.set("cartesianY",  FloatNode(imf, 0.0, SINGLE));
-        proto.set("cartesianZ",  FloatNode(imf, 0.0, SINGLE));
+        proto.set("cartesianX",  FloatNode(imf, 0.0, E57_SINGLE));
+        proto.set("cartesianY",  FloatNode(imf, 0.0, E57_SINGLE));
+        proto.set("cartesianZ",  FloatNode(imf, 0.0, E57_SINGLE));
         proto.set("valid",       IntegerNode(imf, 0, 0, 1));
         proto.set("rowIndex",    IntegerNode(imf, 0));
         proto.set("columnIndex", IntegerNode(imf, 0));
         proto.set("returnIndex", IntegerNode(imf, 0));
         proto.set("returnCount", IntegerNode(imf, 0));
-        proto.set("timeStamp",   FloatNode(imf, 0.0, DOUBLE));
+        proto.set("timeStamp",   FloatNode(imf, 0.0, E57_DOUBLE));
         proto.set("intensity",   IntegerNode(imf, 0));
-        proto.set("colorRed",    FloatNode(imf, 0.0, SINGLE));
-        proto.set("colorGreen",  FloatNode(imf, 0.0, SINGLE));
-        proto.set("colorBlue",   FloatNode(imf, 0.0, SINGLE));
+        proto.set("colorRed",    FloatNode(imf, 0.0, E57_SINGLE));
+        proto.set("colorGreen",  FloatNode(imf, 0.0, E57_SINGLE));
+        proto.set("colorBlue",   FloatNode(imf, 0.0, E57_SINGLE));
 
         /// Make empty codecs vector for use in creating points CompressedVector.
         /// If this vector is empty, it is assumed that all fields will use the BitPack codec.
@@ -120,8 +120,8 @@ int main(int argc, char** argv)
         /// Add start/stop collection times to scan.
         /// Path names: "/images3D/0/collectionStartDateTime",
         ///             "/images3D/0/collectionEndDateTime"
-        scan0.set("collectionStartDateTime", FloatNode(imf, 1234.0, DOUBLE));
-        scan0.set("collectionEndDateTime", FloatNode(imf, 1235.0, DOUBLE));
+        scan0.set("collectionStartDateTime", FloatNode(imf, 1234.0, E57_DOUBLE));
+        scan0.set("collectionEndDateTime", FloatNode(imf, 1235.0, E57_DOUBLE));
 
         /// Add various sensor and version strings to scan.
         /// Path names: "/images3D/0/sensorVendor", etc...
@@ -173,7 +173,7 @@ int main(int argc, char** argv)
         pictureRotation.set("y", FloatNode(imf, 0.0));
         pictureRotation.set("z", FloatNode(imf, 0.0));
         StructureNode pictureTranslation = StructureNode(imf);
-        pose.set("translation", pictureTranslation);
+        picturePose.set("translation", pictureTranslation);
         pictureTranslation.set("x", FloatNode(imf, 0.0));
         pictureTranslation.set("y", FloatNode(imf, 0.0));
         pictureTranslation.set("z", FloatNode(imf, 0.0));
@@ -192,9 +192,9 @@ int main(int argc, char** argv)
 
         /// Add name, description, and time to first picture.
         /// Path names: "/images2D/0/name", etc...
-        picture0.set("name",           StringNode(imf, "pic123"));
-        picture0.set("description",    StringNode(imf, "trial picture"));
-        picture0.set("createDateTime", FloatNode(imf, 321.123));
+        picture0.set("name",             StringNode(imf, "pic123"));
+        picture0.set("description"  ,    StringNode(imf, "trial picture"));
+        picture0.set("creationDateTime", FloatNode(imf, 321.123));
 
         /// Prepare vector of source buffers for writing in the CompressedVector of points
         const int N = 10;
@@ -206,15 +206,15 @@ int main(int argc, char** argv)
         int    columnIndex[N] = {0,   0,   1,   1,   2,   2,   3,   3,   4,   4};
         int    returnIndex[N] = {0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
         int    returnCount[N] = {1,   1,   1,   1,   1,   1,   1,   1,   1,   1};
-        double timeStamp[N]   = {.1,  .2,  .3,  .4,  .5,  6.,  .7,  .8,  .9,  1.0};
+        double timeStamp[N]   = {.1,  .2,  .3,  .4,  .5,  .6,  .7,  .8,  .9,  1.0};
         int    intensity[N]   = {1,   2,   3,   2,   1,   1,   2,   3,   2,   1};
         double colorRed[N]    = {.1,  .2,  .3,  .4,  .5,  6.,  .7,  .8,  .9,  1.0};
         double colorGreen[N]  = {.5,  .5,  .5,  .5,  .5,  .5,  .5,  .5,  .5,  .5};
         double colorBlue[N]   = {1.0, .9,  .8,  .7,  .6,  .5,  .4,  .3,  .2,  .1};
         vector<SourceDestBuffer> sourceBuffers;
-        sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianX", cartesianX, N, true));
-        sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianY", cartesianY, N, true));
-        sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianZ", cartesianZ, N, true));
+        sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianX",  cartesianX, N, true));
+        sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianY",  cartesianY, N, true));
+        sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianZ",  cartesianZ, N, true));
         sourceBuffers.push_back(SourceDestBuffer(imf, "valid",       valid, N, true));
         sourceBuffers.push_back(SourceDestBuffer(imf, "rowIndex",    rowIndex, N, true));
         sourceBuffers.push_back(SourceDestBuffer(imf, "columnIndex", columnIndex, N, true));

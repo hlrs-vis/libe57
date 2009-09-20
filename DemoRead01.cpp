@@ -40,7 +40,7 @@ void main(int argc, char** argv)
             return;
         }
         Node n = root.get("/images3D");
-        if (n.type() != VECTOR) {
+        if (n.type() != E57_VECTOR) {
             cout << "bad file" << endl;
             return;
         }
@@ -86,6 +86,7 @@ void printSomePoints(ImageFile imf, CompressedVectorNode points)
 
     /// The prototype should have a field named either "cartesianX" or "sphericalRange".
     if (proto.isDefined("cartesianX")) {
+#if 0 //!!!
         /// Make a list of buffers to receive the xyz values.
         vector<SourceDestBuffer> destBuffers;
         double x[4];     destBuffers.push_back(SourceDestBuffer(imf, "cartesianX", x, 4, true));
@@ -101,6 +102,22 @@ void printSomePoints(ImageFile imf, CompressedVectorNode points)
         /// Print the coordinates we got
         for (unsigned i=0; i < gotCount; i++)
             cout << "  " << i << ". x=" << x[i] << " y=" << y[i] << " z=" << z[i] << endl;
+#else
+        /// Make a list of buffers to receive the xyz values.
+        vector<SourceDestBuffer> destBuffers;
+        int64_t columnIndex[10];     destBuffers.push_back(SourceDestBuffer(imf, "columnIndex", columnIndex, 10, true));
+        
+        /// Create a reader of the points CompressedVector, try to read first block of 4 points
+        /// Each call to reader.read() will fill the xyz buffers until the points are exhausted.
+        CompressedVectorReader reader = points.reader(destBuffers);
+        unsigned gotCount = reader.read();
+        cout << "  got first " << gotCount << " points" << endl;
+
+        /// Print the coordinates we got
+        for (unsigned i=0; i < gotCount; i++)
+            cout << "  " << i << ". columnIndex=" << columnIndex[i] << endl;
+#endif
+
     } else if (proto.isDefined("sphericalRange")) {
         //??? not implemented yet
     } else
