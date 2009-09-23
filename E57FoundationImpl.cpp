@@ -4,17 +4,17 @@
  * Copyright (C) 2009 Kevin Ackley (kackley@gwi.net)
  *
  * This file is part of the E57 Reference Implementation (E57RI).
- * 
+ *
  * E57RI is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of
  * the License, or at your option) any later version.
- * 
+ *
  * E57RI is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with E57RI.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -123,7 +123,7 @@ NodeImpl::NodeImpl(weak_ptr<ImageFileImpl> fileParent)
 ustring NodeImpl::pathName(){
     if (isRoot())
         return("/");
-    else {  
+    else {
         shared_ptr<NodeImpl> p(parent_);
         if (p->isRoot())
             return("/" + fieldName_);
@@ -246,7 +246,7 @@ bool NodeImpl::findTerminalPosition(shared_ptr<NodeImpl> target, uint64_t& count
                 }
             }
             break;
-        case E57_COMPRESSED_VECTOR: 
+        case E57_COMPRESSED_VECTOR:
             break;  //??? for now, don't search into contents of compressed vector
         case E57_INTEGER:
         case E57_SCALED_INTEGER:
@@ -256,7 +256,7 @@ bool NodeImpl::findTerminalPosition(shared_ptr<NodeImpl> target, uint64_t& count
             countFromLeft++;
             break;
     }
- 
+
     return(false);
 }
 
@@ -282,7 +282,7 @@ bool NodeImpl::treeTerminalPosition(shared_ptr<NodeImpl> ni, uint64_t& countFrom
             }
             break;
         case E57_VECTOR:
-            /// 
+            ///
         case E57_COMPRESSED_VECTOR:
             /// termialCount * recordCount
         case E57_INTEGER:
@@ -291,7 +291,7 @@ bool NodeImpl::treeTerminalPosition(shared_ptr<NodeImpl> ni, uint64_t& countFrom
         case E57_STRING:
         case E57_BLOB:
     }
- 
+
 
 }
 
@@ -489,7 +489,7 @@ shared_ptr<NodeImpl> StructureNodeImpl::lookup(const ustring& pathName)
                 //??? use level here rather than unparse
                 /// Remove first field in path
                 fields.erase(fields.begin());
-                
+
                 /// Call lookup on child object with remaining fields in path name
                 return(children_.at(i)->lookup(imf->pathNameUnparse(true, fields)));
             }
@@ -515,7 +515,7 @@ void StructureNodeImpl::set(int64_t index64, shared_ptr<NodeImpl> ni)
     /// Field name is string version of index value, e.g. "14"
     stringstream fieldName;
     fieldName << index;
-    
+
     /// Allow to set just off end of vector, interpret as append
     if (index == children_.size()) {
         /// If this struct is type constrained, can't add new child
@@ -582,7 +582,7 @@ void StructureNodeImpl::set(const vector<ustring>& fields, int level, shared_ptr
     }
     /// Didn't find matching field name, so have a new child.
 
-    /// If this struct is type constrained, can't add new child 
+    /// If this struct is type constrained, can't add new child
     if (isTypeConstrained())
         throw EXCEPTION("type constraint violation");
 
@@ -631,7 +631,7 @@ void StructureNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, Checke
         fname = forcedFieldName;
     else
         fname = fieldName_;
-    
+
     cf << space(indent) << "<" << fname << " type=\"Structure\"";
 
     /// If this struct is the root, add name space declarations
@@ -731,7 +731,7 @@ void VectorNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFi
         fname = forcedFieldName;
     else
         fname = fieldName_;
-    
+
     cf << space(indent) << "<" << fname << " type=\"Vector\" allowHeterogeneousChildren=\"" << static_cast<int64_t>(allowHeteroChildren_) << "\">\n";
     for (unsigned i = 0; i < children_.size(); i++)
         children_.at(i)->writeXml(imf, cf, indent+4, "vectorChild");
@@ -764,7 +764,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, u
 {}
 
 SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, int16_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_INT16), base_(reinterpret_cast<char*>(base)), ustrings_(0), 
+: fileParent_(fileParent), pathName_(pathName), elementType_(E57_INT16), base_(reinterpret_cast<char*>(base)), ustrings_(0),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
 {}
 
@@ -1671,7 +1671,7 @@ void IntegerNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedF
         fname = forcedFieldName;
     else
         fname = fieldName_;
-    
+
     cf << space(indent) << "<" << fname << " type=\"Integer\"";
     cf << " value=\"" << value_ << "\" minimum=\"" << minimum_ << "\" maximum=\"" << maximum_ << "\"/>\n";
 }
@@ -1751,7 +1751,7 @@ void ScaledIntegerNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, Ch
         fname = forcedFieldName;
     else
         fname = fieldName_;
-    
+
     //???TODO need to handle case where max is largest uint64
     //??? is 16 digits right number?, try to remove trailing zeros?
     cf << space(indent) << "<" << fname << " type=\"ScaledInteger\"";
@@ -1822,7 +1822,7 @@ void FloatNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFil
         fname = forcedFieldName;
     else
         fname = fieldName_;
-    
+
     //??? is 16 digits right number?, try to remove trailing zeros?
     cf << space(indent) << "<" << fname << " type=\"Float\"";
     cf << " value=\"" << value_ << "\" ";
@@ -1895,7 +1895,7 @@ void StringNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFi
         fname = forcedFieldName;
     else
         fname = fieldName_;
-    
+
     //??? need to escape some chars in value: double_quote
     cf << space(indent) << "<" << fname << " type=\"String\" value=\"" << value_ << "\"/>\n";
 }
@@ -2030,7 +2030,7 @@ void BlobNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile
         fname = forcedFieldName;
     else
         fname = fieldName_;
-    
+
     //??? need to implement
     //??? Type --> type
     //??? need to have length?, check same as in section header?
@@ -2185,7 +2185,7 @@ private:
     ustring lookupAttribute(const Attributes& attributes, wchar_t* attribute_name);
 
     std::tr1::shared_ptr<ImageFileImpl> imf_;   /// Image file we are reading
-    std::stack<shared_ptr<NodeImpl>>    stack_; /// Current path in tree we are reading
+    std::stack<shared_ptr<NodeImpl> >    stack_; /// Current path in tree we are reading
 };
 
 }; /// end namespace e57
@@ -2266,7 +2266,7 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         ustring maximum_str   = lookupAttribute(attributes, L"maximum");
         ustring scale_str     = lookupAttribute(attributes, L"scale");
         ustring offset_str    = lookupAttribute(attributes, L"offset");
-        
+
         //??? check validity of numeric strings
 
         int64_t value   = _atoi64(value_str.c_str());    //??? not portable
@@ -2394,7 +2394,7 @@ void E57XmlParser::endElement(const XMLCh* const uri,
         case E57_VECTOR: {
             shared_ptr<VectorNodeImpl> vector_ni = dynamic_pointer_cast<VectorNodeImpl>(container_ni);
 
-            /// Add unnamed child to vector 
+            /// Add unnamed child to vector
             vector_ni->append(ni);
             }
             break;
@@ -2687,7 +2687,7 @@ void ImageFileImpl::cancel()
 
 ImageFileImpl::~ImageFileImpl()
 {
-    //??? warning if not closed, if open, close(), 
+    //??? warning if not closed, if open, close(),
 
     /// Try to close if not already, but don't allow any exceptions to propogate to caller
     try {
@@ -2700,7 +2700,7 @@ ImageFileImpl::~ImageFileImpl()
     if (file_ != NULL) {
         delete file_;
         file_ = NULL;
-    }    
+    }
 }
 
 uint64_t ImageFileImpl::allocateSpace(uint64_t byteCount, bool doExtendNow)
@@ -2829,7 +2829,7 @@ ustring ImageFileImpl::fileNameExtension(const ustring& fileName)
         return("");
 }
 
-void ImageFileImpl::fileNameParse(const ustring& fileName, bool& isRelative, ustring& volumeName, vector<ustring>& directories, 
+void ImageFileImpl::fileNameParse(const ustring& fileName, bool& isRelative, ustring& volumeName, vector<ustring>& directories,
                                 ustring& fileBase, ustring& extension)
 {
     throw EXCEPTION("not implemented");  //!!! implement
@@ -2966,7 +2966,7 @@ CheckedFile::CheckedFile(ustring fname, Mode mode)
             readOnly_ = false;
             logicalLength_ = physicalToLogical(length(physical)); //???
             break;
-    }    
+    }
 }
 
 CheckedFile::~CheckedFile()
@@ -3015,7 +3015,7 @@ void CheckedFile::read(char* buf, size_t nRead, size_t bufSize)
 #else
     ???
 #endif
-    
+
 }
 
 void CheckedFile::write(const char* buf, size_t nWrite)
@@ -3025,7 +3025,7 @@ void CheckedFile::write(const char* buf, size_t nWrite)
 #endif
     if (readOnly_)
         throw EXCEPTION("can't write to read only file");
-    
+
 #ifdef SLOW_MODE
     uint64_t end = position(logical) + nWrite;
 
@@ -3038,7 +3038,7 @@ void CheckedFile::write(const char* buf, size_t nWrite)
     /// Allocate temp page buffer
     vector<char> page_buffer_v(physicalPageSize);
     char* page_buffer = &page_buffer_v[0];
-    
+
     while (nWrite > 0) {
         readPhysicalPage(page_buffer, page);
 #ifdef E57_MAX_VERBOSE
@@ -3147,7 +3147,7 @@ uint64_t CheckedFile::length(OffsetMode omode)
             throw EXCEPTION("lseek failed");
 
         /// Restore original position
-        if (_lseeki64(fd_, original_pos, SEEK_SET) < 0)  //??? Microsoft dependency    
+        if (_lseeki64(fd_, original_pos, SEEK_SET) < 0)  //??? Microsoft dependency
             throw EXCEPTION("lseek failed");
 
         return(static_cast<uint64_t>(end_pos));
@@ -3165,7 +3165,7 @@ void CheckedFile::extend(uint64_t newLength, OffsetMode omode)
 #endif
     if (readOnly_)
         throw EXCEPTION("can't write to read only file");
-    
+
 #ifdef SLOW_MODE
     uint64_t newLogicalLength;
     if (omode==physical)
@@ -3200,7 +3200,7 @@ void CheckedFile::extend(uint64_t newLength, OffsetMode omode)
     /// Allocate temp page buffer
     vector<char> page_buffer_v(physicalPageSize);
     char* page_buffer = &page_buffer_v[0];
-    
+
     while (nWrite > 0) {
         readPhysicalPage(page_buffer, page);
 #ifdef E57_MAX_VERBOSE
@@ -3212,7 +3212,7 @@ void CheckedFile::extend(uint64_t newLength, OffsetMode omode)
         nWrite -= n;
         pageOffset = 0;
         page++;
-        
+
         if (nWrite < logicalPageSize)
             n = static_cast<size_t>(nWrite);
         else
@@ -3326,7 +3326,7 @@ void CheckedFile::writePhysicalPage(char* page_buffer, uint64_t page)
 
     /// Seek to start of physical page
     seek(page*physicalPageSize, physical);
-    
+
     if (::write(fd_, page_buffer, physicalPageSize) < 0)
         throw EXCEPTION("writePage failed");
 }
@@ -3350,27 +3350,27 @@ int main()
 {
     try {
         CheckedFile cf("checked_file_test.e57", CheckedFile::writeCreate);
-        
+
         printState(cf);
-        
+
         cout << "Writing 'hey'" << endl;
         cf.write("hey", 3);
-        
+
         printState(cf);
-        
+
         cout << "Writing ' you'" << endl;
         cf.write(" you", 4);
-        
+
         printState(cf);
-        
+
 #if 0
         for (int i=0; i < 11; i++) {
             cout << "Writing ' yada yada...'" << endl;
             cf.write(" yada yada yada yada yada yada yada yada yada yada yada yada yada yada yada yada yada yada yada yada", 100);
         }
-        
+
         printState(cf);
-        
+
         uint64_t n = 2035;
         for (int i=0; i < 10; i++) {
             cout << "Extending to " << n << " bytes" << endl;
@@ -3401,7 +3401,7 @@ int main()
     } catch (...) {
         cerr << "Got an exception" << endl;
     }
-    
+
     return(0);
 }
 
@@ -3916,7 +3916,7 @@ CompressedVectorWriterImpl::CompressedVectorWriterImpl(shared_ptr<CompressedVect
             throw EXCEPTION("internal error");
     }
 #endif
-    
+
     shared_ptr<ImageFileImpl> imf(ni->fileParent_);
 
     /// Reserve space for CompressedVector binary section header, record location so can save to when writer closes.
@@ -4075,7 +4075,7 @@ void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
 #  define E57_TARGET_PACKET_SIZE    (E57_DATA_PACKET_MAX*3/4)
 #endif
         /// If have more than target fraction of packet, send it now
-        if (currentPacketSize() >= E57_TARGET_PACKET_SIZE) {  //??? 
+        if (currentPacketSize() >= E57_TARGET_PACKET_SIZE) {  //???
             packetWrite();
             continue;  /// restart loop so recalc statistics (packet size may not be zero after write, if have too much data)
         }
@@ -4085,8 +4085,8 @@ void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
         float totalBitsPerRecord = 0;  // an estimate of future performance
         for (unsigned i=0; i < bytestreams_.size(); i++)
             totalBitsPerRecord += bytestreams_.at(i)->bitsPerRecord();
-        float totalBytesPerRecord = max(totalBitsPerRecord/8, 0.1F); //??? trust 
-            
+        float totalBytesPerRecord = max(totalBitsPerRecord/8, 0.1F); //??? trust
+
 #ifdef E57_MAX_VERBOSE
         cout << "  totalBytesPerRecord=" << totalBytesPerRecord << endl; //???
 #endif
@@ -4166,12 +4166,12 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
     } else {
         /// We have too much data for one packet.  Send proportional amounts from each bytestream.
         /// Adjust packetMaxPayloadBytes down by one so have a little slack for floating point weirdness.
-        float fractionToSend =  (packetMaxPayloadBytes-1) / static_cast<float>(totalOutput);   
+        float fractionToSend =  (packetMaxPayloadBytes-1) / static_cast<float>(totalOutput);
         for (unsigned i=0; i < bytestreams_.size(); i++) {
             /// Round down here so sum <= packetMaxPayloadBytes
             count.at(i) = static_cast<unsigned>(floor(fractionToSend * bytestreams_.at(i)->outputAvailable()));
         }
-    }        
+    }
 #ifdef E57_MAX_VERBOSE
     for (unsigned i=0; i < bytestreams_.size(); i++)
         cout << "  count[" << i << "]=" << count.at(i) << endl; //???
@@ -4228,7 +4228,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 
         /// Read from encoder output into packet
         bytestreams_.at(i)->outputRead(p, n);
-        
+
         /// Move pointer to end of current data
         p += n;
     }
@@ -4276,7 +4276,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
     uint64_t packetPhysicalOffset = imf->file_->logicalToPhysical(packetLogicalOffset);
     imf->file_->seek(packetLogicalOffset);  //??? have seekLogical and seekPhysical instead? more explicit
     imf->file_->write(packet, packetLength);
-    
+
 //cout << "data packet:" << endl; //!!!!
 //dataPacket_.dump(4); //!!!!
 
@@ -4349,7 +4349,7 @@ CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVect
 #endif
 
     /// Allow reading of a completed CompressedVector, whether file is being read or currently being written.
-    ///??? what other situations need checking for?  
+    ///??? what other situations need checking for?
     ///??? check if CV not yet written to?
     ///??? file in error state?
 
@@ -4406,7 +4406,7 @@ CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVect
 
     /// Verify that packet given by dataPhysicalOffset is actually a data packet, init channels
     {
-        char* anyPacket = NULL;  
+        char* anyPacket = NULL;
         auto_ptr<PacketLock> packetLock = cache_->lock(dataLogicalOffset, anyPacket);
 
         DataPacket* dpkt = reinterpret_cast<DataPacket*>(anyPacket);
@@ -4537,7 +4537,7 @@ void CompressedVectorReaderImpl::feedPacketToDecoders(uint64_t currentPacketLogi
     uint64_t nextPacketLogicalOffset = UINT64_MAX;
     {
         /// Get packet at currentPacketLogicalOffset into memory.
-        char* anyPacket = NULL;  
+        char* anyPacket = NULL;
         auto_ptr<PacketLock> packetLock = cache_->lock(currentPacketLogicalOffset, anyPacket);
         DataPacket* dpkt = reinterpret_cast<DataPacket*>(anyPacket);
 
@@ -4598,7 +4598,7 @@ void CompressedVectorReaderImpl::feedPacketToDecoders(uint64_t currentPacketLogi
     if (channelHasExhaustedPacket) {
         if (nextPacketLogicalOffset < UINT64_MAX) {
             /// Get packet at nextPacketLogicalOffset into memory.
-            char* anyPacket = NULL;  
+            char* anyPacket = NULL;
             auto_ptr<PacketLock> packetLock = cache_->lock(nextPacketLogicalOffset, anyPacket);
             DataPacket* dpkt = reinterpret_cast<DataPacket*>(anyPacket);
 
@@ -4641,13 +4641,13 @@ void CompressedVectorReaderImpl::feedPacketToDecoders(uint64_t currentPacketLogi
 uint64_t CompressedVectorReaderImpl::findNextDataPacket(uint64_t nextPacketLogicalOffset)
 {
 #ifdef E57_MAX_VERBOSE
-    cout << "  searching for next data packet, nextPacketLogicalOffset=" << nextPacketLogicalOffset 
+    cout << "  searching for next data packet, nextPacketLogicalOffset=" << nextPacketLogicalOffset
          << " sectionEndLogicalOffset=" << sectionEndLogicalOffset_ << endl;
 #endif
 
     /// Starting at nextPacketLogicalOffset, search for next data packet until hit end of binary section.
     while (nextPacketLogicalOffset < sectionEndLogicalOffset_) {
-        char* anyPacket = NULL;  
+        char* anyPacket = NULL;
         auto_ptr<PacketLock> packetLock = cache_->lock(nextPacketLogicalOffset, anyPacket);
 
         /// Guess it's a data packet, if not continue to next packet
@@ -4661,7 +4661,7 @@ uint64_t CompressedVectorReaderImpl::findNextDataPacket(uint64_t nextPacketLogic
 
         /// All packets have length in same place, so can use the field to skip to next packet.
         nextPacketLogicalOffset += dpkt->packetLogicalLengthMinus1 + 1;
-    }                
+    }
 
     /// Ran off end of section, so return failure code.
     return(UINT64_MAX);
@@ -4742,13 +4742,13 @@ Encoder* Encoder::EncoderFactory(unsigned bytestreamNumber,
                 return(new BitpackIntegerEncoder<uint8_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                           ini->minimum(), ini->maximum(), 1.0, 0.0));
             } else if (bitsPerRecord <= 16) {
-                return(new BitpackIntegerEncoder<uint16_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint16_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                            ini->minimum(), ini->maximum(), 1.0, 0.0));
             } else if (bitsPerRecord <= 32) {
-                return(new BitpackIntegerEncoder<uint32_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint32_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                            ini->minimum(), ini->maximum(), 1.0, 0.0));
             } else {
-                return(new BitpackIntegerEncoder<uint64_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint64_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                            ini->minimum(), ini->maximum(), 1.0, 0.0));
             }
         }
@@ -4768,13 +4768,13 @@ Encoder* Encoder::EncoderFactory(unsigned bytestreamNumber,
                 return(new BitpackIntegerEncoder<uint8_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                           sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
             } else if (bitsPerRecord <= 16) {
-                return(new BitpackIntegerEncoder<uint16_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint16_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                            sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
             } else if (bitsPerRecord <= 32) {
-                return(new BitpackIntegerEncoder<uint32_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint32_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                            sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
             } else {
-                return(new BitpackIntegerEncoder<uint64_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
+                return(new BitpackIntegerEncoder<uint64_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
                                                            sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
             }
         }
@@ -4974,7 +4974,7 @@ uint64_t BitpackFloatEncoder::processRecords(unsigned recordCount)
 
     /// Figure out how many records will fit in output.
     unsigned maxOutputRecords = (outBuffer_.size() - outBufferEnd_) / typeSize;
-        
+
     /// Can't process more records than will safely fit in output stream
     if (recordCount > maxOutputRecords)
          recordCount = maxOutputRecords;
@@ -5217,7 +5217,7 @@ void BitpackDecoder::stateReset()
 
 void BitpackDecoder::inBufferShiftDown()
 {
-    /// Move uneaten data down to beginning of inBuffer_.  
+    /// Move uneaten data down to beginning of inBuffer_.
     /// Keep on natural boundaries.
     /// Moves all of word that contains inBufferFirstBit.
     unsigned firstWord          = inBufferFirstBit_ / bitsPerWord_;
@@ -5290,7 +5290,7 @@ unsigned BitpackFloatDecoder::inputProcessAligned(const char* inbuf, unsigned fi
 
     /// Calc how many whole records worth of data we have in inbuf
     unsigned maxInputRecords = (endBit - firstBit) / (8*typeSize);
-        
+
     /// Can't process more records than we have input data for.
     if (n > maxInputRecords)
         n = maxInputRecords;
@@ -5353,7 +5353,7 @@ void BitpackFloatDecoder::dump(int indent, std::ostream& os)
 
 //================================================================
 
-ConstantIntegerDecoder::ConstantIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf, 
+ConstantIntegerDecoder::ConstantIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf,
                                                int64_t minimum, double scale, double offset, uint64_t maxRecordCount)
 : Decoder(bytestreamNumber),
   destBuffer_(dbuf.impl())
@@ -5378,7 +5378,7 @@ unsigned ConstantIntegerDecoder::inputProcess(const char* source, unsigned avail
 #ifdef E57_MAX_VERBOSE
     cout << "ConstantIntegerDecoder::inputprocess() called, source=" << (unsigned)source << " availableByteCount=" << availableByteCount << endl;
 #endif
-    
+
     /// We don't need any input bytes to produce output, so ignore source and availableByteCount.
 
     /// Fill dest buffer unless get to maxRecordCount
@@ -5397,7 +5397,7 @@ unsigned ConstantIntegerDecoder::inputProcess(const char* source, unsigned avail
     currentRecordIndex_ += count;
     return(count);
 }
-        
+
 void ConstantIntegerDecoder::stateReset()
 {
 }
@@ -5566,12 +5566,12 @@ void PacketReadCache::readPacket(unsigned oldestEntry, uint64_t packetLogicalOff
     header.swab();
     /// Can't verify packet header here, because it is not really an EmptyPacketHeader.
     unsigned packetLength = header.packetLogicalLengthMinus1+1;
-    
+
     /// Be paranoid about packetLength before read
     if (packetLength > E57_DATA_PACKET_MAX)
         throw EXCEPTION("bad packet length");
 
-    /// Now read in whole packet into preallocated buffer_.  Note buffer is 
+    /// Now read in whole packet into preallocated buffer_.  Note buffer is
     cFile_->seek(packetLogicalOffset, CheckedFile::logical);
     cFile_->read(entries_.at(oldestEntry).buffer_, packetLength);
 
@@ -5765,7 +5765,7 @@ uint64_t BitpackIntegerEncoder<RegisterT>::processRecords(unsigned recordCount)
     /// Precalculate exact maximum number of records that will fit in output before overflow.
     unsigned outputWordCapacity = (outBuffer_.size() - outBufferEnd_) / sizeof(RegisterT);
     unsigned maxOutputRecords = (outputWordCapacity*8*sizeof(RegisterT) + 8*sizeof(RegisterT) - registerBitsUsed_ - 1) / bitsPerRecord_;
-        
+
     /// Number of transfers is the smaller of what was requested and what will fit.
     recordCount = min(recordCount, maxOutputRecords);
 #ifdef E57_MAX_VERBOSE
@@ -5834,7 +5834,7 @@ uint64_t BitpackIntegerEncoder<RegisterT>::processRecords(unsigned recordCount)
             outp[outTransferred] = register_;
             SWAB(&outp[outTransferred]);  /// swab if neccesary
             outTransferred++;
-            
+
             register_ = 0;
             registerBitsUsed_ = 0;
         } else {
@@ -6047,7 +6047,7 @@ unsigned BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf
     /// We can handle the case where don't have a full word at end of inbuf, but all the bits of the record are there;
     unsigned bitCount = endBit - firstBit;
     unsigned maxInputRecords = bitCount / bitsPerRecord_;
-        
+
     /// Number of transfers is the smaller of what was requested and what is available in input.
     unsigned recordCount = min(destRecords, maxInputRecords);
 
@@ -6059,7 +6059,7 @@ unsigned BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf
     cout << "  recordCount=" << recordCount << endl; //???
 #endif
 
-    const RegisterT* inp = reinterpret_cast<const RegisterT*>(inbuf);  
+    const RegisterT* inp = reinterpret_cast<const RegisterT*>(inbuf);
     unsigned wordPosition = 0;      /// The index in inbuf of the word we are currently working on.
 
     ///  For example on little endian machine:
@@ -6075,11 +6075,11 @@ unsigned BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf
     unsigned bitOffset = firstBit;
 
     for (unsigned i = 0; i < recordCount; i++) {
-        /// Get lower word (contains at least the LSbit of the value), 
+        /// Get lower word (contains at least the LSbit of the value),
         RegisterT low = inp[wordPosition];
         SWAB(&low);  // swab if necessary
 
-        /// Get upper word (may or may not contain interesting bits), 
+        /// Get upper word (may or may not contain interesting bits),
         RegisterT high = inp[wordPosition+1];
         SWAB(&high);  // swab if necessary
 

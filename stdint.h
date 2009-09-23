@@ -4,25 +4,28 @@
  * Copyright (C) 2009 Kevin Ackley (kackley@gwi.net)
  *
  * This file is part of the E57 Reference Implementation (E57RI).
- * 
+ *
  * E57RI is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of
  * the License, or at your option) any later version.
- * 
+ *
  * E57RI is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with E57RI.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef STDINT_H_INCLUDED
-#define STDINT_H_INCLUDED
+#ifndef STDINT_STUB_H_INCLUDED
+#define STDINT_STUB_H_INCLUDED
 
 #include <float.h>  //??? not really integer stuff
 
+#if defined(__MINGW32__) || defined(__GNUC__)
+#include <stdint.h>
+#else
 /// Shorthands for integers of known size
 typedef char                int8_t;
 typedef short               int16_t;
@@ -35,6 +38,7 @@ typedef unsigned int        uint32_t;
 //typedef unsigned long long    uint64_t;
 typedef unsigned __int64 uint64_t; //???
 
+
 /// Minimum and maximum values for integers
 #define INT8_MIN        (-128)
 #define INT8_MAX        (127)
@@ -44,15 +48,15 @@ typedef unsigned __int64 uint64_t; //???
 #define INT32_MAX       (2147483647)
 #define INT64_MIN       (static_cast<int64_t>(-9223372036854775808LL))
 #define INT64_MAX       (static_cast<int64_t>(9223372036854775807LL))
-#define UINT8_MIN       (0)
 #define UINT8_MAX       (255)
-#define UINT16_MIN      (0)
 #define UINT16_MAX      (65535)
-#define UINT32_MIN      (0)
 #define UINT32_MAX      (4294967295U)
-#define UINT64_MIN      (0LL)
 #define UINT64_MAX      (18446744073709551615LL)
-
+#endif
+#define UINT8_MIN       (0)
+#define UINT16_MIN      (0)
+#define UINT32_MIN      (0)
+#define UINT64_MIN      (0LL)
 //??? where should these go?
 #define FLOAT_MIN FLT_MIN
 #define FLOAT_MAX FLT_MAX

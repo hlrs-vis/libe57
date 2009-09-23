@@ -4,17 +4,17 @@
  * Copyright (C) 2009 Kevin Ackley (kackley@gwi.net)
  *
  * This file is part of the E57 Reference Implementation (E57RI).
- * 
+ *
  * E57RI is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of
  * the License, or at your option) any later version.
- * 
+ *
  * E57RI is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with E57RI.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,6 +29,7 @@
 #  include <crtdbg.h>
 #endif
 
+#include <memory>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -38,6 +39,20 @@ namespace e57 {
 
 /// Shorthand for unicode string
 typedef std::string ustring;
+
+enum MemoryRep {
+    E57_INT8,
+    E57_UINT8,
+    E57_INT16,
+    E57_UINT16,
+    E57_INT32,
+    E57_UINT32,
+    E57_INT64,
+    E57_BOOL,
+    E57_REAL32,
+    E57_REAL64,
+    E57_USTRING
+};
 
 enum NodeType {
     E57_STRUCTURE         = 1,
@@ -135,7 +150,7 @@ private:   //=================
                 Node();                 // Not defined, can't default construct Node, see StructureNode(), IntegerNode()...
 
 protected: //=================
-    friend NodeImpl;
+    friend class NodeImpl;
 
     E57_OBJECT_IMPLEMENTATION(Node)  /// Internal implementation details, not part of API, must be last in object
 };
@@ -166,7 +181,7 @@ public:
     void        dump(int indent = 0, std::ostream& os = std::cout);
 
 protected: //=================
-    friend ImageFile;
+    friend class ImageFile;
 
                 StructureNode(std::tr1::shared_ptr<StructureNodeImpl> ni);    // internal use only
                 StructureNode(std::tr1::weak_ptr<ImageFileImpl> fileParent);  // internal use only
@@ -196,7 +211,7 @@ public:
     /// Up/Down cast conversion
                 operator Node();
     explicit    VectorNode(Node& n);
-            
+
     /// Diagnostic functions:
     void        dump(int indent = 0, std::ostream& os = std::cout);
 
@@ -211,25 +226,25 @@ protected: //=================
 
 class SourceDestBuffer {
 public:
-    SourceDestBuffer(ImageFile imf, ustring pathName, int8_t* b,   unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, int8_t* b,   unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(int8_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, uint8_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, uint8_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(uint8_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, int16_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, int16_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(int16_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, uint16_t* b, unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, uint16_t* b, unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(uint16_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, int32_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, int32_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(int32_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, uint32_t* b, unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, uint32_t* b, unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(uint32_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, int64_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, int64_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(int64_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, bool* b,     unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, bool* b,     unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(bool));
-    SourceDestBuffer(ImageFile imf, ustring pathName, float* b,    unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, float* b,    unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(float));
-    SourceDestBuffer(ImageFile imf, ustring pathName, double* b,   unsigned capacity, bool doConversion = false, bool doScaling = false, 
+    SourceDestBuffer(ImageFile imf, ustring pathName, double* b,   unsigned capacity, bool doConversion = false, bool doScaling = false,
                      size_t stride = sizeof(double));
     SourceDestBuffer(ImageFile imf, ustring pathName, std::vector<ustring>* b);  //??? should be pointer or ref?
 
@@ -259,7 +274,7 @@ public:
 
 protected: //=================
     //??? no default ctor, copy
-    friend CompressedVectorNode;
+    friend class CompressedVectorNode;
 
                 CompressedVectorReader(std::tr1::shared_ptr<CompressedVectorReaderImpl> ni);
 
@@ -276,7 +291,7 @@ public:
 
 protected: //=================
     //??? no default ctor, copy
-    friend CompressedVectorNode;
+    friend class CompressedVectorNode;
 
                 CompressedVectorWriter(std::tr1::shared_ptr<CompressedVectorWriterImpl> ni);
 
@@ -304,12 +319,12 @@ public:
     /// Up/Down cast conversion
                 operator Node();
     explicit    CompressedVectorNode(Node& n);
-            
+
     /// Diagnostic functions:
     void        dump(int indent = 0, std::ostream& os = std::cout);
 
 protected: //=================
-    friend E57XmlParser;
+    friend class E57XmlParser;
 
                 CompressedVectorNode(std::tr1::shared_ptr<CompressedVectorNodeImpl> ni);  // internal use only
 
@@ -333,7 +348,7 @@ public:
     /// Up/Down cast conversion
                 operator Node();
     explicit    IntegerNode(Node& n);
-            
+
     /// Diagnostic functions:
     void        dump(int indent = 0, std::ostream& os = std::cout);
 
@@ -346,19 +361,19 @@ protected: //=================
 
 class ScaledIntegerNode {
 public:
-//    explicit    ScaledIntegerNode(ImageFile imf, int8_t   value, int8_t   minimum = INT8_MIN,  int8_t   maximum = INT8_MAX,   
+//    explicit    ScaledIntegerNode(ImageFile imf, int8_t   value, int8_t   minimum = INT8_MIN,  int8_t   maximum = INT8_MAX,
 //                                  double scale = 1.0, double offset = 0.0);
-//    explicit    ScaledIntegerNode(ImageFile imf, int16_t  value, int16_t  minimum = INT16_MIN, int16_t  maximum = INT16_MAX,  
+//    explicit    ScaledIntegerNode(ImageFile imf, int16_t  value, int16_t  minimum = INT16_MIN, int16_t  maximum = INT16_MAX,
 //                                  double scale = 1.0, double offset = 0.0);
-//    explicit    ScaledIntegerNode(ImageFile imf, int32_t  value, int32_t  minimum = INT32_MIN, int32_t  maximum = INT32_MAX,  
+//    explicit    ScaledIntegerNode(ImageFile imf, int32_t  value, int32_t  minimum = INT32_MIN, int32_t  maximum = INT32_MAX,
 //                                  double scale = 1.0, double offset = 0.0);
-    explicit    ScaledIntegerNode(ImageFile imf, int64_t  value, int64_t  minimum = INT64_MIN, int64_t  maximum = INT64_MAX,  
+    explicit    ScaledIntegerNode(ImageFile imf, int64_t  value, int64_t  minimum = INT64_MIN, int64_t  maximum = INT64_MAX,
                                   double scale = 1.0, double offset = 0.0);
-//    explicit    ScaledIntegerNode(ImageFile imf, uint8_t  value, uint8_t  minimum = 0,         uint8_t  maximum = UINT8_MAX,  
+//    explicit    ScaledIntegerNode(ImageFile imf, uint8_t  value, uint8_t  minimum = 0,         uint8_t  maximum = UINT8_MAX,
 //                                  double scale = 1.0, double offset = 0.0);
-//    explicit    ScaledIntegerNode(ImageFile imf, uint16_t value, uint16_t minimum = 0,         uint16_t maximum = UINT16_MAX, 
+//    explicit    ScaledIntegerNode(ImageFile imf, uint16_t value, uint16_t minimum = 0,         uint16_t maximum = UINT16_MAX,
 //                                  double scale = 1.0, double offset = 0.0);
-//    explicit    ScaledIntegerNode(ImageFile imf, uint32_t value, uint32_t minimum = 0,         uint32_t maximum = UINT32_MAX, 
+//    explicit    ScaledIntegerNode(ImageFile imf, uint32_t value, uint32_t minimum = 0,         uint32_t maximum = UINT32_MAX,
 //                                  double scale = 1.0, double offset = 0.0);
 
     NodeType    type();
@@ -377,7 +392,7 @@ public:
     /// Up/Down cast conversion
                 operator Node();
     explicit    ScaledIntegerNode(Node& n);
-            
+
     /// Diagnostic functions:
     void        dump(int indent = 0, std::ostream& os = std::cout);
 
@@ -405,7 +420,7 @@ public:
     /// Up/Down cast conversion
                 operator Node();
     explicit    FloatNode(Node& n);
-            
+
     /// Diagnostic functions:
     void        dump(int indent = 0, std::ostream& os = std::cout);
 
@@ -431,12 +446,12 @@ public:
     /// Up/Down cast conversion
                 operator Node();
     explicit    StringNode(Node& n);
-            
+
     /// Diagnostic functions:
     void        dump(int indent = 0, std::ostream& os = std::cout);
 
 protected: //=================
-    friend StringNodeImpl;
+    friend class StringNodeImpl;
                 StringNode(std::tr1::shared_ptr<StringNodeImpl> ni);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(StringNode)  /// Internal implementation details, not part of API, must be last in object
@@ -459,12 +474,12 @@ public:
     /// Up/Down cast conversion
                 operator Node();
     explicit    BlobNode(Node& n);
-            
+
     /// Diagnostic functions:
     void        dump(int indent = 0, std::ostream& os = std::cout);
 
 protected: //=================
-    friend E57XmlParser;
+    friend class E57XmlParser;
 
                 BlobNode(std::tr1::shared_ptr<BlobNodeImpl> ni);       // internal use only
 
@@ -495,7 +510,7 @@ public:
     void            pathNameParse(const ustring& pathName, bool& isRelative, std::vector<ustring>& fields);
     ustring         pathNameUnparse(bool isRelative, const std::vector<ustring>& fields);
     ustring         fileNameExtension(const ustring& fileName);
-    void            fileNameParse(const ustring& fileName, bool& isRelative, ustring& volumeName, std::vector<ustring>& directories, 
+    void            fileNameParse(const ustring& fileName, bool& isRelative, ustring& volumeName, std::vector<ustring>& directories,
                                   ustring& fileBase, ustring& extension);
     ustring         fileNameUnparse(bool isRelative, const ustring& volumeName, const std::vector<ustring>& directories,
                                     const ustring& fileBase, const ustring& extension);
@@ -522,7 +537,7 @@ const ustring       PICTURE_UID          = "Uid";           //Type_String
 const ustring       PICTURE_DECODER_NAME = "DecoderName";   //Type_String
 const ustring       PICTURE_STATUS       = "Status";        //Type_Int64
 const ustring       PICTURE_DATETIME     = "DateTime";      //Type_DateTime
-    
+
 //Loc_Image Name (Optional)
 //This is a name of the scan, if the picture was taken during a scan.
 

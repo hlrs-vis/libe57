@@ -4,17 +4,17 @@
  * Copyright (C) 2009 Kevin Ackley (kackley@gwi.net)
  *
  * This file is part of the E57 Reference Implementation (E57RI).
- * 
+ *
  * E57RI is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of
  * the License, or at your option) any later version.
- * 
+ *
  * E57RI is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with E57RI.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -107,7 +107,7 @@ template <typename RegisterT> class BitpackIntegerEncoder;
 template <typename RegisterT> class BitpackIntegerDecoder;
 class E57XmlParser;
 class Encoder;
-
+#if 0 // C++ does not allow to use incomplete types
 enum MemoryRep {
     E57_INT8,
     E57_UINT8,
@@ -121,7 +121,7 @@ enum MemoryRep {
     E57_REAL64,
     E57_USTRING
 };
-
+#endif
 const uint32_t E57_VERSION_MAJOR = 0; //??? should be here?
 const uint32_t E57_VERSION_MINOR = 2; //??? should be here?
 
@@ -220,7 +220,7 @@ public:
     ustring                 pathName();
     ustring                 relativePathName(std::tr1::shared_ptr<NodeImpl> origin, ustring childPathName = ustring());
     ustring                 fieldName() {return(fieldName_);};
-    virtual bool            isDefined(const ustring& pathName) = 0; 
+    virtual bool            isDefined(const ustring& pathName) = 0;
 
     void                    setParent(std::tr1::shared_ptr<NodeImpl> parent, const ustring& fieldName);
     bool                    isTypeConstrained();
@@ -243,10 +243,10 @@ public:
 
 protected: //=================
     //??? owned by image file?
-    friend StructureNodeImpl;
-    friend CompressedVectorWriterImpl;
-    friend Decoder; //???
-    friend Encoder; //???
+    friend class StructureNodeImpl;
+    friend class CompressedVectorWriterImpl;
+    friend class Decoder; //???
+    friend class Encoder; //???
 
                                             NodeImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent);
     NodeImpl&                               operator=(NodeImpl& n);
@@ -265,7 +265,7 @@ public:
 
     virtual NodeType    type() {return(E57_STRUCTURE);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
-    virtual bool        isDefined(const ustring& pathName); 
+    virtual bool        isDefined(const ustring& pathName);
     virtual int64_t     childCount() {return(children_.size());};
     virtual std::tr1::shared_ptr<NodeImpl> get(int64_t index);
     virtual std::tr1::shared_ptr<NodeImpl> get(const ustring& pathName);
@@ -283,10 +283,10 @@ public:
 #endif
 
 protected: //=================
-    friend CompressedVectorReaderImpl;
+    friend class CompressedVectorReaderImpl;
     virtual std::tr1::shared_ptr<NodeImpl> lookup(const ustring& pathName);
 
-    std::vector<std::tr1::shared_ptr<NodeImpl>> children_;
+    std::vector<std::tr1::shared_ptr<NodeImpl> > children_;
 };
 
 class VectorNodeImpl : public StructureNodeImpl {
@@ -315,28 +315,28 @@ protected: //=================
 
 class SourceDestBufferImpl : public std::tr1::enable_shared_from_this<SourceDestBufferImpl> {
 public:
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, int8_t* b,   unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, int8_t* b,   unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(int8_t));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint8_t* b,  unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint8_t* b,  unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(uint8_t));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, int16_t* b,  unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, int16_t* b,  unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(int16_t));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint16_t* b, unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint16_t* b, unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(uint16_t));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, int32_t* b,  unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, int32_t* b,  unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(int32_t));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint32_t* b, unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint32_t* b, unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(uint32_t));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, int64_t* b,  unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, int64_t* b,  unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(int64_t));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, bool* b,     unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, bool* b,     unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(bool));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, float* b,    unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, float* b,    unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(float));
-    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, double* b,   unsigned capacity, bool doConversion = false, 
+    SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, double* b,   unsigned capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(double));
     SourceDestBufferImpl(std::tr1::weak_ptr<ImageFileImpl> fileParent, ustring pathName, std::vector<ustring>* b);
-    
+
     ustring                 pathName()      {return(pathName_);}
     MemoryRep               elementType()   {return(elementType_);};
     void*                   base()          {return(base_);}
@@ -365,14 +365,14 @@ public:
 #endif
 
 protected: //=================
-friend BitpackIntegerEncoder<uint8_t>;   //??? needed?
-friend BitpackIntegerEncoder<uint16_t>;  //??? needed?
-friend BitpackIntegerEncoder<uint32_t>;  //??? needed?
-friend BitpackIntegerEncoder<uint64_t>;  //??? needed?
-friend BitpackIntegerDecoder<uint8_t> ;  //??? needed?
-friend BitpackIntegerDecoder<uint16_t>;  //??? needed?
-friend BitpackIntegerDecoder<uint32_t>;  //??? needed?
-friend BitpackIntegerDecoder<uint64_t>;  //??? needed?
+friend class BitpackIntegerEncoder<uint8_t>;   //??? needed?
+friend class BitpackIntegerEncoder<uint16_t>;  //??? needed?
+friend class BitpackIntegerEncoder<uint32_t>;  //??? needed?
+friend class BitpackIntegerEncoder<uint64_t>;  //??? needed?
+friend class BitpackIntegerDecoder<uint8_t> ;  //??? needed?
+friend class BitpackIntegerDecoder<uint16_t>;  //??? needed?
+friend class BitpackIntegerDecoder<uint32_t>;  //??? needed?
+friend class BitpackIntegerDecoder<uint64_t>;  //??? needed?
 
     //??? verify alignment
     std::tr1::weak_ptr<ImageFileImpl> fileParent_;
@@ -396,7 +396,7 @@ public:
 
     virtual NodeType    type() {return(E57_COMPRESSED_VECTOR);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
-    virtual bool        isDefined(const ustring& pathName); 
+    virtual bool        isDefined(const ustring& pathName);
 
     void                setPrototype(std::tr1::shared_ptr<NodeImpl> prototype);
     std::tr1::shared_ptr<NodeImpl> getPrototype() {return(prototype_);};  //??? check defined
@@ -423,7 +423,7 @@ public:
     void                dump(int indent = 0, std::ostream& os = std::cout);
 #endif
 protected: //=================
-    friend CompressedVectorReaderImpl; //???
+    friend class CompressedVectorReaderImpl; //???
 
     std::tr1::shared_ptr<NodeImpl>  prototype_;
     std::tr1::shared_ptr<NodeImpl>  codecs_;
@@ -440,7 +440,7 @@ public:
 
     virtual NodeType    type()    {return(E57_INTEGER);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
-    virtual bool        isDefined(const ustring& pathName); 
+    virtual bool        isDefined(const ustring& pathName);
     int64_t             value()   {return(value_);};
     int64_t             minimum() {return(minimum_);};
     int64_t             maximum() {return(maximum_);};
@@ -467,7 +467,7 @@ public:
 
     virtual NodeType    type()          {return(E57_SCALED_INTEGER);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
-    virtual bool        isDefined(const ustring& pathName); 
+    virtual bool        isDefined(const ustring& pathName);
     int64_t             rawValue()      {return(value_);};
     double              scaledValue()   {return(value_ * scale_ + offset_);};
     int64_t             minimum()       {return(minimum_);};
@@ -499,7 +499,7 @@ public:
 
     virtual NodeType    type() {return(E57_FLOAT);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
-    virtual bool        isDefined(const ustring& pathName); 
+    virtual bool        isDefined(const ustring& pathName);
     double              value() {return(value_);};
     FloatPrecision      precision() {return(precision_);};
 
@@ -523,7 +523,7 @@ public:
 
     virtual NodeType    type() {return(E57_STRING);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
-    virtual bool        isDefined(const ustring& pathName); 
+    virtual bool        isDefined(const ustring& pathName);
     ustring             value() {return(value_);};
 
     virtual void        checkLeavesInSet(const std::set<ustring>& pathNames, std::tr1::shared_ptr<NodeImpl> origin);
@@ -546,7 +546,7 @@ public:
 
     virtual NodeType    type() {return(E57_BLOB);};
     virtual bool        isTypeEquivalent(std::tr1::shared_ptr<NodeImpl> ni);
-    virtual bool        isDefined(const ustring& pathName); 
+    virtual bool        isDefined(const ustring& pathName);
     int64_t             byteCount();
     void                read(uint8_t* buf, uint64_t start, uint64_t count);
     void                write(uint8_t* buf, uint64_t start, uint64_t count);
@@ -591,7 +591,7 @@ public:
     void            pathNameParse(const ustring& pathName, bool& isRelative, std::vector<ustring>& fields);
     ustring         pathNameUnparse(bool isRelative, const std::vector<ustring>& fields);
     ustring         fileNameExtension(const ustring& fileName);
-    void            fileNameParse(const ustring& fileName, bool& isRelative, ustring& volumeName, std::vector<ustring>& directories, 
+    void            fileNameParse(const ustring& fileName, bool& isRelative, ustring& volumeName, std::vector<ustring>& directories,
                                   ustring& fileBase, ustring& extension);
     ustring         fileNameUnparse(bool isRelative, const ustring& volumeName, const std::vector<ustring>& directories,
                                     const ustring& fileBase, const ustring& extension);
@@ -603,10 +603,10 @@ public:
 #endif
 
 protected: //=================
-    friend E57XmlParser;
-    friend BlobNodeImpl;
-    friend CompressedVectorWriterImpl;
-    friend CompressedVectorReaderImpl; //??? add file() instead of accessing file_, others friends too
+    friend class E57XmlParser;
+    friend class BlobNodeImpl;
+    friend class CompressedVectorWriterImpl;
+    friend class CompressedVectorReaderImpl; //??? add file() instead of accessing file_, others friends too
 
     struct NameSpace {
         ustring     prefix;
@@ -629,7 +629,7 @@ protected: //=================
     uint64_t                unusedLogicalStart_;
 
     /// Bidirectional map from namespace prefix to uri
-    std::vector<NameSpace>  nameSpaces_; 
+    std::vector<NameSpace>  nameSpaces_;
 
     /// Smart pointer to metadata tree
     std::tr1::shared_ptr<StructureNodeImpl> root_;
@@ -945,7 +945,7 @@ public:
     virtual void        dump(int indent = 0, std::ostream& os = std::cout);
 #endif
 protected: //================
-    FloatPrecision      precision_;    
+    FloatPrecision      precision_;
 };
 
 //================================================================
@@ -1085,7 +1085,7 @@ protected: //================
 template <typename RegisterT>
 class BitpackIntegerDecoder : public BitpackDecoder {
 public:
-                        BitpackIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf, 
+                        BitpackIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf,
                                               int64_t minimum, int64_t maximum, double scale, double offset, uint64_t maxRecordCount);
 
     virtual unsigned    inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit);
@@ -1107,7 +1107,7 @@ protected: //================
 
 class ConstantIntegerDecoder : public Decoder {
 public:
-                        ConstantIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf, 
+                        ConstantIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf,
                                               int64_t minimum, double scale, double offset, uint64_t maxRecordCount);
     virtual void        destBufferSetNew(std::vector<SourceDestBuffer>& dbufs);
     virtual uint64_t    totalRecordsCompleted() {return(currentRecordIndex_);};
