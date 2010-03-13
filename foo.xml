@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<e57Root type="Structure"
+         xmlns:demo="www.example.com/DemoExtension"
+         xmlns="http://www.astm.org/COMMIT/E57/2010-e57-v0.5">
+  <formatName type="String"><![CDATA[ASTM E57 3D Imaging Data File]]></formatName>
+  <guid type="String"><![CDATA[3F2504E0-4F89-11D3-9A0C-0305E82C3300]]></guid>
+  <versionMajor type="Integer"/>
+  <versionMinor type="Integer">3</versionMinor>
+  <coordinateMetadata type="String"><![CDATA[...A WKT string here...]]></coordinateMetadata>
+  <creationDateTime type="Structure">
+    <dateTimeValue type="Float" precision="double">1.23456e+002</dateTimeValue>
+  </creationDateTime>
+  <data3D type="Vector" allowHeterogeneousChildren="1">
+    <vectorChild type="Structure">
+      <guid type="String"><![CDATA[3F2504E0-4F89-11D3-9A0C-0305E82C3301]]></guid>
+      <demo:extra1 type="String"><![CDATA[used by demo extension]]></demo:extra1>
+      <points type="CompressedVector" fileOffset="68" recordCount="10">
+        <prototype type="Structure">
+          <cartesianX type="ScaledInteger" minimum="0" maximum="32767" scale="1e-003"/>
+          <cartesianY type="ScaledInteger" minimum="0" maximum="32767" scale="1e-003"/>
+          <cartesianZ type="ScaledInteger" minimum="0" maximum="32767" scale="1e-003"/>
+          <valid type="Integer" minimum="0" maximum="1"/>
+          <rowIndex type="Integer" minimum="0" maximum="1"/>
+          <columnIndex type="Integer" minimum="0" maximum="4"/>
+          <returnIndex type="Integer" minimum="0" maximum="0"/>
+          <returnCount type="Integer" minimum="1" maximum="1"/>
+          <timeStamp type="Float" precision="double"/>
+          <intensity type="Integer" minimum="0" maximum="255"/>
+          <colorRed type="Float" precision="single" minimum="0" maximum="1"/>
+          <colorGreen type="Float" precision="single" minimum="0" maximum="1"/>
+          <colorBlue type="Float" precision="single" minimum="0" maximum="1"/>
+          <demo:extra2 type="String"/>
+        </prototype>
+        <codecs type="Vector" allowHeterogeneousChildren="1">
+        </codecs>
+      </points>
+      <pose type="Structure">
+        <rotation type="Structure">
+          <w type="Float" precision="double">1</w>
+          <x type="Float" precision="double"/>
+          <y type="Float" precision="double"/>
+          <z type="Float" precision="double"/>
+        </rotation>
+        <translation type="Structure">
+          <x type="Float" precision="double"/>
+          <y type="Float" precision="double"/>
+          <z type="Float" precision="double"/>
+        </translation>
+      </pose>
+      <pointGroupingSchemes type="Structure">
+        <groupingByLine type="Structure">
+          <idElementName type="String"><![CDATA[columnIndex]]></idElementName>
+          <groups type="CompressedVector" fileOffset="464" recordCount="5">
+            <prototype type="Structure">
+              <idElementValue type="Integer" minimum="0" maximum="4"/>
+              <startPointIndex type="Integer" minimum="0" maximum="9"/>
+              <pointCount type="Integer" minimum="1" maximum="2"/>
+              <cartesianBounds type="Structure">
+                <xMinimum type="Float" precision="double"/>
+                <xMaximum type="Float" precision="double"/>
+                <yMinimum type="Float" precision="double"/>
+                <yMaximum type="Float" precision="double"/>
+                <zMinimum type="Float" precision="double"/>
+                <zMaximum type="Float" precision="double"/>
+              </cartesianBounds>
+            </prototype>
+            <codecs type="Vector" allowHeterogeneousChildren="1">
+            </codecs>
+          </groups>
+        </groupingByLine>
+      </pointGroupingSchemes>
+      <name type="String"><![CDATA[Station 3F]]></name>
+      <description type="String"><![CDATA[An example scan]]></description>
+      <cartesianBounds type="Structure">
+        <xMinimum type="Float" precision="double"/>
+        <xMaximum type="Float" precision="double">1</xMaximum>
+        <yMinimum type="Float" precision="double"/>
+        <yMaximum type="Float" precision="double">1</yMaximum>
+        <zMinimum type="Float" precision="double"/>
+        <zMaximum type="Float" precision="double">1</zMaximum>
+      </cartesianBounds>
+      <acquisitionStart type="Structure">
+        <dateTimeValue type="Float" precision="double">1.235e+003</dateTimeValue>
+      </acquisitionStart>
+      <acquisitionEnd type="Structure">
+        <dateTimeValue type="Float" precision="double">1.235e+003</dateTimeValue>
+      </acquisitionEnd>
+      <sensorVendor type="String"><![CDATA[Scan Co]]></sensorVendor>
+      <sensorModel type="String"><![CDATA[Scanmatic 2000]]></sensorModel>
+      <sensorSerialNumber type="String"><![CDATA[123-321]]></sensorSerialNumber>
+      <sensorHardwareVersion type="String"><![CDATA[3.3.0]]></sensorHardwareVersion>
+      <sensorSoftwareVersion type="String"><![CDATA[27.0.3]]></sensorSoftwareVersion>
+      <sensorFirmwareVersion type="String"><![CDATA[27.0.3]]></sensorFirmwareVersion>
+      <temperature type="Float" precision="double">2e+001</temperature>
+      <relativeHumidity type="Float" precision="double">4e+001</relativeHumidity>
+    </vectorChild>
+  </data3D>
+  <cameraImages type="Vector" allowHeterogeneousChildren="1">
+    <vectorChild type="Structure">
+      <guid type="String"><![CDATA[3F2504E0-4F89-11D3-9A0C-0305E82C3302]]></guid>
+      <pinholeRepresentation type="Structure">
+        <imageWidth type="Integer">1024</imageWidth>
+        <imageHeight type="Integer">1024</imageHeight>
+        <focalLength type="Float" precision="double">1</focalLength>
+        <pixelWidth type="Float" precision="double">1e-003</pixelWidth>
+        <pixelHeight type="Float" precision="double">1e-003</pixelHeight>
+        <principalPointX type="Float" precision="double">5.12e+002</principalPointX>
+        <principalPointY type="Float" precision="double">5.12e+002</principalPointY>
+        <jpegImage type="Blob" fileOffset="40" length="10"/>
+      </pinholeRepresentation>
+      <pose type="Structure">
+        <rotation type="Structure">
+          <w type="Float" precision="double">1</w>
+          <x type="Float" precision="double"/>
+          <y type="Float" precision="double"/>
+          <z type="Float" precision="double"/>
+        </rotation>
+        <translation type="Structure">
+          <x type="Float" precision="double"/>
+          <y type="Float" precision="double"/>
+          <z type="Float" precision="double"/>
+        </translation>
+      </pose>
+      <name type="String"><![CDATA[pic123]]></name>
+      <description type="String"><![CDATA[trial picture]]></description>
+      <associatedData3DGuid type="String"><![CDATA[3F2504E0-4F89-11D3-9A0C-0305E82C3301]]></associatedData3DGuid>
+      <acquisitionDateTime type="Structure">
+        <dateTimeValue type="Float" precision="double">1.23456e+002</dateTimeValue>
+      </acquisitionDateTime>
+    </vectorChild>
+  </cameraImages>
+</e57Root>
+   
