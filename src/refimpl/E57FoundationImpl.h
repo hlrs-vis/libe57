@@ -166,17 +166,17 @@ const uint32_t E57_FORMAT_MINOR = 5;
 #ifndef E57_REFIMPL_REVISION_ID
 #  define E57_REFIMPL_REVISION_ID  unknown
 #endif
-#define STR_VALUE(arg)              #arg
-#define DO_QUOTE(name)              STR_VALUE(name)
-#define QUOTED_E57_REFIMPL_MAJOR   DO_QUOTE(E57_REFIMPL_MAJOR)
-#define QUOTED_E57_REFIMPL_MINOR   DO_QUOTE(E57_REFIMPL_MINOR)
-#define QUOTED_REFIMPL_REVISION_ID DO_QUOTE(REFIMPL_REVISION_ID)
-const char E57_LIBRARY_ID[] = "ReferenceImplementation "   \
-                              QUOTED_E57_REFIMPL_MAJOR     \
-                              "."                          \
-                              QUOTED_E57_REFIMPL_MINOR     \
-                              "."                          \
-                              QUOTED_REFIMPL_REVISION_ID;
+#define STR_VALUE(arg)                  #arg
+#define DO_QUOTE(name)                  STR_VALUE(name)
+#define QUOTED_E57_REFIMPL_MAJOR        DO_QUOTE(E57_REFIMPL_MAJOR)
+#define QUOTED_E57_REFIMPL_MINOR        DO_QUOTE(E57_REFIMPL_MINOR)
+#define QUOTED_E57_REFIMPL_REVISION_ID  DO_QUOTE(E57_REFIMPL_REVISION_ID)
+const char E57_LIBRARY_ID[] = "ReferenceImplementation "      \
+                              QUOTED_E57_REFIMPL_MAJOR        \
+                              "."                             \
+                              QUOTED_E57_REFIMPL_MINOR        \
+                              "."                             \
+                              QUOTED_E57_REFIMPL_REVISION_ID;
 
 /// Section types:
 #define E57_BLOB_SECTION                1
