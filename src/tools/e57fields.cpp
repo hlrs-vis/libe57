@@ -191,7 +191,7 @@ ustring minMaxString(int64_t minimum, int64_t maximum)
 {
     /// Print min,max to string.  Detect if interval is equivalent to an even number of bits, and print shorthand instead.
 
-    if (minimum == INT64_MIN && maximum == INT64_MAX)
+    if (minimum == E57_INT64_MIN && maximum == E57_INT64_MAX)
         return("int64");
     ostringstream ss;
     for (unsigned i = 1; i < 62; i++) {
@@ -447,9 +447,9 @@ struct CVElementInfo {
     /// Only one is used, depending on the type of the E57 element.
     /// One of these three should be resized to BUFFER_ELEMENT_COUNT.
     /// These are smart pointers to avoid the copying (and the moving) when put on the cvElements list.
-    shared_ptr<vector<int64_t>> iBuffer;
-    shared_ptr<vector<double>>  dBuffer;
-    shared_ptr<vector<string>>  sBuffer;
+    shared_ptr<vector<int64_t> > iBuffer;
+    shared_ptr<vector<double> >  dBuffer;
+    shared_ptr<vector<string> >  sBuffer;
 
     /// The precalculated parts of the element path name.
     /// The only part that is missing is the record number which goes in between.
@@ -657,6 +657,7 @@ void gatherCompressedVectorStats(CompressedVectorNode cv, Statistics& stats, Ima
         }
         recordNumber += gotCount;
     } while (gotCount > 0);
+    reader.close();
 }
 
 

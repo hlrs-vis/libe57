@@ -35,8 +35,10 @@
 #include <iomanip>
 #include <map>
 
-#include <Rpc.h>  // for UuidCreate
-#pragma comment(lib, "Rpcrt4.lib")
+#ifdef _MSC_VER
+#  include <Rpc.h>  // for UuidCreate
+#  pragma comment(lib, "Rpcrt4.lib")
+#endif
 
 using namespace std;
 using namespace e57;
@@ -240,18 +242,18 @@ UseInfo::UseInfo()
     maximumColumnIndex = 0;
     maximumReturnIndex = 0;
     maximumReturnCount = 0;
-    minimumClassification = INT64_MAX;
+    minimumClassification = E57_INT64_MAX;
     maximumClassification = 0;
-    minimumScanAngleRank = INT64_MAX;
-    maximumScanAngleRank = INT64_MIN;
-    minimumGpsTime = DOUBLE_MAX;
-    maximumGpsTime = -DOUBLE_MAX;
-    minimumX = INT64_MAX;
-    maximumX = INT64_MIN;
-    minimumY = INT64_MAX;
-    maximumY = INT64_MIN;
-    minimumZ = INT64_MAX;
-    maximumZ = INT64_MIN;
+    minimumScanAngleRank = E57_INT64_MAX;
+    maximumScanAngleRank = E57_INT64_MIN;
+    minimumGpsTime = E57_DOUBLE_MAX;
+    maximumGpsTime = -E57_DOUBLE_MAX;
+    minimumX = E57_INT64_MAX;
+    maximumX = E57_INT64_MIN;
+    minimumY = E57_INT64_MAX;
+    maximumY = E57_INT64_MIN;
+    minimumZ = E57_INT64_MAX;
+    maximumZ = E57_INT64_MIN;
 }
 
 void UseInfo::processPoint(LASPublicHeaderBlock& hdr, LASPointDataRecord& point, int64_t columnIndex)
@@ -445,10 +447,10 @@ struct DenseGroupingScheme {
 };
 
 DenseGroupingScheme::DenseGroupingScheme(int64_t minimumId_arg, int64_t maximumId_arg, bool isFixedSize_arg, bool areMembersContiguous_arg)
-: minimumId(minimumId_arg),
-  maximumId(maximumId_arg),
-  isFixedSize(isFixedSize_arg),
+: isFixedSize(isFixedSize_arg),
   areMembersContiguous(areMembersContiguous_arg),
+  minimumId(minimumId_arg),
+  maximumId(maximumId_arg),
   groups(0)
 {
     if (isFixedSize) {
@@ -480,7 +482,7 @@ void DenseGroupingScheme::write(ImageFile imf, StructureNode groupingSchemeNode,
     vector<SourceDestBuffer> sourceBuffers;
 
     /// Add id value for this group, pathname: "/data3D/0/pointGroupingSchemes/<groupingSchemeName>/groups/0/idElementValue"
-    proto.set("idElementValue",  IntegerNode(imf, 0, minimumId, maximumId));
+    proto.set("idElementValue",  IntegerNode(imf, minimumId, minimumId, maximumId));
     sourceBuffers.push_back(SourceDestBuffer(imf, "idElementValue", &(groups[0].id), groups.size(), false, false, sizeof(GroupRecord)));
 
     /// Find the maximum point count and startPointIndex in all the groups (will save a few bytes in the file).
@@ -590,8 +592,8 @@ void SparseGroupingScheme::write(ImageFile imf, StructureNode groupingSchemeNode
     /// Find the maximum point count and startPointIndex in all the groups (will save a few bytes in the file).
     int64_t pointCountMax = 0;
     int64_t startPointIndexMax = 0;
-    int64_t minimumId = INT64_MIN;
-    int64_t maximumId = INT64_MAX;
+    int64_t minimumId = E57_INT64_MIN;
+    int64_t maximumId = E57_INT64_MAX;
     for (unsigned i = 0; i < groupVector.size(); i++) {
         if (groupVector[i].count > pointCountMax)
             pointCountMax = groupVector[i].count;
@@ -604,7 +606,7 @@ void SparseGroupingScheme::write(ImageFile imf, StructureNode groupingSchemeNode
     }
 
     /// Prepare prototype and source buffers for pathname: "/data3D/0/pointGroupingSchemes/<groupingSchemeName>/groups/0/idElementValue"
-    proto.set("idElementValue",  IntegerNode(imf, 0, minimumId, maximumId));
+    proto.set("idElementValue",  IntegerNode(imf, minimumId, minimumId, maximumId));
     sourceBuffers.push_back(SourceDestBuffer(imf, "idElementValue", &(groupVector[0].id), groupVector.size(), false, false, sizeof(GroupRecord)));
 
     /// Add pointCount, pathname: "/data3D/0/pointGroupingSchemes/<groupingSchemeName>/groups/0/pointCount"
@@ -1021,7 +1023,7 @@ void copyPerScanData(CommandLineOptions& options, LASReader& lasf, ImageFile imf
 
     /// Save fileSourceId
     /// Path name: "/data3D/0/las:fileSourceId"
-    scan0.set("las:fileSourceId", IntegerNode(imf, hdr.fileSourceId, 0, UINT16_MAX));
+    scan0.set("las:fileSourceId", IntegerNode(imf, hdr.fileSourceId, 0, E57_UINT16_MAX));
 
     /// gpsTimeType is not stored in E57 file.  If gpsTimeType==true, timeStamp uses offset = +1e9.
 
@@ -1038,8 +1040,8 @@ void copyPerScanData(CommandLineOptions& options, LASReader& lasf, ImageFile imf
 
     /// Save versionMajor and version minor
     /// Path names: "/data3D/0/las:versionMajor", "/data3D/0/las:versionMinor"
-    scan0.set("las:versionMajor", IntegerNode(imf, hdr.versionMajor, 0, UINT8_MAX));
-    scan0.set("las:versionMinor", IntegerNode(imf, hdr.versionMinor, 0, UINT8_MAX));
+    scan0.set("las:versionMajor", IntegerNode(imf, hdr.versionMajor, 0, E57_UINT8_MAX));
+    scan0.set("las:versionMinor", IntegerNode(imf, hdr.versionMinor, 0, E57_UINT8_MAX));
 
     /// Save systemIdentifier as sensorModel
     /// Assuming descriptor of aquisition hardware, but might be name of processing software (can't tell which).
@@ -1163,11 +1165,11 @@ void copyVariableLengthRecords(CommandLineOptions& options, LASReader& lasf, Ima
 
         /// Add recordId to vlr
         /// Path name: /data3D/0/las:variableLengthRecords/N/las:recordId
-        vlr.set("las:recordId", IntegerNode(imf, vlrInfo.recordId, UINT16_MIN, UINT16_MAX));
+        vlr.set("las:recordId", IntegerNode(imf, vlrInfo.recordId, E57_UINT16_MIN, E57_UINT16_MAX));
 
         /// Add recordLengthAfterHeader to vlr
         /// Path name: /data3D/0/las:variableLengthRecords/N/las:recordLengthAfterHeader
-        vlr.set("las:recordLengthAfterHeader", IntegerNode(imf, vlrInfo.recordLengthAfterHeader, UINT16_MIN, UINT16_MAX));
+        vlr.set("las:recordLengthAfterHeader", IntegerNode(imf, vlrInfo.recordLengthAfterHeader, E57_UINT16_MIN, E57_UINT16_MAX));
 
         /// Save whole binary record (including header) as a blob
         size_t recordSize = vlrInfo.wholeRecordData.size();
@@ -1247,17 +1249,17 @@ void copyPerPointData(CommandLineOptions& options, LASReader& lasf, ImageFile im
     double e57TimeOffset = 0.0;  // amount to add to timeStamp in E57 point record to get absolute GPS time.
 
     sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianX", &pointBuffer[0].x, N, true, false, sizeof(LASPointDataRecord)));
-    proto.set("cartesianX",  ScaledIntegerNode(imf, 0, useInfo.minimumX, useInfo.maximumX, hdr.xScaleFactor, hdr.xOffset));
+    proto.set("cartesianX",  ScaledIntegerNode(imf, useInfo.minimumX, useInfo.minimumX, useInfo.maximumX, hdr.xScaleFactor, hdr.xOffset));
 
     sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianY", &pointBuffer[0].y, N, true, false, sizeof(LASPointDataRecord)));
-    proto.set("cartesianY",  ScaledIntegerNode(imf, 0, useInfo.minimumY, useInfo.maximumY, hdr.yScaleFactor, hdr.yOffset));
+    proto.set("cartesianY",  ScaledIntegerNode(imf, useInfo.minimumY, useInfo.minimumY, useInfo.maximumY, hdr.yScaleFactor, hdr.yOffset));
 
     sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianZ", &pointBuffer[0].z, N, true, false, sizeof(LASPointDataRecord)));
-    proto.set("cartesianZ",  ScaledIntegerNode(imf, 0, useInfo.minimumZ, useInfo.maximumZ, hdr.zScaleFactor, hdr.zOffset));
+    proto.set("cartesianZ",  ScaledIntegerNode(imf, useInfo.minimumZ, useInfo.minimumZ, useInfo.maximumZ, hdr.zScaleFactor, hdr.zOffset));
 
     if (options.unusedNotOptional || useInfo.intensityUsed) {
         sourceBuffers.push_back(SourceDestBuffer(imf, "intensity", &pointBuffer[0].intensity, N, true, false, sizeof(LASPointDataRecord)));
-        proto.set("intensity",  IntegerNode(imf, 0, UINT16_MIN, UINT16_MAX)); //!!! get rid of overloads!
+        proto.set("intensity",  IntegerNode(imf, 0, E57_UINT16_MIN, E57_UINT16_MAX)); //!!! get rid of overloads!
     }
 
     if (useInfo.maximumColumnIndex > 0) {
@@ -1288,7 +1290,7 @@ void copyPerPointData(CommandLineOptions& options, LASReader& lasf, ImageFile im
     /// Specifying actual min and max used, so don't care about size in LAS file.
     if (options.unusedNotOptional || useInfo.classificationUsed) {
         sourceBuffers.push_back(SourceDestBuffer(imf, "las:classification", &pointBuffer[0].classification, N, true, false, sizeof(LASPointDataRecord)));
-        proto.set("las:classification",  IntegerNode(imf, 0, useInfo.minimumClassification, useInfo.maximumClassification));
+        proto.set("las:classification",  IntegerNode(imf, useInfo.minimumClassification, useInfo.minimumClassification, useInfo.maximumClassification));
     }
 
     if (hdr.versionMajor == 1 && hdr.versionMinor > 0) {
@@ -1309,33 +1311,33 @@ void copyPerPointData(CommandLineOptions& options, LASReader& lasf, ImageFile im
     }
     if (options.unusedNotOptional || useInfo.scanAngleRankUsed) {
         sourceBuffers.push_back(SourceDestBuffer(imf, "las:scanAngleRank", &pointBuffer[0].scanAngleRank, N, true, false, sizeof(LASPointDataRecord)));
-        proto.set("las:scanAngleRank",  IntegerNode(imf, 0, useInfo.minimumScanAngleRank, useInfo.maximumScanAngleRank));
+        proto.set("las:scanAngleRank",  IntegerNode(imf, useInfo.minimumScanAngleRank, useInfo.minimumScanAngleRank, useInfo.maximumScanAngleRank));
     }
 
     if (hdr.versionMajor == 1 && hdr.versionMinor == 0) {
         /// LAS v1.0 had file marker and user bit fields
         if (options.unusedNotOptional || useInfo.fileMarkerUsed) {
             sourceBuffers.push_back(SourceDestBuffer(imf, "las:fileMarker", &pointBuffer[0].fileMarker, N, true, false, sizeof(LASPointDataRecord)));
-            proto.set("las:fileMarker",  IntegerNode(imf, 0, UINT8_MIN, UINT8_MAX));
+            proto.set("las:fileMarker",  IntegerNode(imf, 0, E57_UINT8_MIN, E57_UINT8_MAX));
         }
 
         if (options.unusedNotOptional || useInfo.userBitFieldUsed) {
             /// Reusing las:userData field name rather than create new name.  Means that may be either 16 bits or 8 bits.
             sourceBuffers.push_back(SourceDestBuffer(imf, "las:userData", &pointBuffer[0].userBitField, N, true, false, sizeof(LASPointDataRecord)));
-            proto.set("las:userData",  IntegerNode(imf, 0, UINT16_MIN, UINT16_MAX));
+            proto.set("las:userData",  IntegerNode(imf, 0, E57_UINT16_MIN, E57_UINT16_MAX));
         }
     } else {
         /// LAS v1.1+ has user data and point source id
         if (options.unusedNotOptional || useInfo.userDataUsed) {
             sourceBuffers.push_back(SourceDestBuffer(imf, "las:userData", &pointBuffer[0].userData, N, true, false, sizeof(LASPointDataRecord)));
-            proto.set("las:userData",  IntegerNode(imf, 0, UINT8_MIN, UINT8_MAX));
+            proto.set("las:userData",  IntegerNode(imf, 0, E57_UINT8_MIN, E57_UINT8_MAX));
         }
 
         /// Note a zero value of pointSourceId should be interpreted as the fileSourceId of this file.
         /// So if this field isn't defined (because all zero), this should be interpreted as all pointSourcIds set to fileSourceId.
         if (options.unusedNotOptional || useInfo.pointSourceIdUsed) {
             sourceBuffers.push_back(SourceDestBuffer(imf, "las:pointSourceId", &pointBuffer[0].pointSourceId, N, true, false,sizeof(LASPointDataRecord)));
-            proto.set("las:pointSourceId",  IntegerNode(imf, 0, UINT16_MIN, UINT16_MAX));
+            proto.set("las:pointSourceId",  IntegerNode(imf, 0, E57_UINT16_MIN, E57_UINT16_MAX));
         }
     }
     
@@ -1389,13 +1391,13 @@ void copyPerPointData(CommandLineOptions& options, LASReader& lasf, ImageFile im
         case 5:
             if (options.unusedNotOptional || useInfo.redUsed || useInfo.blueUsed || useInfo.greenUsed) {
                 sourceBuffers.push_back(SourceDestBuffer(imf, "colorRed", &pointBuffer[0].red, N, true, false, sizeof(LASPointDataRecord)));
-                proto.set("colorRed", IntegerNode(imf, 0, UINT16_MIN, UINT16_MAX));
+                proto.set("colorRed", IntegerNode(imf, 0, E57_UINT16_MIN, E57_UINT16_MAX));
 
                 sourceBuffers.push_back(SourceDestBuffer(imf, "colorGreen", &pointBuffer[0].green, N, true, false, sizeof(LASPointDataRecord)));
-                proto.set("colorGreen", IntegerNode(imf, 0, UINT16_MIN, UINT16_MAX));
+                proto.set("colorGreen", IntegerNode(imf, 0, E57_UINT16_MIN, E57_UINT16_MAX));
 
                 sourceBuffers.push_back(SourceDestBuffer(imf, "colorBlue", &pointBuffer[0].blue, N, true, false, sizeof(LASPointDataRecord)));
-                proto.set("colorBlue", IntegerNode(imf, 0, UINT16_MIN, UINT16_MAX));
+                proto.set("colorBlue", IntegerNode(imf, 0, E57_UINT16_MIN, E57_UINT16_MAX));
             }
             break;
     }
@@ -1404,13 +1406,13 @@ void copyPerPointData(CommandLineOptions& options, LASReader& lasf, ImageFile im
         case 4:
         case 5:
             sourceBuffers.push_back(SourceDestBuffer(imf, "las:wavePacketDescriptorIndex", &pointBuffer[0].wavePacketDescriptorIndex, N, true, false, sizeof(LASPointDataRecord)));
-            proto.set("las:wavePacketDescriptorIndex",  IntegerNode(imf, 0, UINT8_MIN, UINT8_MAX));
+            proto.set("las:wavePacketDescriptorIndex",  IntegerNode(imf, 0, E57_UINT8_MIN, E57_UINT8_MAX));
 
             sourceBuffers.push_back(SourceDestBuffer(imf, "las:byteOffsetToWaveformData", reinterpret_cast<int64_t*>(&pointBuffer[0].byteOffsetToWaveformData), N, true, false, sizeof(LASPointDataRecord)));
-            proto.set("las:byteOffsetToWaveformData",  IntegerNode(imf, 0LL, 0LL, INT64_MAX));
+            proto.set("las:byteOffsetToWaveformData",  IntegerNode(imf, 0LL, 0LL, E57_INT64_MAX));
 
             sourceBuffers.push_back(SourceDestBuffer(imf, "las:waveformPacketSizeInBytes", &pointBuffer[0].waveformPacketSizeInBytes, N, true, false, sizeof(LASPointDataRecord)));
-            proto.set("las:waveformPacketSizeInBytes",  IntegerNode(imf, 0LU, UINT32_MIN, UINT32_MAX));
+            proto.set("las:waveformPacketSizeInBytes",  IntegerNode(imf, 0LU, E57_UINT32_MIN, E57_UINT32_MAX));
 
             sourceBuffers.push_back(SourceDestBuffer(imf, "las:returnPointWaveformLocation", &pointBuffer[0].returnPointWaveformLocation, N, true, false, sizeof(LASPointDataRecord)));
             proto.set("las:returnPointWaveformLocation",  FloatNode(imf, 0.0, E57_SINGLE));
@@ -1501,8 +1503,8 @@ void copyPerFileData(CommandLineOptions& options, LASReader& lasf, ImageFile imf
     int astmMinor = 0;
     ustring libraryId;
     E57Utilities().getVersions(astmMajor, astmMinor, libraryId);
-    root.set("versionMajor", IntegerNode(imf, astmMajor, 0, UINT8_MAX));
-    root.set("versionMinor", IntegerNode(imf, astmMinor, 0, UINT8_MAX));
+    root.set("versionMajor", IntegerNode(imf, astmMajor, 0, E57_UINT8_MAX));
+    root.set("versionMinor", IntegerNode(imf, astmMinor, 0, E57_UINT8_MAX));
 
     /// Mark file with current GPS time (the time the file was opened for writing).
     /// Path name: "/creationDateTime/dateTimeValue"

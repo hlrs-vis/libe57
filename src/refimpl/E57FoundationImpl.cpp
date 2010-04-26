@@ -26,6 +26,31 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#if defined(WIN32)
+#  if defined(_MSC_VER)
+#    include <io.h>
+#    include <fcntl.h>
+#    include <sys\stat.h>
+#  elif defined(__GNUC__)
+#  define _LARGEFILE64_SOURCE
+#  define __LARGE64_FILES
+#  include <sys/types.h>
+#  include <unistd.h>
+
+#    include <fcntl.h>
+#    include <sys\stat.h>
+#  else
+#    error "no supported compiler defined"
+#  endif
+#elif defined(LINUX)
+#  define _LARGEFILE64_SOURCE
+#  define __LARGE64_FILES
+#  include <sys/types.h>
+#  include <unistd.h>
+#else
+#  error "no supported OS platform defined"
+#endif
+
 #include <sstream>
 //#include <memory> //??? needed?
 #include <fstream> //??? needed?
@@ -33,15 +58,11 @@
 #include <cmath> //??? needed?
 #include <float.h> //??? needed?
 
-#include <sstream>
-#include <io.h> //???needed?
-#include <fcntl.h> //???needed?
-#include <sys\stat.h>
-
 #include "E57FoundationImpl.h"
 using namespace e57;
 using namespace std;
-using namespace std::tr1;
+using namespace boost;
+//???using namespace std::tr1;
 
 ///============================================================================================================
 ///============================================================================================================
@@ -108,11 +129,47 @@ void BlobSectionHeader::dump(int indent, std::ostream& os)
 ///================================================================
 ///================================================================
 
-NodeImpl::NodeImpl(weak_ptr<ImageFileImpl> fileParent)
-: fileParent_(fileParent)
-{}
+NodeImpl::NodeImpl(weak_ptr<ImageFileImpl> destImageFile)
+: destImageFile_(destImageFile),
+  isAttached_(false)
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);  // does checking for all node type ctors
+}
 
-ustring NodeImpl::pathName(){
+void NodeImpl::checkImageFileOpen(const char* srcFileName, int srcLineNumber, const char* srcFunctionName)
+{
+    /// Throw an exception if destImageFile (destImageFile_) isn't open
+    shared_ptr<ImageFileImpl> destImageFile(destImageFile_);
+    if (!destImageFile->isOpen()) {
+        throw E57Exception(E57_ERROR_IMAGEFILE_NOT_OPEN,
+                           "fileName=" + destImageFile->fileName(),
+                           srcFileName,
+                           srcLineNumber,
+                           srcFunctionName);
+    }
+}        
+
+bool NodeImpl::isRoot()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(parent_.expired());
+};
+
+boost::shared_ptr<NodeImpl> NodeImpl::parent()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    if (isRoot()) {
+        /// If is root, then has self as parent (by convention)
+        return(shared_from_this());
+    } else {
+        boost::shared_ptr<NodeImpl> myParent(parent_);
+        return(myParent);
+    }
+}
+
+ustring NodeImpl::pathName()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     if (isRoot())
         return("/");
     else {  
@@ -126,6 +183,7 @@ ustring NodeImpl::pathName(){
 
 ustring NodeImpl::relativePathName(shared_ptr<NodeImpl> origin, ustring childPathName)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     if (origin == shared_from_this())
         return(childPathName);
 
@@ -142,19 +200,65 @@ ustring NodeImpl::relativePathName(shared_ptr<NodeImpl> origin, ustring childPat
     }
 }
 
-ustring NodeImpl::imageFileName() {
-    shared_ptr<ImageFileImpl> imf(fileParent_);
+ustring NodeImpl::elementName()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(elementName_);
+};
+
+shared_ptr<ImageFileImpl> NodeImpl::destImageFile()
+{
+    /// don't checkImageFileOpen
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
+    return(imf);
+}
+
+bool NodeImpl::isAttached()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(isAttached_);
+}
+    
+void NodeImpl::setAttachedRecursive()
+{
+    /// Non-terminal node types (Structure, Vector, CompressedVector) will override this virtual function, to mark their children, codecs, prototypes
+    isAttached_ = true;
+}
+
+ustring NodeImpl::imageFileName()
+{
+    /// don't checkImageFileOpen
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
     return(imf->fileName());
 }
 
 void NodeImpl::setParent(shared_ptr<NodeImpl> parent, const ustring& elementName)
 {
+    /// don't checkImageFileOpen
+
+    /// First check if our parent_ is already set, throw E57_ERROR_ALREADY_HAS_PARENT
+    /// The isAttached_ condition is to catch two errors:
+    ///    1) if user attempts to use the ImageFile root as a child (e.g. root.set("x", root))
+    ///    2) if user attempts to reuse codecs or prototype trees of a CompressedVectorNode
+    ///       ??? what if CV not attached yet?
+    if (!parent_.expired() || isAttached_) {
+        /// ??? does caller do setParent first, so state is not messed up when throw?
+        throw E57_EXCEPTION2(E57_ERROR_ALREADY_HAS_PARENT,
+                             "this->pathName=" + this->pathName() + 
+                             " newParent->pathName=" + parent->pathName());
+    }
+
     parent_      = parent;
     elementName_ = elementName;
+
+    /// If parent is attached then we are attached (and all of our children)
+    if (parent->isAttached())
+        setAttachedRecursive();
 }
 
 shared_ptr<NodeImpl> NodeImpl::getRoot()
 {
+    /// don't checkImageFileOpen
     shared_ptr<NodeImpl> p(shared_from_this());
     while (!p->isRoot())
         p = shared_ptr<NodeImpl>(p->parent_);  //??? check if bad ptr?
@@ -164,6 +268,7 @@ shared_ptr<NodeImpl> NodeImpl::getRoot()
 //??? use visitor?
 bool NodeImpl::isTypeConstrained()
 {
+    /// don't checkImageFileOpen
     /// A node is type constrained if any of its parents is an homo VECTOR or COMPRESSED_VECTOR with more than one child
     shared_ptr<NodeImpl> p(shared_from_this());
     while (!p->isRoot()) {
@@ -186,22 +291,26 @@ bool NodeImpl::isTypeConstrained()
             case E57_COMPRESSED_VECTOR:
                 /// Can't make any type changes to CompressedVector prototype.  ??? what if hasn't been written to yet
                 return(true);
+            default:
+                break;
         }
     }
     /// Didn't find any constraining VECTORs or COMPRESSED_VECTORs in path above us, so our type is not constrained.
     return(false);
 }
 
-std::tr1::shared_ptr<NodeImpl> NodeImpl::get(const ustring& pathName)
+boost::shared_ptr<NodeImpl> NodeImpl::get(const ustring& pathName)
 {
     /// This is common virtual function for terminal E57 element types: Integer, ScaledInteger, Float, Blob.
     /// The non-terminal types override this virtual function.
     /// Only absolute pathNames make any sense here, because the terminal types can't have children, so relative pathNames are illegal.
 
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
     /// Parse to determine if pathName is absolute
     bool isRelative;
     vector<ustring> fields;
-    shared_ptr<ImageFileImpl> imf(fileParent_);
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
     imf->pathNameParse(pathName, isRelative, fields);  // throws if bad pathName
 
     /// If not an absolute path name, have error
@@ -230,10 +339,12 @@ void NodeImpl::set(const ustring& pathName, shared_ptr<NodeImpl> ni, bool autoPa
     /// The non-terminal types override this virtual function.
     /// Only absolute pathNames make any sense here, because the terminal types can't have children, so relative pathNames are illegal.
 
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
     /// Parse to determine if pathName is absolute
     bool isRelative;
     vector<ustring> fields;
-    shared_ptr<ImageFileImpl> imf(fileParent_);
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
     imf->pathNameParse(pathName, isRelative, fields);  // throws if bad pathName
 
     /// If not an absolute path name, have error
@@ -256,9 +367,17 @@ void NodeImpl::set(const ustring& pathName, shared_ptr<NodeImpl> ni, bool autoPa
     root->set(pathName, ni, autoPathCreate);
 }
 
+void NodeImpl::set(const std::vector<ustring>& /*fields*/, unsigned /*level*/, boost::shared_ptr<NodeImpl> /*ni*/, bool /*autoPathCreate*/)
+{
+    /// If get here, then tried to call set(fields...) on NodeImpl that wasn't a StructureNodeImpl, so that's an error
+    throw E57_EXCEPTION1(E57_ERROR_BAD_PATH_NAME); //???
+};
+
 void NodeImpl::checkBuffers(const vector<SourceDestBuffer>& sdbufs, bool allowMissing)  //??? convert sdbufs to vector of shared_ptr
 {
     /// this node is prototype of CompressedVector
+
+    /// don't checkImageFileOpen
 
     std::set<ustring> pathNames;
     for (unsigned i = 0; i < sdbufs.size(); i++) {
@@ -290,6 +409,8 @@ void NodeImpl::checkBuffers(const vector<SourceDestBuffer>& sdbufs, bool allowMi
 
 bool NodeImpl::findTerminalPosition(shared_ptr<NodeImpl> target, uint64_t& countFromLeft)
 {
+    /// don't checkImageFileOpen
+
     if (this == &*target) //??? ok?
         return(true);
 
@@ -330,15 +451,34 @@ bool NodeImpl::findTerminalPosition(shared_ptr<NodeImpl> target, uint64_t& count
     return(false);
 }
 
+#ifdef E57_DEBUG
+void NodeImpl::dump(int indent, ostream& os)
+{
+    /// don't checkImageFileOpen
+    os << space(indent) << "elementName: " << elementName_ << endl;
+    os << space(indent) << "isAttached:  " << isAttached_ << endl;
+    os << space(indent) << "path:        " << pathName() << endl;
+}
+#endif
 
 //================================================================================================
-StructureNodeImpl::StructureNodeImpl(weak_ptr<ImageFileImpl> fileParent)
-: NodeImpl(fileParent)
-{}
+StructureNodeImpl::StructureNodeImpl(weak_ptr<ImageFileImpl> destImageFile)
+: NodeImpl(destImageFile)
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+}
+
+NodeType StructureNodeImpl::type()
+{
+    /// don't checkImageFileOpen
+    return(E57_STRUCTURE);
+}
 
 //??? use visitor?
 bool StructureNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
+    /// don't checkImageFileOpen
+
     /// Same node type?
     if (ni->type() != E57_STRUCTURE)
         return(false);
@@ -374,12 +514,29 @@ bool StructureNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 
 bool StructureNodeImpl::isDefined(const ustring& pathName)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     shared_ptr<NodeImpl> ni(lookup(pathName));
     return(ni != 0);
 }
 
+void StructureNodeImpl::setAttachedRecursive()
+{
+    /// Mark this node as attached to an ImageFile
+    isAttached_ = true;
+
+    /// Not a leaf node, so mark all our children
+    for (unsigned i = 0; i < children_.size(); i++)
+        children_.at(i)->setAttachedRecursive();
+}
+
+int64_t StructureNodeImpl::childCount()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(children_.size());
+};
 shared_ptr<NodeImpl> StructureNodeImpl::get(int64_t index)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     if (index < 0 || index >= children_.size()) {
         throw E57_EXCEPTION2(E57_ERROR_CHILD_INDEX_OUT_OF_BOUNDS,
                              "this->pathName=" + this->pathName() 
@@ -392,6 +549,7 @@ shared_ptr<NodeImpl> StructureNodeImpl::get(int64_t index)
 
 shared_ptr<NodeImpl> StructureNodeImpl::get(const ustring& pathName)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     shared_ptr<NodeImpl> ni(lookup(pathName));
     if (!ni)
         throw E57_EXCEPTION2(E57_ERROR_PATH_UNDEFINED, "this->pathName=" + this->pathName() + " pathName=" + pathName);
@@ -400,10 +558,11 @@ shared_ptr<NodeImpl> StructureNodeImpl::get(const ustring& pathName)
 
 shared_ptr<NodeImpl> StructureNodeImpl::lookup(const ustring& pathName)
 {
+    /// don't checkImageFileOpen
     //??? use lookup(fields, level) instead, for speed.
     bool isRelative;
     vector<ustring> fields;
-    shared_ptr<ImageFileImpl> imf(fileParent_);
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
     imf->pathNameParse(pathName, isRelative, fields);  // throws if bad pathName
 
     if (isRelative || isRoot()) {
@@ -445,6 +604,7 @@ shared_ptr<NodeImpl> StructureNodeImpl::lookup(const ustring& pathName)
 
 void StructureNodeImpl::set(int64_t index64, shared_ptr<NodeImpl> ni)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     unsigned index = static_cast<unsigned>(index64);
 
     /// Allow index == current number of elements, interpret as append
@@ -462,6 +622,15 @@ void StructureNodeImpl::set(int64_t index64, shared_ptr<NodeImpl> ni)
                              + " index=" + toString(index64));
     }
 
+    /// Verify that child is destined for same ImageFile as this is
+    shared_ptr<ImageFileImpl> thisDest(destImageFile());
+    shared_ptr<ImageFileImpl> niDest(ni->destImageFile());
+    if (thisDest != niDest) {
+        throw E57_EXCEPTION2(E57_ERROR_DIFFERENT_DEST_IMAGEFILE,
+                             "this->destImageFile" + thisDest->fileName()
+                             + " ni->destImageFile" + niDest->fileName());
+    }
+
     /// Field name is string version of index value, e.g. "14"
     stringstream elementName;
     elementName << index;
@@ -476,6 +645,7 @@ void StructureNodeImpl::set(int64_t index64, shared_ptr<NodeImpl> ni)
 
 void StructureNodeImpl::set(const ustring& pathName, shared_ptr<NodeImpl> ni, bool autoPathCreate)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     //??? parse pathName! throw if impossible, absolute and multi-level paths...
     //??? enforce type constraints on path (non-zero index types match zero index types for VECTOR, COMPRESSED_VECTOR
 
@@ -487,7 +657,7 @@ void StructureNodeImpl::set(const ustring& pathName, shared_ptr<NodeImpl> ni, bo
     vector<ustring> fields;
 
     /// Path may be absolute or relative with several levels.  Break string into individual levels.
-    shared_ptr<ImageFileImpl> imf(fileParent_);
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
     imf->pathNameParse(pathName, isRelative, fields);  // throws if bad pathName
     if (isRelative) {
         /// Relative path, starting from current object, e.g. "foo/17/bar"
@@ -498,20 +668,22 @@ void StructureNodeImpl::set(const ustring& pathName, shared_ptr<NodeImpl> ni, bo
     }
 }
 
-void StructureNodeImpl::set(const vector<ustring>& fields, int level, shared_ptr<NodeImpl> ni, bool autoPathCreate)
+void StructureNodeImpl::set(const vector<ustring>& fields, unsigned level, shared_ptr<NodeImpl> ni, bool autoPathCreate)
 {
-    //??? check if field is numeric string (e.g. "17"), verify number is same as index, else throw bad_path
 #ifdef E57_MAX_VERBOSE
     cout << "StructureNodeImpl::set: level=" << level << endl;
     for (unsigned i = 0; i < fields.size(); i++)
         cout << "  field[" << i << "]: " << fields.at(i) << endl;
 #endif
 
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    //??? check if field is numeric string (e.g. "17"), verify number is same as index, else throw bad_path
+
     /// Check if trying to set the root node "/", which is illegal
     if (level == 0 && fields.size() == 0)
         throw E57_EXCEPTION2(E57_ERROR_SET_TWICE, "this->pathName=" + this->pathName() + " element=/");
 
-    /// Serial search for matching field name, replace if already defined ???set once?
+    /// Serial search for matching field name, if find match, have error since can't set twice
     for (unsigned i = 0; i < children_.size(); i++) {
         if (fields.at(level) == children_.at(i)->elementName()) {
             if (level == fields.size()-1) {
@@ -546,7 +718,7 @@ void StructureNodeImpl::set(const vector<ustring>& fields, int level, shared_ptr
         /// Do autoPathCreate: Create nested Struct objects for extra field names in path
         shared_ptr<NodeImpl> parent(shared_from_this());
         for (;level != fields.size()-1; level++) {
-            shared_ptr<StructureNodeImpl> child(new StructureNodeImpl(fileParent_));
+            shared_ptr<StructureNodeImpl> child(new StructureNodeImpl(destImageFile_));
             parent->set(fields.at(level), child);
             parent = child;
         }
@@ -556,6 +728,8 @@ void StructureNodeImpl::set(const vector<ustring>& fields, int level, shared_ptr
 
 void StructureNodeImpl::append(shared_ptr<NodeImpl> ni)
 {
+    /// don't checkImageFileOpen, set() will do it
+
     /// Create new node at end of list with integer field name
     set(childCount(), ni);
 }
@@ -563,57 +737,66 @@ void StructureNodeImpl::append(shared_ptr<NodeImpl> ni)
 //??? use visitor?
 void StructureNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, shared_ptr<NodeImpl> origin)
 {
+    /// don't checkImageFileOpen
+
     /// Not a leaf node, so check all our children
     for (unsigned i = 0; i < children_.size(); i++)
         children_.at(i)->checkLeavesInSet(pathNames, origin);
 }
 
 //??? use visitor?
-void StructureNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
+void StructureNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, const char* forcedFieldName)
 {
-    ustring fname;
+    /// don't checkImageFileOpen
+
+    ustring fieldName;
     if (forcedFieldName != NULL)
-        fname = forcedFieldName;
+        fieldName = forcedFieldName;
     else
-        fname = elementName_;
+        fieldName = elementName_;
     
-    cf << space(indent) << "<" << fname << " type=\"Structure\"";
+    cf << space(indent) << "<" << fieldName << " type=\"Structure\"";
 
     /// If this struct is the root for the E57 file, add name space declarations
     /// Note the prototype of a CompressedVector is a separate tree, so don't want to write out namespaces if not the ImageFile root
     if (isRoot() && shared_from_this() == imf->root()) {
         bool gotDefaultNamespace = false;
         for (int i = 0; i < imf->extensionsCount(); i++) {
-            char* xmlnsExtension;
+            const char* xmlnsExtension;
             if (imf->extensionsPrefix(i) == "") {
                 gotDefaultNamespace = true;
                 xmlnsExtension = "xmlns";
             } else
                 xmlnsExtension = "xmlns:";
-            cf << "\n" << space(indent+fname.length()+2) << xmlnsExtension << imf->extensionsPrefix(i) << "=\"" << imf->extensionsUri(i) << "\"";
+            cf << "\n" << space(indent+fieldName.length()+2) << xmlnsExtension << imf->extensionsPrefix(i) << "=\"" << imf->extensionsUri(i) << "\"";
         }
 
         /// If user didn't explicitly declare a default namespace, use the current E57 standard one.
         if (!gotDefaultNamespace)
-            cf << "\n" << space(indent+fname.length()+2) << "xmlns=\"" << E57_V1_0_URI << "\"";
+            cf << "\n" << space(indent+fieldName.length()+2) << "xmlns=\"" << E57_V1_0_URI << "\"";
     }
-    cf << ">\n";
+    if (children_.size() > 0) {
+        cf << ">\n";
 
-    /// Write all children nested inside Structure element
-    for (unsigned i = 0; i < children_.size(); i++)
-        children_.at(i)->writeXml(imf, cf, indent+2);
+        /// Write all children nested inside Structure element
+        for (unsigned i = 0; i < children_.size(); i++)
+            children_.at(i)->writeXml(imf, cf, indent+2);
 
-    /// Write closing tag
-    cf << space(indent) << "</" << fname << ">\n";
+        /// Write closing tag
+        cf << space(indent) << "</" << fieldName << ">\n";
+    } else {
+        /// XML element has no child elements
+        cf << "/>\n";
+    }
 }
 
 //??? use visitor?
 #ifdef E57_DEBUG
 void StructureNodeImpl::dump(int indent, ostream& os)
 {
-    os << space(indent) << "type:        Struct" << " (" << type() << ")" << endl;
-    os << space(indent) << "elementName: " << elementName_ << endl;
-    os << space(indent) << "path:        " << pathName() << endl;
+    /// don't checkImageFileOpen
+    os << space(indent) << "type:        Structure" << " (" << type() << ")" << endl;
+    NodeImpl::dump(indent, os);
     for (unsigned i = 0; i < children_.size(); i++) {
         os << space(indent) << "child[" << i << "]:" << endl;
         children_.at(i)->dump(indent+2, os);
@@ -622,13 +805,23 @@ void StructureNodeImpl::dump(int indent, ostream& os)
 #endif
 
 //=============================================================================
-VectorNodeImpl::VectorNodeImpl(weak_ptr<ImageFileImpl> fileParent, bool allowHeteroChildren)
-: StructureNodeImpl(fileParent),
+VectorNodeImpl::VectorNodeImpl(weak_ptr<ImageFileImpl> destImageFile, bool allowHeteroChildren)
+: StructureNodeImpl(destImageFile),
   allowHeteroChildren_(allowHeteroChildren)
-{}
+{
+    /// don't checkImageFileOpen, StructNodeImpl() will do it
+}
+
+NodeType VectorNodeImpl::type()
+{
+    /// don't checkImageFileOpen
+    return(E57_VECTOR);
+};
 
 bool VectorNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
+    /// don't checkImageFileOpen
+
     /// Same node type?
     if (ni->type() != E57_VECTOR)
         return(false);
@@ -656,8 +849,15 @@ bool VectorNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
     return(true);
 }
 
+bool VectorNodeImpl::allowHeteroChildren()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(allowHeteroChildren_);
+};
+
 void VectorNodeImpl::set(int64_t index64, shared_ptr<NodeImpl> ni)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     if (!allowHeteroChildren_) {
         /// New node type must match all existing children
         for (unsigned i = 0; i < children_.size(); i++) {
@@ -670,26 +870,28 @@ void VectorNodeImpl::set(int64_t index64, shared_ptr<NodeImpl> ni)
     StructureNodeImpl::set(index64, ni);
 }
 
-void VectorNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
+void VectorNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, const char* forcedFieldName)
 {
-    ustring fname;
+    /// don't checkImageFileOpen
+
+    ustring fieldName;
     if (forcedFieldName != NULL)
-        fname = forcedFieldName;
+        fieldName = forcedFieldName;
     else
-        fname = elementName_;
+        fieldName = elementName_;
     
-    cf << space(indent) << "<" << fname << " type=\"Vector\" allowHeterogeneousChildren=\"" << static_cast<int64_t>(allowHeteroChildren_) << "\">\n";
+    cf << space(indent) << "<" << fieldName << " type=\"Vector\" allowHeterogeneousChildren=\"" << static_cast<int64_t>(allowHeteroChildren_) << "\">\n";
     for (unsigned i = 0; i < children_.size(); i++)
         children_.at(i)->writeXml(imf, cf, indent+2, "vectorChild");
-    cf << space(indent) << "</"<< fname << ">\n";
+    cf << space(indent) << "</"<< fieldName << ">\n";
 }
 
 #ifdef E57_DEBUG
 void VectorNodeImpl::dump(int indent, ostream& os)
 {
+    /// don't checkImageFileOpen
     os << space(indent) << "type:        Vector" << " (" << type() << ")" << endl;
-    os << space(indent) << "elementName: " << elementName_ << endl;
-    os << space(indent) << "path:        " << pathName() << endl;
+    NodeImpl::dump(indent, os);
     os << space(indent) << "allowHeteroChildren: " << allowHeteroChildren() << endl;
     for (unsigned i = 0; i < children_.size(); i++) {
         os << space(indent) << "child[" << i << "]:" << endl;
@@ -699,80 +901,92 @@ void VectorNodeImpl::dump(int indent, ostream& os)
 #endif
 
 //=====================================================================================
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, int8_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_INT8), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int8_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_INT8), base_(reinterpret_cast<char*>(base)), 
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint8_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_UINT8), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint8_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_UINT8), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, int16_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_INT16), base_(reinterpret_cast<char*>(base)), ustrings_(0), 
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int16_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_INT16), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint16_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_UINT16), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint16_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_UINT16), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, int32_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_INT32), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int32_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_INT32), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, uint32_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_UINT32), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint32_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_UINT32), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, int64_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_INT64), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int64_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_INT64), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, bool* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_BOOL), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, bool* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_BOOL), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, float* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_REAL32), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, float* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_REAL32), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, double* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_REAL64), base_(reinterpret_cast<char*>(base)), ustrings_(0),
-  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, double* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_REAL64), base_(reinterpret_cast<char*>(base)),
+  capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, ustring pathName, vector<ustring>* b)
-: fileParent_(fileParent), pathName_(pathName), elementType_(E57_USTRING), base_(0), ustrings_(b),
-  capacity_(0/*updated below*/), doConversion_(false), doScaling_(false), stride_(0), nextIndex_(0)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, vector<ustring>* b)
+: destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_USTRING), base_(0),
+  capacity_(0/*updated below*/), doConversion_(false), doScaling_(false), stride_(0), nextIndex_(0), ustrings_(b)
 {
+    /// don't checkImageFileOpen, checkState_ will do it
+
     /// Set capacity_ after testing that b is OK
     if (b == NULL)
         throw E57_EXCEPTION2(E57_ERROR_BAD_BUFFER, "sdbuf.pathName=" + pathName);
@@ -786,11 +1000,17 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> fileParent, u
 
 void SourceDestBufferImpl::checkState_()
 {
+    /// Implement checkImageFileOpen functionality for SourceDestBufferImpl ctors
+    /// Throw an exception if destImageFile (destImageFile_) isn't open
+    shared_ptr<ImageFileImpl> destImageFile(destImageFile_);
+    if (!destImageFile->isOpen())
+        throw E57_EXCEPTION2(E57_ERROR_IMAGEFILE_NOT_OPEN, "fileName=" + destImageFile->fileName());
+
     /// Check pathName is well formed (can't verify path is defined until associate sdbuffer with CompressedVector later)
-    shared_ptr<ImageFileImpl> imf(fileParent_);
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
     imf->pathNameCheckWellFormed(pathName_);
 
-    if (elementType_ != E57_USTRING) {
+    if (memoryRepresentation_ != E57_USTRING) {
         if (base_ == NULL)
             throw E57_EXCEPTION2(E57_ERROR_BAD_BUFFER, "pathName=" + pathName_);
         if (stride_ == 0)
@@ -805,6 +1025,8 @@ void SourceDestBufferImpl::checkState_()
 
 int64_t SourceDestBufferImpl::getNextInt64()
 {
+    /// don't checkImageFileOpen
+
     /// Verify index is within bounds
     if (nextIndex_ >= capacity_)
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "pathName=" + pathName_);
@@ -813,7 +1035,7 @@ int64_t SourceDestBufferImpl::getNextInt64()
     /// Convert from non-integer formats if requested.
     char* p = &base_[nextIndex_*stride_];
     int64_t value;
-    switch (elementType_) {
+    switch (memoryRepresentation_) {
         case E57_INT8:
             value = static_cast<int64_t>(*reinterpret_cast<int8_t*>(p));
             break;
@@ -864,6 +1086,8 @@ int64_t SourceDestBufferImpl::getNextInt64()
 
 int64_t SourceDestBufferImpl::getNextInt64(double scale, double offset)
 {
+    /// don't checkImageFileOpen
+
     /// Reverse scale (undo scaling) of a user's number to get raw value to put in file.
 
     /// Encorporating the scale is optional (requested by user when constructing the sdbuf).
@@ -885,7 +1109,7 @@ int64_t SourceDestBufferImpl::getNextInt64(double scale, double offset)
     /// Convert from non-integer formats if requested
     char* p = &base_[nextIndex_*stride_];
     double doubleRawValue;
-    switch (elementType_) {
+    switch (memoryRepresentation_) {
         case E57_INT8:
             /// Calc (x-offset)/scale rounded to nearest integer, but keep in floating point until sure is in bounds
             doubleRawValue = floor((*reinterpret_cast<int8_t*>(p) - offset)/scale + 0.5);
@@ -942,7 +1166,7 @@ int64_t SourceDestBufferImpl::getNextInt64(double scale, double offset)
             throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "pathName=" + pathName_);
     }
     /// Make sure that value is representable in an int64_t
-    if (doubleRawValue < INT64_MIN || INT64_MAX < doubleRawValue) {
+    if (doubleRawValue < E57_INT64_MIN || E57_INT64_MAX < doubleRawValue) {
         throw E57_EXCEPTION2(E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE, 
                              "pathName=" + pathName_ 
                              + " value=" + toString(doubleRawValue));
@@ -956,6 +1180,8 @@ int64_t SourceDestBufferImpl::getNextInt64(double scale, double offset)
 
 float SourceDestBufferImpl::getNextFloat()
 {
+    /// don't checkImageFileOpen
+
     /// Verify index is within bounds
     if (nextIndex_ >= capacity_)
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "pathName=" + pathName_);
@@ -964,7 +1190,7 @@ float SourceDestBufferImpl::getNextFloat()
     /// Convert from other formats to floating point if requested
     char* p = &base_[nextIndex_*stride_];
     float value;
-    switch (elementType_) {
+    switch (memoryRepresentation_) {
         case E57_INT8:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
@@ -1015,7 +1241,7 @@ float SourceDestBufferImpl::getNextFloat()
             double d = *reinterpret_cast<double*>(p);
 
             ///??? silently limit here?
-            if (d < DOUBLE_MIN || DOUBLE_MAX < d)
+            if (d < E57_DOUBLE_MIN || E57_DOUBLE_MAX < d)
                 throw E57_EXCEPTION2(E57_ERROR_REAL64_TOO_LARGE, "pathName=" + pathName_ + " value=" + toString(d));
             value = static_cast<float>(d);
             break;
@@ -1031,6 +1257,8 @@ float SourceDestBufferImpl::getNextFloat()
 
 double SourceDestBufferImpl::getNextDouble()
 {
+    /// don't checkImageFileOpen
+
     /// Verify index is within bounds
     if (nextIndex_ >= capacity_)
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "pathName=" + pathName_);
@@ -1039,7 +1267,7 @@ double SourceDestBufferImpl::getNextDouble()
     /// Convert from other formats to floating point if requested
     char* p = &base_[nextIndex_*stride_];
     double value;
-    switch (elementType_) {
+    switch (memoryRepresentation_) {
         case E57_INT8:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
@@ -1097,8 +1325,10 @@ double SourceDestBufferImpl::getNextDouble()
 
 ustring SourceDestBufferImpl::getNextString()
 {
+    /// don't checkImageFileOpen
+
     /// Check have correct type buffer
-    if (elementType_ != E57_USTRING)
+    if (memoryRepresentation_ != E57_USTRING)
         throw E57_EXCEPTION2(E57_ERROR_EXPECTING_USTRING, "pathName=" + pathName_);
 
     /// Verify index is within bounds
@@ -1111,6 +1341,8 @@ ustring SourceDestBufferImpl::getNextString()
 
 void  SourceDestBufferImpl::setNextInt64(int64_t value)
 {
+    /// don't checkImageFileOpen
+
     /// Verify have room
     if (nextIndex_ >= capacity_)
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "pathName=" + pathName_);
@@ -1118,34 +1350,34 @@ void  SourceDestBufferImpl::setNextInt64(int64_t value)
     /// Calc start of memory location, index into buffer using stride_ (the distance between elements).
     char* p = &base_[nextIndex_*stride_];
 
-    switch (elementType_) {
+    switch (memoryRepresentation_) {
         case E57_INT8:
-            if (value < INT8_MIN || INT8_MAX < value)
+            if (value < E57_INT8_MIN || E57_INT8_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int8_t*>(p) = static_cast<int8_t>(value);
             break;
         case E57_UINT8:
-            if (value < UINT8_MIN || UINT8_MAX < value)
+            if (value < E57_UINT8_MIN || E57_UINT8_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint8_t*>(p) = static_cast<uint8_t>(value);
             break;
         case E57_INT16:
-            if (value < INT16_MIN || INT16_MAX < value)
+            if (value < E57_INT16_MIN || E57_INT16_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int16_t*>(p) = static_cast<int16_t>(value);
             break;
         case E57_UINT16:
-            if (value < UINT16_MIN || UINT16_MAX < value)
+            if (value < E57_UINT16_MIN || E57_UINT16_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint16_t*>(p) = static_cast<uint16_t>(value);
             break;
         case E57_INT32:
-            if (value < INT32_MIN || INT32_MAX < value)
+            if (value < E57_INT32_MIN || E57_INT32_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int32_t*>(p) = static_cast<int32_t>(value);
             break;
         case E57_UINT32:
-            if (value < UINT32_MIN || UINT32_MAX < value)
+            if (value < E57_UINT32_MIN || E57_UINT32_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint32_t*>(p) = static_cast<uint32_t>(value);
             break;
@@ -1175,6 +1407,8 @@ void  SourceDestBufferImpl::setNextInt64(int64_t value)
 
 void  SourceDestBufferImpl::setNextInt64(int64_t value, double scale, double offset)
 {
+    /// don't checkImageFileOpen
+
     /// Apply a scale and offset to numbers from file before puting in user's buffer.
 
     /// Encorporating the scale is optional (requested by user when constructing the sdbuf).
@@ -1194,7 +1428,7 @@ void  SourceDestBufferImpl::setNextInt64(int64_t value, double scale, double off
 
     /// Calc x*scale+offset
     double scaledValue;
-    if (elementType_ == E57_REAL32 || elementType_ == E57_REAL64) {
+    if (memoryRepresentation_ == E57_REAL32 || memoryRepresentation_ == E57_REAL64) {
         /// Value will be stored in some floating point rep in user's buffer, so keep full resolution here.
         scaledValue = value*scale + offset;
     } else {
@@ -1203,34 +1437,34 @@ void  SourceDestBufferImpl::setNextInt64(int64_t value, double scale, double off
         scaledValue = floor(value*scale + offset + 0.5);
     }
 
-    switch (elementType_) {
+    switch (memoryRepresentation_) {
         case E57_INT8:
-            if (scaledValue < INT8_MIN || INT8_MAX < scaledValue)
+            if (scaledValue < E57_INT8_MIN || E57_INT8_MAX < scaledValue)
                 throw E57_EXCEPTION2(E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " scaledValue=" + toString(scaledValue));
             *reinterpret_cast<int8_t*>(p) = static_cast<int8_t>(scaledValue);
             break;
         case E57_UINT8:
-            if (scaledValue < UINT8_MIN || UINT8_MAX < scaledValue)
+            if (scaledValue < E57_UINT8_MIN || E57_UINT8_MAX < scaledValue)
                 throw E57_EXCEPTION2(E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " scaledValue=" + toString(scaledValue));
             *reinterpret_cast<uint8_t*>(p) = static_cast<uint8_t>(scaledValue);
             break;
         case E57_INT16:
-            if (scaledValue < INT16_MIN || INT16_MAX < scaledValue)
+            if (scaledValue < E57_INT16_MIN || E57_INT16_MAX < scaledValue)
                 throw E57_EXCEPTION2(E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " scaledValue=" + toString(scaledValue));
             *reinterpret_cast<int16_t*>(p) = static_cast<int16_t>(scaledValue);
             break;
         case E57_UINT16:
-            if (scaledValue < UINT16_MIN || UINT16_MAX < scaledValue)
+            if (scaledValue < E57_UINT16_MIN || E57_UINT16_MAX < scaledValue)
                 throw E57_EXCEPTION2(E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " scaledValue=" + toString(scaledValue));
             *reinterpret_cast<uint16_t*>(p) = static_cast<uint16_t>(scaledValue);
             break;
         case E57_INT32:
-            if (scaledValue < INT32_MIN || INT32_MAX < scaledValue)
+            if (scaledValue < E57_INT32_MIN || E57_INT32_MAX < scaledValue)
                 throw E57_EXCEPTION2(E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " scaledValue=" + toString(scaledValue));
             *reinterpret_cast<int32_t*>(p) = static_cast<int32_t>(scaledValue);
             break;
         case E57_UINT32:
-            if (scaledValue < UINT32_MIN || UINT32_MAX < scaledValue)
+            if (scaledValue < E57_UINT32_MIN || E57_UINT32_MAX < scaledValue)
                 throw E57_EXCEPTION2(E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " scaledValue=" + toString(scaledValue));
             *reinterpret_cast<uint32_t*>(p) = static_cast<uint32_t>(scaledValue);
             break;
@@ -1244,7 +1478,7 @@ void  SourceDestBufferImpl::setNextInt64(int64_t value, double scale, double off
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
             /// Check that exponent of result is not too big for single precision float
-            if (scaledValue < DOUBLE_MIN || DOUBLE_MAX < scaledValue)
+            if (scaledValue < E57_DOUBLE_MIN || E57_DOUBLE_MAX < scaledValue)
                 throw E57_EXCEPTION2(E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " scaledValue=" + toString(scaledValue));
             *reinterpret_cast<float*>(p) = static_cast<float>(scaledValue);
             break;
@@ -1262,6 +1496,8 @@ void  SourceDestBufferImpl::setNextInt64(int64_t value, double scale, double off
 
 void SourceDestBufferImpl::setNextFloat(float value)
 {
+    /// don't checkImageFileOpen
+
     /// Verify have room
     if (nextIndex_ >= capacity_)
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "pathName=" + pathName_);
@@ -1269,54 +1505,54 @@ void SourceDestBufferImpl::setNextFloat(float value)
     /// Calc start of memory location, index into buffer using stride_ (the distance between elements).
     char* p = &base_[nextIndex_*stride_];
 
-    switch (elementType_) {
+    switch (memoryRepresentation_) {
         case E57_INT8:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
             //??? fault if get special value: NaN, NegInf...  (all other ints below too)
-            if (value < INT8_MIN || INT8_MAX < value)
+            if (value < E57_INT8_MIN || E57_INT8_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int8_t*>(p) = static_cast<int8_t>(value);
             break;
         case E57_UINT8:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < UINT8_MIN || UINT8_MAX < value)
+            if (value < E57_UINT8_MIN || E57_UINT8_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint8_t*>(p) = static_cast<uint8_t>(value);
             break;
         case E57_INT16:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < INT16_MIN || INT16_MAX < value)
+            if (value < E57_INT16_MIN || E57_INT16_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int16_t*>(p) = static_cast<int16_t>(value);
             break;
         case E57_UINT16:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < UINT16_MIN || UINT16_MAX < value)
+            if (value < E57_UINT16_MIN || E57_UINT16_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint16_t*>(p) = static_cast<uint16_t>(value);
             break;
         case E57_INT32:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < INT32_MIN || INT32_MAX < value)
+            if (value < E57_INT32_MIN || E57_INT32_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int32_t*>(p) = static_cast<int32_t>(value);
             break;
         case E57_UINT32:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < UINT32_MIN || UINT32_MAX < value)
+            if (value < E57_UINT32_MIN || E57_UINT32_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint32_t*>(p) = static_cast<uint32_t>(value);
             break;
         case E57_INT64:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < INT64_MIN || INT64_MAX < value)
+            if (value < E57_INT64_MIN || E57_INT64_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int64_t*>(p) = static_cast<int64_t>(value);
             break;
@@ -1341,6 +1577,8 @@ void SourceDestBufferImpl::setNextFloat(float value)
 
 void SourceDestBufferImpl::setNextDouble(double value)
 {
+    /// don't checkImageFileOpen
+
     /// Verify have room
     if (nextIndex_ >= capacity_)
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "pathName=" + pathName_);
@@ -1348,54 +1586,54 @@ void SourceDestBufferImpl::setNextDouble(double value)
     /// Calc start of memory location, index into buffer using stride_ (the distance between elements).
     char* p = &base_[nextIndex_*stride_];
 
-    switch (elementType_) {
+    switch (memoryRepresentation_) {
         case E57_INT8:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
             //??? fault if get special value: NaN, NegInf...  (all other ints below too)
-            if (value < INT8_MIN || INT8_MAX < value)
+            if (value < E57_INT8_MIN || E57_INT8_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int8_t*>(p) = static_cast<int8_t>(value);
             break;
         case E57_UINT8:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < UINT8_MIN || UINT8_MAX < value)
+            if (value < E57_UINT8_MIN || E57_UINT8_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint8_t*>(p) = static_cast<uint8_t>(value);
             break;
         case E57_INT16:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < INT16_MIN || INT16_MAX < value)
+            if (value < E57_INT16_MIN || E57_INT16_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int16_t*>(p) = static_cast<int16_t>(value);
             break;
         case E57_UINT16:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < UINT16_MIN || UINT16_MAX < value)
+            if (value < E57_UINT16_MIN || E57_UINT16_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint16_t*>(p) = static_cast<uint16_t>(value);
             break;
         case E57_INT32:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < INT32_MIN || INT32_MAX < value)
+            if (value < E57_INT32_MIN || E57_INT32_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int32_t*>(p) = static_cast<int32_t>(value);
             break;
         case E57_UINT32:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < UINT32_MIN || UINT32_MAX < value)
+            if (value < E57_UINT32_MIN || E57_UINT32_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<uint32_t*>(p) = static_cast<uint32_t>(value);
             break;
         case E57_INT64:
             if (!doConversion_)
                 throw E57_EXCEPTION2(E57_ERROR_CONVERSION_REQUIRED, "pathName=" + pathName_);
-            if (value < INT64_MIN || INT64_MAX < value)
+            if (value < E57_INT64_MIN || E57_INT64_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<int64_t*>(p) = static_cast<int64_t>(value);
             break;
@@ -1407,7 +1645,7 @@ void SourceDestBufferImpl::setNextDouble(double value)
         case E57_REAL32:
             /// Does this count as conversion?  It loses information.
             /// Check for really large exponents that can't fit in a single precision
-            if (value < DOUBLE_MIN || DOUBLE_MAX < value)
+            if (value < E57_DOUBLE_MIN || E57_DOUBLE_MAX < value)
                 throw E57_EXCEPTION2(E57_ERROR_VALUE_NOT_REPRESENTABLE, "pathName=" + pathName_ + " value=" + toString(value));
             *reinterpret_cast<float*>(p) = static_cast<float>(value);
             break;
@@ -1423,7 +1661,9 @@ void SourceDestBufferImpl::setNextDouble(double value)
 
 void SourceDestBufferImpl::setNextString(const ustring& value)
 {
-    if (elementType_ != E57_USTRING)
+    /// don't checkImageFileOpen
+
+    if (memoryRepresentation_ != E57_USTRING)
         throw E57_EXCEPTION2(E57_ERROR_EXPECTING_USTRING, "pathName=" + pathName_);
 
     /// Verify have room.
@@ -1435,12 +1675,48 @@ void SourceDestBufferImpl::setNextString(const ustring& value)
     nextIndex_++;
 }
 
+void SourceDestBufferImpl::checkCompatible(shared_ptr<SourceDestBufferImpl> newBuf)
+{
+    if (pathName_ != newBuf->pathName()) {
+        throw E57_EXCEPTION2(E57_ERROR_BUFFERS_NOT_COMPATIBLE,
+                             "pathName=" + pathName_
+                             + " newPathName=" + newBuf->pathName());
+    }  
+    if (memoryRepresentation_ != newBuf->memoryRepresentation()) {
+        throw E57_EXCEPTION2(E57_ERROR_BUFFERS_NOT_COMPATIBLE,
+                             "memoryRepresentation=" + toString(memoryRepresentation_)
+                             + " newMemoryType=" + toString(newBuf->memoryRepresentation()));
+    }  
+    if (capacity_ != newBuf->capacity()) {
+        throw E57_EXCEPTION2(E57_ERROR_BUFFERS_NOT_COMPATIBLE,
+                             "capacity=" + toString(capacity_)
+                             + " newCapacity=" + toString(newBuf->capacity()));
+    }  
+    if (doConversion_ != newBuf->doConversion()) {
+        throw E57_EXCEPTION2(E57_ERROR_BUFFERS_NOT_COMPATIBLE,
+                             "doConversion=" + toString(doConversion_)
+                             + "newDoConversion=" + toString(newBuf->doConversion()));
+    }  
+    if (doConversion_ != newBuf->doConversion()) {
+        throw E57_EXCEPTION2(E57_ERROR_BUFFERS_NOT_COMPATIBLE,
+                             "doConversion=" + toString(doConversion_)
+                             + " newDoConversion=" + toString(newBuf->doConversion()));
+    }  
+    if (stride_ != newBuf->stride()) {
+        throw E57_EXCEPTION2(E57_ERROR_BUFFERS_NOT_COMPATIBLE,
+                             "stride=" + toString(stride_)
+                             + " newStride=" + toString(newBuf->stride()));
+    }  
+}
+
 #ifdef E57_DEBUG
 void SourceDestBufferImpl::dump(int indent, ostream& os)
 {
-    os << space(indent) << "pathName:       " << pathName_ << endl;
-    os << space(indent) << "elementType:    ";
-    switch (elementType_) {
+    /// don't checkImageFileOpen
+
+    os << space(indent) << "pathName:             " << pathName_ << endl;
+    os << space(indent) << "memoryRepresentation: ";
+    switch (memoryRepresentation_) {
         case E57_INT8:      os << "int8_t" << endl;    break;
         case E57_UINT8:     os << "uint8_t" << endl;   break;
         case E57_INT16:     os << "int16_t" << endl;    break;
@@ -1454,32 +1730,58 @@ void SourceDestBufferImpl::dump(int indent, ostream& os)
         case E57_USTRING:   os << "ustring" << endl;   break;
         default:            os << "<unknown>" << endl; break;
     }
-    os << space(indent) << "base:           " << reinterpret_cast<unsigned>(base_) << endl;
-    os << space(indent) << "ustrings:       " << reinterpret_cast<unsigned>(ustrings_) << endl;
-    os << space(indent) << "capacity:       " << capacity_ << endl;
-    os << space(indent) << "doConversion:   " << doConversion_ << endl;
-    os << space(indent) << "doScaling:      " << doScaling_ << endl;
-    os << space(indent) << "stride:         " << stride_ << endl;
-    os << space(indent) << "nextIndex:      " << nextIndex_ << endl;
+    os << space(indent) << "base:                 " << reinterpret_cast<unsigned>(base_) << endl;
+    os << space(indent) << "ustrings:             " << reinterpret_cast<unsigned>(ustrings_) << endl;
+    os << space(indent) << "capacity:             " << capacity_ << endl;
+    os << space(indent) << "doConversion:         " << doConversion_ << endl;
+    os << space(indent) << "doScaling:            " << doScaling_ << endl;
+    os << space(indent) << "stride:               " << stride_ << endl;
+    os << space(indent) << "nextIndex:            " << nextIndex_ << endl;
 }
 #endif
 
 //=============================================================================
-CompressedVectorNodeImpl::CompressedVectorNodeImpl(weak_ptr<ImageFileImpl> fileParent)
-: NodeImpl(fileParent)
+CompressedVectorNodeImpl::CompressedVectorNodeImpl(weak_ptr<ImageFileImpl> destImageFile)
+: NodeImpl(destImageFile)
 {
+    // don't checkImageFileOpen, NodeImpl() will do it
+
     recordCount_                = 0;
     binarySectionLogicalStart_  = 0;
 }
 
+NodeType CompressedVectorNodeImpl::type()
+{
+    // don't checkImageFileOpen
+    return(E57_COMPRESSED_VECTOR);
+}
+
 void CompressedVectorNodeImpl::setPrototype(shared_ptr<NodeImpl> prototype)
 {
+    // don't checkImageFileOpen, ctor did it
+
     //??? check ok for proto, no Blob CompressedVector, empty?
     //??? throw E57_EXCEPTION2(E57_ERROR_BAD_PROTOTYPE)
 
     /// Can't set prototype twice.
     if (prototype_)
         throw E57_EXCEPTION2(E57_ERROR_SET_TWICE, "this->pathName=" + this->pathName());
+
+    /// prototype can't have a parent (must be a root node)
+    if (!prototype->isRoot()) {
+        throw E57_EXCEPTION2(E57_ERROR_ALREADY_HAS_PARENT,
+                             "this->pathName=" + this->pathName() + 
+                             " prototype->pathName=" + prototype->pathName());
+    }
+
+    /// Verify that prototype is destined for same ImageFile as this is
+    shared_ptr<ImageFileImpl> thisDest(destImageFile());
+    shared_ptr<ImageFileImpl> prototypeDest(prototype->destImageFile());
+    if (thisDest != prototypeDest) {
+        throw E57_EXCEPTION2(E57_ERROR_DIFFERENT_DEST_IMAGEFILE,
+                             "this->destImageFile" + thisDest->fileName()
+                             + " prototype->destImageFile" + prototypeDest->fileName());
+    }
 
     //!!! check for incomplete CompressedVectors when closing file
     prototype_ = prototype;
@@ -1488,13 +1790,37 @@ void CompressedVectorNodeImpl::setPrototype(shared_ptr<NodeImpl> prototype)
     /// This means that prototype is a root node (has no parent).
 }
 
-void CompressedVectorNodeImpl::setCodecs(shared_ptr<NodeImpl> codecs)
+shared_ptr<NodeImpl> CompressedVectorNodeImpl::getPrototype()
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(prototype_);  //??? check defined
+}
+
+void CompressedVectorNodeImpl::setCodecs(shared_ptr<VectorNodeImpl> codecs)
+{
+    // don't checkImageFileOpen, ctor did it
+
     //??? check ok for codecs, empty vector, or each element has "inputs" vector of strings, codec substruct
 
     /// Can't set codecs twice.
     if (codecs_)
         throw E57_EXCEPTION2(E57_ERROR_SET_TWICE, "this->pathName=" + this->pathName());
+
+    /// codecs can't have a parent (must be a root node)
+    if (!codecs->isRoot()) {
+        throw E57_EXCEPTION2(E57_ERROR_ALREADY_HAS_PARENT,
+                             "this->pathName=" + this->pathName() + 
+                             " codecs->pathName=" + codecs->pathName());
+    }
+
+    /// Verify that codecs is destined for same ImageFile as this is
+    shared_ptr<ImageFileImpl> thisDest(destImageFile());
+    shared_ptr<ImageFileImpl> codecsDest(codecs->destImageFile());
+    if (thisDest != codecsDest) {
+        throw E57_EXCEPTION2(E57_ERROR_DIFFERENT_DEST_IMAGEFILE,
+                             "this->destImageFile" + thisDest->fileName()
+                             + " codecs->destImageFile" + codecsDest->fileName());
+    }
 
     codecs_ = codecs;
 
@@ -1502,8 +1828,16 @@ void CompressedVectorNodeImpl::setCodecs(shared_ptr<NodeImpl> codecs)
     /// This means that codecs is a root node (has no parent).
 }
 
+shared_ptr<VectorNodeImpl> CompressedVectorNodeImpl::getCodecs()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(codecs_);  //??? check defined
+}
+
 bool CompressedVectorNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
+    // don't checkImageFileOpen
+
     //??? is this test a good idea?
 
     /// Same node type?
@@ -1530,32 +1864,51 @@ bool CompressedVectorNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 
 bool CompressedVectorNodeImpl::isDefined(const ustring& pathName)
 {
-    throw E57_EXCEPTION2(E57_ERROR_NOT_IMPLEMENTED, "this->pathName=" + this->pathName() + " pathName=" + "this->pathName=" + this->pathName());
+    throw E57_EXCEPTION2(E57_ERROR_NOT_IMPLEMENTED, "this->pathName=" + this->pathName() + " pathName=" + pathName);
     return(false);
+}
+
+void CompressedVectorNodeImpl::setAttachedRecursive()
+{
+    /// Mark this node as attached to an ImageFile
+    isAttached_ = true;
+
+    /// Mark nodes in prototype tree, if defined
+    if (prototype_)
+        prototype_->setAttachedRecursive();
+
+    /// Mark nodes in codecs tree if defined
+    if (codecs_)
+        codecs_->setAttachedRecursive();
 }
 
 int64_t CompressedVectorNodeImpl::childCount()
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     return(recordCount_);
 }
 
-void CompressedVectorNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, shared_ptr<NodeImpl> origin)
+void CompressedVectorNodeImpl::checkLeavesInSet(const std::set<ustring>& /*pathNames*/, shared_ptr<NodeImpl> /*origin*/)
 {
+    // don't checkImageFileOpen
+
     /// Since only called for prototype nodes, should't be able to get here since CompressedVectors can't be in prototypes
     throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "this->pathName=" + this->pathName());
 }
 
-void CompressedVectorNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
+void CompressedVectorNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, const char* forcedFieldName)
 {
-    ustring fname;
+    // don't checkImageFileOpen
+
+    ustring fieldName;
     if (forcedFieldName != NULL)
-        fname = forcedFieldName;
+        fieldName = forcedFieldName;
     else
-        fname = elementName_;
+        fieldName = elementName_;
 
     uint64_t physicalStart = cf.logicalToPhysical(binarySectionLogicalStart_);
 
-    cf << space(indent) << "<" << fname << " type=\"CompressedVector\"";
+    cf << space(indent) << "<" << fieldName << " type=\"CompressedVector\"";
     cf << " fileOffset=\"" << physicalStart;
     cf << "\" recordCount=\"" << recordCount_ << "\">\n";
 
@@ -1563,15 +1916,14 @@ void CompressedVectorNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf,
         prototype_->writeXml(imf, cf, indent+2, "prototype");
     if (codecs_)
         codecs_->writeXml(imf, cf, indent+2, "codecs");
-    cf << space(indent) << "</"<< fname << ">\n";
+    cf << space(indent) << "</"<< fieldName << ">\n";
 }
 
 #ifdef E57_DEBUG
 void CompressedVectorNodeImpl::dump(int indent, ostream& os)
 {
-    os << space(indent) << "type:        CompressedVectorNode" << " (" << type() << ")" << endl;
-    os << space(indent) << "elementName: " << elementName_ << endl;
-    os << space(indent) << "path:        " << pathName() << endl;
+    os << space(indent) << "type:        CompressedVector" << " (" << type() << ")" << endl;
+    NodeImpl::dump(indent, os);
     if (prototype_) {
         os << space(indent) << "prototype:" << endl;
         prototype_->dump(indent+2, os);
@@ -1589,6 +1941,34 @@ void CompressedVectorNodeImpl::dump(int indent, ostream& os)
 
 shared_ptr<CompressedVectorWriterImpl> CompressedVectorNodeImpl::writer(vector<SourceDestBuffer> sbufs)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
+    shared_ptr<ImageFileImpl> destImageFile(destImageFile_);
+
+    /// Check don't have any writers/readers open for this ImageFile
+    if (destImageFile->writerCount() > 0) {
+        throw E57_EXCEPTION2(E57_ERROR_TOO_MANY_WRITERS,
+                             "fileName=" + destImageFile->fileName()
+                             + " writerCount=" + toString(destImageFile->writerCount())
+                             + " readerCount=" + toString(destImageFile->readerCount()));
+    }
+    if (destImageFile->readerCount() > 0) {
+        throw E57_EXCEPTION2(E57_ERROR_TOO_MANY_READERS,
+                             "fileName=" + destImageFile->fileName()
+                             + " writerCount=" + toString(destImageFile->writerCount())
+                             + " readerCount=" + toString(destImageFile->readerCount()));
+    }
+
+    /// sbufs can't be empty
+    if (sbufs.size() == 0)
+        throw E57_EXCEPTION2(E57_ERROR_BAD_API_ARGUMENT, "fileName=" + destImageFile->fileName());
+
+    if (!destImageFile->isWriter())
+        throw E57_EXCEPTION2(E57_ERROR_FILE_IS_READ_ONLY, "fileName=" + destImageFile->fileName());
+
+    if (!isAttached())
+        throw E57_EXCEPTION2(E57_ERROR_NODE_UNATTACHED, "fileName=" + destImageFile->fileName());
+
     /// Get pointer to me (really shared_ptr<CompressedVectorNodeImpl>)
     shared_ptr<NodeImpl> ni(shared_from_this());
 
@@ -1604,6 +1984,32 @@ shared_ptr<CompressedVectorWriterImpl> CompressedVectorNodeImpl::writer(vector<S
 
 shared_ptr<CompressedVectorReaderImpl> CompressedVectorNodeImpl::reader(vector<SourceDestBuffer> dbufs)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
+    shared_ptr<ImageFileImpl> destImageFile(destImageFile_);
+
+    /// Check don't have any writers/readers open for this ImageFile
+    if (destImageFile->writerCount() > 0) {
+        throw E57_EXCEPTION2(E57_ERROR_TOO_MANY_WRITERS,
+                             "fileName=" + destImageFile->fileName()
+                             + " writerCount=" + toString(destImageFile->writerCount())
+                             + " readerCount=" + toString(destImageFile->readerCount()));
+    }
+    if (destImageFile->readerCount() > 0) {
+        throw E57_EXCEPTION2(E57_ERROR_TOO_MANY_READERS,
+                             "fileName=" + destImageFile->fileName()
+                             + " writerCount=" + toString(destImageFile->writerCount())
+                             + " readerCount=" + toString(destImageFile->readerCount()));
+    }
+
+    /// dbufs can't be empty
+    if (dbufs.size() == 0)
+        throw E57_EXCEPTION2(E57_ERROR_BAD_API_ARGUMENT, "fileName=" + destImageFile->fileName());
+
+    /// Can be read or write mode, but must be attached
+    if (!isAttached())
+        throw E57_EXCEPTION2(E57_ERROR_NODE_UNATTACHED, "fileName=" + destImageFile->fileName());
+
     /// Get pointer to me (really shared_ptr<CompressedVectorNodeImpl>)
     shared_ptr<NodeImpl> ni(shared_from_this());
 #ifdef E57_MAX_VERBOSE
@@ -1625,15 +2031,34 @@ shared_ptr<CompressedVectorReaderImpl> CompressedVectorNodeImpl::reader(vector<S
 }
 
 //=====================================================================
-IntegerNodeImpl::IntegerNodeImpl(weak_ptr<ImageFileImpl> fileParent, int64_t value, int64_t minimum, int64_t maximum)
-: NodeImpl(fileParent),
+IntegerNodeImpl::IntegerNodeImpl(weak_ptr<ImageFileImpl> destImageFile, int64_t value, int64_t minimum, int64_t maximum)
+: NodeImpl(destImageFile),
   value_(value),
   minimum_(minimum),
   maximum_(maximum)
-{}
+{
+    // don't checkImageFileOpen, NodeImpl() will do it
+
+    /// Enforce the given bounds
+    if (value < minimum || maximum < value) {
+        throw E57_EXCEPTION2(E57_ERROR_VALUE_OUT_OF_BOUNDS,
+                             "this->pathName=" + this->pathName()
+                             + " value=" + toString(value)
+                             + " minimum=" + toString(minimum)
+                             + " maximum=" + toString(maximum));
+    }
+}
+
+NodeType IntegerNodeImpl::type()
+{
+    // don't checkImageFileOpen
+    return(E57_INTEGER);
+}
 
 bool IntegerNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
+    // don't checkImageFileOpen
+
     /// Same node type?
     if (ni->type() != E57_INTEGER)
         return(false);
@@ -1659,36 +2084,60 @@ bool IntegerNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 
 bool IntegerNodeImpl::isDefined(const ustring& pathName)
 {
+    // don't checkImageFileOpen
+
     /// We have no sub-structure, so if path not empty return false
     return(pathName == "");
 }
 
+int64_t IntegerNodeImpl::value()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(value_);
+}
+
+int64_t IntegerNodeImpl::minimum()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(minimum_);
+}
+
+int64_t IntegerNodeImpl::maximum()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(maximum_);
+}
+
 void IntegerNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, shared_ptr<NodeImpl> origin)
 {
+    // don't checkImageFileOpen
+
     /// We are a leaf node, so verify that we are listed in set.
     if (pathNames.find(relativePathName(origin)) == pathNames.end())
         throw E57_EXCEPTION2(E57_ERROR_NO_BUFFER_FOR_ELEMENT, "this->pathName=" + this->pathName());
 }
 
-void IntegerNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
+void IntegerNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> /*imf???*/, CheckedFile& cf, int indent, const char* forcedFieldName)
 {
-    ustring fname;
+    // don't checkImageFileOpen
+
+    ustring fieldName;
     if (forcedFieldName != NULL)
-        fname = forcedFieldName;
+        fieldName = forcedFieldName;
     else
-        fname = elementName_;
+        fieldName = elementName_;
     
-    cf << space(indent) << "<" << fname << " type=\"Integer\"";
+    cf << space(indent) << "<" << fieldName << " type=\"Integer\"";
 
     /// Don't need to write if are default values
-    if (minimum_ != INT64_MIN)
+    if (minimum_ != E57_INT64_MIN)
         cf << " minimum=\"" << minimum_ << "\"";
-    if (maximum_ != INT64_MAX)
+    if (maximum_ != E57_INT64_MAX)
         cf << " maximum=\"" << maximum_ << "\"";
 
     /// Write value as child text, unless it is the default value
     if (value_ != 0)
-        cf << ">" << value_ << "</" << fname << ">\n";
+        cf << ">" << value_ << "</" << fieldName << ">\n";
     else
         cf << "/>\n";
 }
@@ -1696,27 +2145,46 @@ void IntegerNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedF
 #ifdef E57_DEBUG
 void IntegerNodeImpl::dump(int indent, ostream& os)
 {
+    // don't checkImageFileOpen
     os << space(indent) << "type:        Integer" << " (" << type() << ")" << endl;
-    os << space(indent) << "elementName: " << elementName_ << endl;
-    os << space(indent) << "path:        " << pathName() << endl;
+    NodeImpl::dump(indent, os);
+    os << space(indent) << "value:       " << value_ << endl;
     os << space(indent) << "minimum:     " << minimum_ << endl;
     os << space(indent) << "maximum:     " << maximum_ << endl;
-    os << space(indent) << "value:       " << value_ << endl;
 }
 #endif
 
 //=============================================================================
-ScaledIntegerNodeImpl::ScaledIntegerNodeImpl(weak_ptr<ImageFileImpl> fileParent, int64_t value, int64_t minimum, int64_t maximum, double scale, double offset)
-: NodeImpl(fileParent),
-  value_(value),
+ScaledIntegerNodeImpl::ScaledIntegerNodeImpl(weak_ptr<ImageFileImpl> destImageFile, int64_t rawValue, int64_t minimum, int64_t maximum, double scale, double offset)
+: NodeImpl(destImageFile),
+  value_(rawValue),
   minimum_(minimum),
   maximum_(maximum),
   scale_(scale),
   offset_(offset)
-{}
+{
+    // don't checkImageFileOpen, NodeImpl() will do it
+
+    /// Enforce the given bounds on raw value
+    if (rawValue < minimum || maximum < rawValue) {
+        throw E57_EXCEPTION2(E57_ERROR_VALUE_OUT_OF_BOUNDS,
+                             "this->pathName=" + this->pathName()
+                             + " rawValue=" + toString(rawValue)
+                             + " minimum=" + toString(minimum)
+                             + " maximum=" + toString(maximum));
+    }
+}
+
+NodeType ScaledIntegerNodeImpl::type()
+{
+    // don't checkImageFileOpen
+    return(E57_SCALED_INTEGER);
+}
 
 bool ScaledIntegerNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
+    // don't checkImageFileOpen
+
     /// Same node type?
     if (ni->type() != E57_SCALED_INTEGER)
         return(false);
@@ -1750,31 +2218,73 @@ bool ScaledIntegerNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 
 bool ScaledIntegerNodeImpl::isDefined(const ustring& pathName)
 {
+    // don't checkImageFileOpen
+
     /// We have no sub-structure, so if path not empty return false
     return(pathName == "");
 }
 
+int64_t ScaledIntegerNodeImpl::rawValue()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(value_);
+}
+
+double ScaledIntegerNodeImpl::scaledValue()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(value_ * scale_ + offset_);
+}
+
+int64_t ScaledIntegerNodeImpl::minimum()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(minimum_);
+}
+
+int64_t ScaledIntegerNodeImpl::maximum()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(maximum_);
+}
+
+double ScaledIntegerNodeImpl::scale()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(scale_);
+}
+
+double ScaledIntegerNodeImpl::offset()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(offset_);
+}
+
 void ScaledIntegerNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, shared_ptr<NodeImpl> origin)
 {
+    // don't checkImageFileOpen
+
     /// We are a leaf node, so verify that we are listed in set.
     if (pathNames.find(relativePathName(origin)) == pathNames.end())
         throw E57_EXCEPTION2(E57_ERROR_NO_BUFFER_FOR_ELEMENT, "this->pathName=" + this->pathName());
 }
 
-void ScaledIntegerNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
+void ScaledIntegerNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> /*imf*/, CheckedFile& cf, int indent, const char* forcedFieldName)
 {
-    ustring fname;
+    // don't checkImageFileOpen
+
+    ustring fieldName;
     if (forcedFieldName != NULL)
-        fname = forcedFieldName;
+        fieldName = forcedFieldName;
     else
-        fname = elementName_;
+        fieldName = elementName_;
     
-    cf << space(indent) << "<" << fname << " type=\"ScaledInteger\"";
+    cf << space(indent) << "<" << fieldName << " type=\"ScaledInteger\"";
 
     /// Don't need to write if are default values
-    if (minimum_ != INT64_MIN)
+    if (minimum_ != E57_INT64_MIN)
         cf << " minimum=\"" << minimum_ << "\"";
-    if (maximum_ != INT64_MAX)
+    if (maximum_ != E57_INT64_MAX)
         cf << " maximum=\"" << maximum_ << "\"";
     if (scale_ != 1.0)
         cf << " scale=\""  << scale_  << "\"";
@@ -1783,7 +2293,7 @@ void ScaledIntegerNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, Ch
 
     /// Write value as child text, unless it is the default value
     if (value_ != 0)
-        cf << ">" << value_ << "</" << fname << ">\n";
+        cf << ">" << value_ << "</" << fieldName << ">\n";
     else
         cf << "/>\n";
 }
@@ -1791,29 +2301,57 @@ void ScaledIntegerNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, Ch
 #ifdef E57_DEBUG
 void ScaledIntegerNodeImpl::dump(int indent, ostream& os)
 {
-    os << space(indent) << "type:        Integer" << " (" << type() << ")" << endl;
-    os << space(indent) << "elementName: " << elementName_ << endl;
-    os << space(indent) << "path:        " << pathName() << endl;
+    // don't checkImageFileOpen
+    os << space(indent) << "type:        ScaledInteger" << " (" << type() << ")" << endl;
+    NodeImpl::dump(indent, os);
+    os << space(indent) << "rawValue:    " << value_ << endl;
     os << space(indent) << "minimum:     " << minimum_ << endl;
     os << space(indent) << "maximum:     " << maximum_ << endl;
     os << space(indent) << "scale:       " << scale_ << endl;
     os << space(indent) << "offset:      " << offset_ << endl;
-    os << space(indent) << "value:       " << value_ << endl;
 }
 #endif
 
 //=============================================================================
 
-FloatNodeImpl::FloatNodeImpl(weak_ptr<ImageFileImpl> fileParent, double value, FloatPrecision precision, double minimum, double maximum)
-: NodeImpl(fileParent),
+FloatNodeImpl::FloatNodeImpl(weak_ptr<ImageFileImpl> destImageFile, double value, FloatPrecision precision, double minimum, double maximum)
+: NodeImpl(destImageFile),
   value_(value),
   precision_(precision),
   minimum_(minimum),
   maximum_(maximum)
-{}
+{
+    // don't checkImageFileOpen, NodeImpl() will do it
+
+    /// Since this ctor also used to construct single precision, and defaults for minimum/maximum are for double precision,
+    /// adjust bounds smaller if single.
+    if (precision_ == E57_SINGLE) {
+        if (minimum_ < E57_FLOAT_MIN)
+            minimum_ = E57_FLOAT_MIN;
+        if (maximum_ > E57_FLOAT_MAX)
+            maximum_ = E57_FLOAT_MAX;
+    }
+
+    /// Enforce the given bounds on raw value
+    if (value < minimum || maximum < value) {
+        throw E57_EXCEPTION2(E57_ERROR_VALUE_OUT_OF_BOUNDS,
+                             "this->pathName=" + this->pathName()
+                             + " value=" + toString(value)
+                             + " minimum=" + toString(minimum)
+                             + " maximum=" + toString(maximum));
+    }
+}
+
+NodeType FloatNodeImpl::type()
+{
+    /// don't checkImageFileOpen
+    return(E57_FLOAT);
+}
 
 bool FloatNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
+    // don't checkImageFileOpen
+
     /// Same node type?
     if (ni->type() != E57_FLOAT)
         return(false);
@@ -1843,50 +2381,93 @@ bool FloatNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 
 bool FloatNodeImpl::isDefined(const ustring& pathName)
 {
+    // don't checkImageFileOpen
+
     /// We have no sub-structure, so if path not empty return false
     return(pathName == "");
 }
 
+double FloatNodeImpl::value()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(value_);
+}
+
+FloatPrecision FloatNodeImpl::precision()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(precision_);
+}
+
+double FloatNodeImpl::minimum()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(minimum_);
+}
+
+double FloatNodeImpl::maximum()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(maximum_);
+}
+
 void FloatNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, shared_ptr<NodeImpl> origin)
 {
-    /// We are a leaf node, so verify that we are listed in set.
-    if (pathNames.find(relativePathName(origin)) == pathNames.end())
+    // don't checkImageFileOpen
+
+    /// We are a leaf node, so verify that we are listed in set (either relative or absolute form)
+    if (pathNames.find(relativePathName(origin)) == pathNames.end() && pathNames.find(pathName()) == pathNames.end())
         throw E57_EXCEPTION2(E57_ERROR_NO_BUFFER_FOR_ELEMENT, "this->pathName=" + this->pathName());
 }
 
-void FloatNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
+void FloatNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> /*imf*/, CheckedFile& cf, int indent, const char* forcedFieldName)
 {
-    ustring fname;
+    // don't checkImageFileOpen
+
+    ustring fieldName;
     if (forcedFieldName != NULL)
-        fname = forcedFieldName;
+        fieldName = forcedFieldName;
     else
-        fname = elementName_;
+        fieldName = elementName_;
     
-    cf << space(indent) << "<" << fname << " type=\"Float\"";
-    if (precision_ == E57_SINGLE)
+    cf << space(indent) << "<" << fieldName << " type=\"Float\"";
+    if (precision_ == E57_SINGLE) {
         cf << " precision=\"single\"";
-    else
+
+        /// Don't need to write if are default values
+        if (minimum_ > E57_FLOAT_MIN)
+            cf << " minimum=\"" << static_cast<float>(minimum_) << "\"";
+        if (maximum_ < E57_FLOAT_MAX)
+            cf << " maximum=\"" << static_cast<float>(maximum_) << "\"";
+
+        /// Write value as child text, unless it is the default value
+        if (value_ != 0.0)
+            cf << ">" << static_cast<float>(value_) << "</" << fieldName << ">\n";
+        else
+            cf << "/>\n";
+    } else {
         cf << " precision=\"double\"";
 
-    /// Don't need to write if are default values
-    if (minimum_ != DOUBLE_MIN)
-        cf << " minimum=\"" << minimum_ << "\"";
-    if (maximum_ != DOUBLE_MAX)
-        cf << " maximum=\"" << maximum_ << "\"";
+        /// Don't need to write if are default values
+        if (minimum_ > E57_DOUBLE_MIN)
+            cf << " minimum=\"" << minimum_ << "\"";
+        if (maximum_ < E57_DOUBLE_MAX)
+            cf << " maximum=\"" << maximum_ << "\"";
 
-    /// Write value as child text, unless it is the default value
-    if (value_ != 0.0)
-        cf << ">" << value_ << "</" << fname << ">\n";
-    else
-        cf << "/>\n";
+        /// Write value as child text, unless it is the default value
+        if (value_ != 0.0)
+            cf << ">" << value_ << "</" << fieldName << ">\n";
+        else
+            cf << "/>\n";
+    }
 }
 
 #ifdef E57_DEBUG
 void FloatNodeImpl::dump(int indent, ostream& os)
 {
+    // don't checkImageFileOpen
     os << space(indent) << "type:        Float" << " (" << type() << ")" << endl;
-    os << space(indent) << "elementName: " << elementName_ << endl;
-    os << space(indent) << "path:        " << pathName() << endl;
+    NodeImpl::dump(indent, os);
     os << space(indent) << "precision:   ";
     if (precision() == E57_SINGLE)
         os << "single" << endl;
@@ -1909,13 +2490,23 @@ void FloatNodeImpl::dump(int indent, ostream& os)
 
 //=============================================================================
 
-StringNodeImpl::StringNodeImpl(weak_ptr<ImageFileImpl> fileParent, ustring value)
-: NodeImpl(fileParent),
+StringNodeImpl::StringNodeImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring value)
+: NodeImpl(destImageFile),
   value_(value)
-{}
+{
+    // don't checkImageFileOpen, NodeImpl() will do it
+}
+
+NodeType StringNodeImpl::type()
+{
+    // don't checkImageFileOpen
+    return(E57_STRING);
+}
 
 bool StringNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
+    // don't checkImageFileOpen
+
     /// Same node type?
     if (ni->type() != E57_STRING)
         return(false);
@@ -1928,26 +2519,38 @@ bool StringNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 
 bool StringNodeImpl::isDefined(const ustring& pathName)
 {
+    // don't checkImageFileOpen
+
     /// We have no sub-structure, so if path not empty return false
     return(pathName == "");
 }
 
+ustring StringNodeImpl::value()
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(value_);
+}
+
 void StringNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, shared_ptr<NodeImpl> origin)
 {
+    // don't checkImageFileOpen
+
     /// We are a leaf node, so verify that we are listed in set.
     if (pathNames.find(relativePathName(origin)) == pathNames.end())
         throw E57_EXCEPTION2(E57_ERROR_NO_BUFFER_FOR_ELEMENT, "this->pathName=" + this->pathName());
 }
 
-void StringNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
+void StringNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> /*imf*/, CheckedFile& cf, int indent, const char* forcedFieldName)
 {
-    ustring fname;
+    // don't checkImageFileOpen
+
+    ustring fieldName;
     if (forcedFieldName != NULL)
-        fname = forcedFieldName;
+        fieldName = forcedFieldName;
     else
-        fname = elementName_;
+        fieldName = elementName_;
     
-    cf << space(indent) << "<" << fname << " type=\"String\"";
+    cf << space(indent) << "<" << fieldName << " type=\"String\"";
 
     /// Write value as child text, unless it is the default value
     if (value_ == "") {
@@ -1976,7 +2579,7 @@ void StringNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFi
                 currentPosition = found+2;
             }
         }
-        cf << "]]></" << fname << ">\n";
+        cf << "]]></" << fieldName << ">\n";
     }
 }
 
@@ -1984,18 +2587,19 @@ void StringNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFi
 void StringNodeImpl::dump(int indent, ostream& os)
 {
     os << space(indent) << "type:        String" << " (" << type() << ")" << endl;
-    os << space(indent) << "elementName: " << elementName_ << endl;
-    os << space(indent) << "path:        " << pathName() << endl;
+    NodeImpl::dump(indent, os);
     os << space(indent) << "value:       '" << value_ << "'" << endl;
 }
 #endif
 
 //=============================================================================
 
-BlobNodeImpl::BlobNodeImpl(weak_ptr<ImageFileImpl> fileParent, uint64_t byteCount)
-: NodeImpl(fileParent)
+BlobNodeImpl::BlobNodeImpl(weak_ptr<ImageFileImpl> destImageFile, int64_t byteCount)
+: NodeImpl(destImageFile)
 {
-    shared_ptr<ImageFileImpl> imf(fileParent);
+    // don't checkImageFileOpen, NodeImpl() will do it
+
+    shared_ptr<ImageFileImpl> imf(destImageFile);
 
     /// This what caller thinks blob length is
     blobLogicalLength_ = byteCount;
@@ -2024,12 +2628,14 @@ BlobNodeImpl::BlobNodeImpl(weak_ptr<ImageFileImpl> fileParent, uint64_t byteCoun
     imf->file_->write(reinterpret_cast<char*>(&header), sizeof(header));
 }
 
-BlobNodeImpl::BlobNodeImpl(weak_ptr<ImageFileImpl> fileParent, uint64_t fileOffset, uint64_t length)
-: NodeImpl(fileParent)
+BlobNodeImpl::BlobNodeImpl(weak_ptr<ImageFileImpl> destImageFile, int64_t fileOffset, int64_t length)
+: NodeImpl(destImageFile)
 {
     /// Init blob object that already exists in E57 file currently reading.
 
-    shared_ptr<ImageFileImpl> imf(fileParent);
+    // don't checkImageFileOpen, NodeImpl() will do it
+
+    shared_ptr<ImageFileImpl> imf(destImageFile);
 
     /// Init state from values read from XML
     blobLogicalLength_ = length;
@@ -2037,8 +2643,16 @@ BlobNodeImpl::BlobNodeImpl(weak_ptr<ImageFileImpl> fileParent, uint64_t fileOffs
     binarySectionLogicalLength_ = sizeof(BlobSectionHeader) + blobLogicalLength_;
 }
 
+NodeType BlobNodeImpl::type()
+{
+    /// don't checkImageFileOpen
+    return(E57_BLOB);
+}
+
 bool BlobNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 {
+    // don't checkImageFileOpen, NodeImpl() will do it
+
     /// Same node type?
     if (ni->type() != E57_BLOB)
         return(false);
@@ -2060,6 +2674,8 @@ bool BlobNodeImpl::isTypeEquivalent(shared_ptr<NodeImpl> ni)
 
 bool BlobNodeImpl::isDefined(const ustring& pathName)
 {
+    // don't checkImageFileOpen, NodeImpl() will do it
+
     /// We have no sub-structure, so if path not empty return false
     return(pathName == "");
 }
@@ -2069,26 +2685,40 @@ BlobNodeImpl::~BlobNodeImpl()
 
 int64_t BlobNodeImpl::byteCount()
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     return(blobLogicalLength_);
 }
 
-void BlobNodeImpl::read(uint8_t* buf, uint64_t start, size_t count)
+void BlobNodeImpl::read(uint8_t* buf, int64_t start, size_t count)
 {
-    if (start+count > blobLogicalLength_) {
+    //??? check start not negative
+
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    if (static_cast<uint64_t>(start)+count > blobLogicalLength_) {
         throw E57_EXCEPTION2(E57_ERROR_BAD_API_ARGUMENT, 
                              "this->pathName=" + this->pathName()
                              + " start=" + toString(start)
                              + " count=" + toString(count)
                              + " length=" + toString(blobLogicalLength_));
     }
-    shared_ptr<ImageFileImpl> imf(fileParent_);
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
     imf->file_->seek(binarySectionLogicalStart_ + sizeof(BlobSectionHeader) + start);
     imf->file_->read(reinterpret_cast<char*>(buf), static_cast<size_t>(count));  //??? arg1 void* ?
 }
 
-void BlobNodeImpl::write(uint8_t* buf, uint64_t start, size_t count)
+void BlobNodeImpl::write(uint8_t* buf, int64_t start, size_t count)
 {
-    if (start+count > blobLogicalLength_) {
+    //??? check start not negative
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
+    shared_ptr<ImageFileImpl> destImageFile(destImageFile_);
+
+    if (!destImageFile->isWriter())
+        throw E57_EXCEPTION2(E57_ERROR_FILE_IS_READ_ONLY, "fileName=" + destImageFile->fileName());
+    if (!isAttached())
+        throw E57_EXCEPTION2(E57_ERROR_NODE_UNATTACHED, "fileName=" + destImageFile->fileName());
+
+    if (static_cast<uint64_t>(start)+count > blobLogicalLength_) {
         throw E57_EXCEPTION2(E57_ERROR_BAD_API_ARGUMENT, 
                              "this->pathName=" + this->pathName()
                              + " start=" + toString(start)
@@ -2096,39 +2726,43 @@ void BlobNodeImpl::write(uint8_t* buf, uint64_t start, size_t count)
                              + " length=" + toString(blobLogicalLength_));
     }
 
-    shared_ptr<ImageFileImpl> imf(fileParent_);
+    shared_ptr<ImageFileImpl> imf(destImageFile_);
     imf->file_->seek(binarySectionLogicalStart_ + sizeof(BlobSectionHeader) + start);
     imf->file_->write(reinterpret_cast<char*>(buf), static_cast<size_t>(count));  //??? arg1 void* ?
 }
 
 void BlobNodeImpl::checkLeavesInSet(const std::set<ustring>& pathNames, shared_ptr<NodeImpl> origin)
 {
+    // don't checkImageFileOpen
+
     /// We are a leaf node, so verify that we are listed in set. ???true for blobs? what exception get if try blob in compressedvector?
     if (pathNames.find(relativePathName(origin)) == pathNames.end())
         throw E57_EXCEPTION2(E57_ERROR_NO_BUFFER_FOR_ELEMENT, "this->pathName=" + this->pathName());
 }
 
-void BlobNodeImpl::writeXml(std::tr1::shared_ptr<ImageFileImpl> imf, CheckedFile& cf, int indent, char* forcedFieldName)
+void BlobNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> /*imf*/, CheckedFile& cf, int indent, const char* forcedFieldName)
 {
-    ustring fname;
+    // don't checkImageFileOpen
+
+    ustring fieldName;
     if (forcedFieldName != NULL)
-        fname = forcedFieldName;
+        fieldName = forcedFieldName;
     else
-        fname = elementName_;
+        fieldName = elementName_;
     
     //??? need to implement
     //??? Type --> type
     //??? need to have length?, check same as in section header?
     uint64_t physicalOffset = cf.logicalToPhysical(binarySectionLogicalStart_);
-    cf << space(indent) << "<" << fname << " type=\"Blob\" fileOffset=\"" << physicalOffset << "\" length=\"" << blobLogicalLength_ << "\"/>\n";
+    cf << space(indent) << "<" << fieldName << " type=\"Blob\" fileOffset=\"" << physicalOffset << "\" length=\"" << blobLogicalLength_ << "\"/>\n";
 }
 
 #ifdef E57_DEBUG
 void BlobNodeImpl::dump(int indent, ostream& os)
 {
-    os << space(indent) << "type:                         Blob" << " (" << type() << ")" << endl;
-    os << space(indent) << "elementName:                  " << elementName_ << endl;
-    os << space(indent) << "path:                         " << pathName() << endl;
+    // don't checkImageFileOpen
+    os << space(indent) << "type:        Blob" << " (" << type() << ")" << endl;
+    NodeImpl::dump(indent, os);
     os << space(indent) << "blobLogicalLength_:           " << blobLogicalLength_ << endl;
     os << space(indent) << "binarySectionLogicalStart:    " << binarySectionLogicalStart_ << endl;
     os << space(indent) << "binarySectionLogicalLength:   " << binarySectionLogicalLength_ << endl;
@@ -2151,7 +2785,7 @@ void BlobNodeImpl::dump(int indent, ostream& os)
 #include <xercesc/util/BinInputStream.hpp>
 
 /// Make shorthand for Xerces namespace???
-XERCES_CPP_NAMESPACE_USE;
+XERCES_CPP_NAMESPACE_USE
 
 class E57FileInputStream : public BinInputStream
 {
@@ -2196,7 +2830,21 @@ XMLSize_t E57FileInputStream::readBytes(       XMLByte* const  toFill
     size_t maxToRead_size = maxToRead;
 
     /// Be careful if size_t is smaller than int64_t
-    size_t available_size = static_cast<size_t>(min(available, static_cast<int64_t>(SIZE_MAX)));
+    size_t available_size;
+    if (sizeof(size_t) >= sizeof(int64_t))
+        /// size_t is at least as big as int64_t
+        available_size = static_cast<size_t>(available);
+    else {
+        /// size_t is smaller than int64_t, Calc max that size_t can hold
+        int64_t size_max = ((1LL<<(8*sizeof(size_t))) - 1);
+
+        /// read smaller of size_max, available
+        ///??? redo
+        if (size_max < available)
+            available_size = static_cast<size_t>(size_max);
+        else
+            available_size = static_cast<size_t>(available);
+    }
 
     size_t readCount = min(maxToRead_size, available_size);
 
@@ -2248,7 +2896,7 @@ namespace e57 {
 class E57XmlParser : public DefaultHandler
 {
 public:
-    E57XmlParser(std::tr1::shared_ptr<ImageFileImpl> imf);
+    E57XmlParser(boost::shared_ptr<ImageFileImpl> imf);
     ~E57XmlParser();
 
     /// SAX interface
@@ -2267,10 +2915,10 @@ public:
     void fatalError(const SAXParseException& exc);
 private:
     ustring toUString(const XMLCh* const xml_str);
-    ustring lookupAttribute(const Attributes& attributes, wchar_t* attribute_name);
-    bool    isAttributeDefined(const Attributes& attributes, wchar_t* attribute_name);
+    ustring lookupAttribute(const Attributes& attributes, const wchar_t* attribute_name);
+    bool    isAttributeDefined(const Attributes& attributes, const wchar_t* attribute_name);
 
-    std::tr1::shared_ptr<ImageFileImpl> imf_;   /// Image file we are reading
+    boost::shared_ptr<ImageFileImpl> imf_;   /// Image file we are reading
 
     struct ParseInfo {
         /// All the fields need to remember while parsing the XML
@@ -2337,9 +2985,9 @@ void E57XmlParser::ParseInfo::dump(int indent, ostream& os)
     os << space(indent) << "childText:      \"" << childText << "\"" << endl;
 }
 
-}; /// end namespace e57
+} /// end namespace e57
 
-E57XmlParser::E57XmlParser(std::tr1::shared_ptr<ImageFileImpl> imf)
+E57XmlParser::E57XmlParser(boost::shared_ptr<ImageFileImpl> imf)
 : imf_(imf)
 {
 }
@@ -2374,7 +3022,7 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
     cout << "startElement" << endl;
     cout << space(2) << "URI:       " << toUString(uri) << endl;
     cout << space(2) << "localName: " << toUString(localName) << endl;
-    cout << space(2) << "qName:     " << toUString(qname) << endl;
+    cout << space(2) << "qName:     " << toUString(qName) << endl;
 
     for (size_t i = 0; i < attributes.getLength(); i++) {
         cout << space(2) << "Attribute[" << i << "]" << endl;
@@ -2400,18 +3048,30 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 
         if (isAttributeDefined(attributes, L"minimum")) {
             ustring minimum_str = lookupAttribute(attributes, L"minimum");
-            pi.minimum = _atoi64(minimum_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+            pi.minimum = _atoi64(minimum_str.c_str());
+#elif defined(__GNUC__)
+            pi.minimum = strtoll(minimum_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
         } else {
-            /// Not defined defined in XML, so defaults to INT64_MIN
-            pi.minimum = INT64_MIN;
+            /// Not defined defined in XML, so defaults to E57_INT64_MIN
+            pi.minimum = E57_INT64_MIN;
         }
 
         if (isAttributeDefined(attributes, L"maximum")) {
             ustring maximum_str   = lookupAttribute(attributes, L"maximum");
-            pi.maximum = _atoi64(maximum_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+            pi.maximum = _atoi64(maximum_str.c_str());
+#elif defined(__GNUC__)
+            pi.maximum = strtoll(maximum_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
         } else {
-            /// Not defined defined in XML, so defaults to INT64_MAX
-            pi.maximum = INT64_MAX;
+            /// Not defined defined in XML, so defaults to E57_INT64_MAX
+            pi.maximum = E57_INT64_MAX;
         }
 
         /// Push info so far onto stack
@@ -2425,18 +3085,30 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         //??? check validity of numeric strings
         if (isAttributeDefined(attributes, L"minimum")) {
             ustring minimum_str = lookupAttribute(attributes, L"minimum");
-            pi.minimum = _atoi64(minimum_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+            pi.minimum = _atoi64(minimum_str.c_str());
+#elif defined(__GNUC__)
+            pi.minimum = strtoll(minimum_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
         } else {
-            /// Not defined defined in XML, so defaults to INT64_MIN
-            pi.minimum = INT64_MIN;
+            /// Not defined defined in XML, so defaults to E57_INT64_MIN
+            pi.minimum = E57_INT64_MIN;
         }
 
         if (isAttributeDefined(attributes, L"maximum")) {
             ustring maximum_str   = lookupAttribute(attributes, L"maximum");
-            pi.maximum = _atoi64(maximum_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+            pi.maximum = _atoi64(maximum_str.c_str());
+#elif defined(__GNUC__)
+            pi.maximum = strtoll(maximum_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
         } else {
-            /// Not defined defined in XML, so defaults to INT64_MAX
-            pi.maximum = INT64_MAX;
+            /// Not defined defined in XML, so defaults to E57_INT64_MAX
+            pi.maximum = E57_INT64_MAX;
         }
 
         if (isAttributeDefined(attributes, L"scale")) {
@@ -2482,11 +3154,11 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
             ustring minimum_str = lookupAttribute(attributes, L"minimum");
             pi.floatMinimum = atof(minimum_str.c_str());  //??? use exact rounding library
         } else {
-            /// Not defined defined in XML, so defaults to FLOAT_MIN or DOUBLE_MIN
+            /// Not defined defined in XML, so defaults to E57_FLOAT_MIN or E57_DOUBLE_MIN
             if (pi.precision == E57_SINGLE)
-                pi.floatMinimum = FLOAT_MIN;
+                pi.floatMinimum = E57_FLOAT_MIN;
             else
-                pi.floatMinimum = DOUBLE_MIN;
+                pi.floatMinimum = E57_DOUBLE_MIN;
         }
 
         if (isAttributeDefined(attributes, L"maximum")) {
@@ -2495,9 +3167,9 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         } else {
             /// Not defined defined in XML, so defaults to FLOAT_MAX or DOUBLE_MAX
             if (pi.precision == E57_SINGLE)
-                pi.floatMaximum = FLOAT_MAX;
+                pi.floatMaximum = E57_FLOAT_MAX;
             else
-                pi.floatMaximum = DOUBLE_MAX;
+                pi.floatMaximum = E57_DOUBLE_MAX;
         }
 
         /// Push info so far onto stack
@@ -2520,11 +3192,23 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 
         /// fileOffset is required to be defined
         ustring fileOffset_str = lookupAttribute(attributes, L"fileOffset");
-        pi.fileOffset = _atoi64(fileOffset_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+        pi.fileOffset = _atoi64(fileOffset_str.c_str());
+#elif defined(__GNUC__)
+        pi.fileOffset = strtoll(fileOffset_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
 
         /// length is required to be defined
         ustring length_str = lookupAttribute(attributes, L"length");
-        pi.length = _atoi64(length_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+        pi.length = _atoi64(length_str.c_str());
+#elif defined(__GNUC__)
+        pi.length = strtoll(length_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
 
         /// Push info so far onto stack
         stack_.push(pi);
@@ -2572,6 +3256,10 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         shared_ptr<StructureNodeImpl> s_ni(new StructureNodeImpl(imf_));
         pi.container_ni = s_ni;
 
+        /// After have Structure, check again if E57Root, if so mark attached so all children will be attached when added
+        if (toUString(localName) == "e57Root")
+            s_ni->setAttachedRecursive();
+
         /// Push info so far onto stack
         stack_.push(pi);
     } else if (node_type == "Vector") {
@@ -2582,7 +3270,13 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 
         if (isAttributeDefined(attributes, L"allowHeterogeneousChildren")) {
             ustring allowHetero_str = lookupAttribute(attributes, L"allowHeterogeneousChildren");
-            int64_t i64 = _atoi64(allowHetero_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+            int64_t i64 = _atoi64(allowHetero_str.c_str());
+#elif defined(__GNUC__)
+            int64_t i64 = strtoll(allowHetero_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
             if (i64 == 0)
                 pi.allowHeterogeneousChildren = false;
             else if (i64 == 1)
@@ -2614,11 +3308,23 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 
         /// fileOffset is required to be defined
         ustring fileOffset_str = lookupAttribute(attributes, L"fileOffset");
-        pi.fileOffset = _atoi64(fileOffset_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+        pi.fileOffset = _atoi64(fileOffset_str.c_str());
+#elif defined(__GNUC__)
+        pi.fileOffset = strtoll(fileOffset_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
 
         /// recordCount is required to be defined
         ustring recordCount_str = lookupAttribute(attributes, L"recordCount");
-        pi.recordCount = _atoi64(recordCount_str.c_str());  //??? not portable, MSonly
+#if defined(_MSC_VER)
+        pi.recordCount = _atoi64(recordCount_str.c_str());
+#elif defined(__GNUC__)
+        pi.recordCount = strtoll(recordCount_str.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
 
         /// Create container now, so can hold children
         shared_ptr<CompressedVectorNodeImpl> cv_ni(new CompressedVectorNodeImpl(imf_));
@@ -2670,9 +3376,15 @@ void E57XmlParser::endElement(const XMLCh* const uri,
         case E57_INTEGER: {
             /// Convert child text (if any) to value, else default to 0.0
             int64_t intValue;
-            if (pi.childText.length() > 0)
-                intValue = _atoi64(pi.childText.c_str());  //??? not portable, MSonly
-            else
+            if (pi.childText.length() > 0) {
+#if defined(_MSC_VER)
+                intValue = _atoi64(pi.childText.c_str());
+#elif defined(__GNUC__)
+                intValue = strtoll(pi.childText.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
+            } else
                 intValue = 0;
             shared_ptr<IntegerNodeImpl> i_ni(new IntegerNodeImpl(imf_, intValue, pi.minimum, pi.maximum));
             current_ni = i_ni;
@@ -2680,9 +3392,15 @@ void E57XmlParser::endElement(const XMLCh* const uri,
         case E57_SCALED_INTEGER: {
             /// Convert child text (if any) to value, else default to 0.0
             int64_t intValue;
-            if (pi.childText.length() > 0)
-                intValue = _atoi64(pi.childText.c_str());  //??? not portable, MSonly
-            else
+            if (pi.childText.length() > 0) {
+#if defined(_MSC_VER)
+                intValue = _atoi64(pi.childText.c_str());
+#elif defined(__GNUC__)
+                intValue = strtoll(pi.childText.c_str(), NULL, 10); //??? check endptr?
+#else
+#  error "no supported compiler defined"
+#endif
+            } else
                 intValue = 0;
             shared_ptr<ScaledIntegerNodeImpl> si_ni(new ScaledIntegerNodeImpl(imf_, intValue, pi.minimum, pi.maximum, pi.scale, pi.offset));
             current_ni = si_ni;
@@ -2763,9 +3481,29 @@ void E57XmlParser::endElement(const XMLCh* const uri,
             /// n can be either prototype or codecs
             if (uQName == "prototype")
                 cv_ni->setPrototype(current_ni);
-            else if (uQName == "codecs")  //??? need to check is hetero Vector?
-                cv_ni->setCodecs(current_ni);
-            else {
+            else if (uQName == "codecs") {
+                if (current_ni->type() != E57_VECTOR) {
+                    throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT,
+                                         "currentType=" + toString(current_ni->type())
+                                         + " fileName=" + imf_->fileName()
+                                         + " uri=" + toUString(uri)
+                                         + " localName=" + toUString(localName)
+                                         + " qName=" + toUString(qName));
+                }
+                shared_ptr<VectorNodeImpl> vi = dynamic_pointer_cast<VectorNodeImpl>(current_ni);
+
+                /// Check VectorNode is hetero
+                if (!vi->allowHeteroChildren()) {
+                    throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT,
+                                         "currentType=" + toString(current_ni->type())
+                                         + " fileName=" + imf_->fileName()
+                                         + " uri=" + toUString(uri)
+                                         + " localName=" + toUString(localName)
+                                         + " qName=" + toUString(qName));
+                }
+
+                cv_ni->setCodecs(vi);
+            } else {
                 /// Found unknown XML child element of CompressedVector, not prototype or codecs
                 throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT, 
                                      + "fileName=" + imf_->fileName()
@@ -2786,8 +3524,8 @@ void E57XmlParser::endElement(const XMLCh* const uri,
 }
 
 
-void E57XmlParser::processingInstruction(const XMLCh* const target,
-                                      const XMLCh* const data)
+void E57XmlParser::processingInstruction(const XMLCh* const /*target*/,
+                                         const XMLCh* const /*data*/)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "processingInstruction" << endl;
@@ -2795,9 +3533,10 @@ void E57XmlParser::processingInstruction(const XMLCh* const target,
 }
 
 
-void E57XmlParser::characters(const   XMLCh* const    chars,
-                        const   XMLSize_t    length)
+void E57XmlParser::characters(const   XMLCh* const chars,
+                              const   XMLSize_t    length)
 {
+//??? use length to make ustring
 #ifdef E57_MAX_VERBOSE
     cout << "characters, chars=\"" << toUString(chars) << "\" length=" << length << endl;
 #endif
@@ -2870,18 +3609,30 @@ ustring E57XmlParser::toUString(const XMLCh* const xml_str)
     return(u_str);
 }
 
-ustring E57XmlParser::lookupAttribute(const Attributes& attributes, wchar_t* attribute_name)
+ustring E57XmlParser::lookupAttribute(const Attributes& attributes, const wchar_t* attribute_name)
 {
+#ifdef E57_MAX_DEBUG
+    if (sizeof(XMLCh) != sizeof(wchar_t))
+        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "sizeof(XMLCh)=" + toString(sizeof(XMLCh)) + " sizeof(wchar_t)=" + toString(sizeof(wchar_t)));
+#endif
+
+    const XMLCh* XMLCh_attribute_name = reinterpret_cast<const XMLCh*>(attribute_name);
     XMLSize_t attr_index;
-    if (!attributes.getIndex(static_cast<XMLCh*>(attribute_name), attr_index))  //??? may not be portable static_cast
-        throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT, "attributeName=" + toUString(attribute_name));
+    if (!attributes.getIndex(XMLCh_attribute_name, attr_index))
+        throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT, "attributeName=" + toUString(XMLCh_attribute_name));
     return(toUString(attributes.getValue(attr_index)));
 }
 
-bool E57XmlParser::isAttributeDefined(const Attributes& attributes, wchar_t* attribute_name)
+bool E57XmlParser::isAttributeDefined(const Attributes& attributes, const wchar_t* attribute_name)
 {
+#ifdef E57_MAX_DEBUG
+    if (sizeof(XMLCh) != sizeof(wchar_t))
+        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "sizeof(XMLCh)=" + toString(sizeof(XMLCh)) + " sizeof(wchar_t)=" + toString(sizeof(wchar_t)));
+#endif
+
+    const XMLCh* XMLCh_attribute_name = reinterpret_cast<const XMLCh*>(attribute_name);
     XMLSize_t attr_index;
-    return(attributes.getIndex(static_cast<XMLCh*>(attribute_name), attr_index));  //??? may not be portable static_cast
+    return(attributes.getIndex(XMLCh_attribute_name, attr_index));
 }
 
 //=============================================================================
@@ -2889,25 +3640,30 @@ bool E57XmlParser::isAttributeDefined(const Attributes& attributes, wchar_t* att
 //=============================================================================
 
 ImageFileImpl::ImageFileImpl()
+: writerCount_(0),
+  readerCount_(0)
 {
     /// First phase of construction, can't do much until have the ImageFile object.
     /// See ImageFileImpl::construct2() for second phase.
 }
 
-void ImageFileImpl::construct2(const ustring& fname, const ustring& mode, const ustring& configuration)
+void ImageFileImpl::construct2(const ustring& fileName, const ustring& mode, const ustring& /*configuration*/)
 {
     /// Second phase of construction, now we have a well-formed ImageFile object.
 
 #ifdef E57_MAX_VERBOSE
-    cout << "ImageFileImpl() called, fname=" << fname << " mode=" << mode << " configuration=" << configuration << endl;
+    cout << "ImageFileImpl() called, fileName=" << fileName << " mode=" << mode << endl;
 #endif
 
-    fname_ = fname;
+    fileName_ = fileName;
 
     /// Get shared_ptr to this object
     shared_ptr<ImageFileImpl> imf=shared_from_this();
     shared_ptr<StructureNodeImpl> root(new StructureNodeImpl(imf));
     root_ = root; //??? ok?
+
+    /// Mark the root as attached to an ImageFile (this one)
+    root_->setAttachedRecursive();
 
     //??? allow "rw" or "a"?
     if (mode == "w")
@@ -2922,7 +3678,7 @@ void ImageFileImpl::construct2(const ustring& fname, const ustring& mode, const 
     if (!isWriter_) {
         try { //??? should one try block cover whole function?
             /// Open file for reading.
-            file_ = new CheckedFile(fname_, CheckedFile::readOnly);
+            file_ = new CheckedFile(fileName_, CheckedFile::readOnly);
 
             E57FileHeader header;
             readFileHeader(file_, header);
@@ -2971,8 +3727,10 @@ void ImageFileImpl::construct2(const ustring& fname, const ustring& mode, const 
             /// Do the parse, building up the node tree
             xmlReader->parse(xmlSection);
         } catch (...) {
-            if (xmlReader != NULL)
+            if (xmlReader != NULL) {
                 delete xmlReader;
+                xmlReader = NULL;
+            }
             if (file_ != NULL) {
                 delete file_;
                 file_ = NULL;
@@ -2983,7 +3741,7 @@ void ImageFileImpl::construct2(const ustring& fname, const ustring& mode, const 
     } else { /// open for writing (start empty)
         try {
             /// Open file for writing, truncate if already exists.
-            file_ = new CheckedFile(fname_, CheckedFile::writeCreate);
+            file_ = new CheckedFile(fileName_, CheckedFile::writeCreate);
 
             unusedLogicalStart_ = sizeof(E57FileHeader);
         } catch (...) {
@@ -3017,7 +3775,7 @@ void ImageFileImpl::readFileHeader(CheckedFile* file, E57FileHeader& header)
         throw E57_EXCEPTION2(E57_ERROR_BAD_FILE_SIGNATURE, "fileName="+file->fileName());
 
     /// Check file version compatibility
-    if (header.majorVersion != E57_VERSION_MAJOR) {
+    if (header.majorVersion != E57_FORMAT_MAJOR) {
         throw E57_EXCEPTION2(E57_ERROR_UNKNOWN_FILE_VERSION,
                              "fileName=" + file->fileName()
                              + " header.majorVersion=" + toString(header.majorVersion)
@@ -3026,7 +3784,7 @@ void ImageFileImpl::readFileHeader(CheckedFile* file, E57FileHeader& header)
 
     /// If is a prototype version (majorVersion==0), then minorVersion has to match too.
     /// In production versions (majorVersion>=1), should be able to handle any minor version.
-    if (header.majorVersion == 0 && header.minorVersion != E57_VERSION_MINOR) {
+    if (header.majorVersion == 0 && header.minorVersion != E57_FORMAT_MINOR) {
         throw E57_EXCEPTION2(E57_ERROR_UNKNOWN_FILE_VERSION,
                              "fileName=" + file->fileName()
                              + " header.majorVersion=" + toString(header.majorVersion)
@@ -3047,8 +3805,45 @@ void ImageFileImpl::readFileHeader(CheckedFile* file, E57FileHeader& header)
 //        throw E57_EXCEPTION2(E57_ERROR_BAD_FILE_LENGTH, "fileName=" + file->fileName());
 }
 
+void ImageFileImpl::incrWriterCount()
+{
+    writerCount_++;
+}
+
+void ImageFileImpl::decrWriterCount()
+{
+    writerCount_--;
+#ifdef E57_MAX_DEBUG
+    if (writerCount_ < 0) {
+        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, 
+                             "fileName=" + fileName_ 
+                             + " writerCount=" + toString(writerCount_)
+                             + " readerCount=" + toString(readerCount_));
+    }
+#endif
+}
+
+void ImageFileImpl::incrReaderCount()
+{
+    readerCount_++;
+}
+
+void ImageFileImpl::decrReaderCount()
+{
+    readerCount_--;
+#ifdef E57_MAX_DEBUG
+    if (readerCount_ < 0) {
+        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, 
+                             "fileName=" + fileName_ 
+                             + " writerCount=" + toString(writerCount_)
+                             + " readerCount=" + toString(readerCount_));
+    }
+#endif
+}
+
 shared_ptr<StructureNodeImpl> ImageFileImpl::root()
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     return(root_);
 }
 
@@ -3085,8 +3880,8 @@ void ImageFileImpl::close()
         E57FileHeader header;
         memset(&header, 0, sizeof(header));  /// need to init to zero, ok since no constructor
         memcpy(&header.fileSignature, "ASTM-E57", 8);
-        header.majorVersion       = E57_VERSION_MAJOR;
-        header.minorVersion       = E57_VERSION_MINOR;
+        header.majorVersion       = E57_FORMAT_MAJOR;
+        header.minorVersion       = E57_FORMAT_MINOR;
         header.filePhysicalLength = file_->length(CheckedFile::physical);
         header.xmlPhysicalOffset  = xmlPhysicalOffset;
         header.xmlLogicalLength   = xmlLogicalLength_;
@@ -3108,21 +3903,50 @@ void ImageFileImpl::close()
 
 void ImageFileImpl::cancel()
 {
-    //??? flush, close
+    /// If file already closed, have nothing to do
+    if (file_ == NULL)
+        return;
+
+    /// Close the file and ulink (delete) it.
+    /// It is legal to cancel a read file, but file isn't deleted.
+    if (isWriter_)
+        file_->unlink();
+    else
+        file_->close();
+
+    delete file_;
+    file_ = NULL;
+}
+
+bool ImageFileImpl::isOpen()
+{
+    return(file_ != NULL);
+}
+
+bool ImageFileImpl::isWriter()
+{
+    return(isWriter_);
+}
+
+int ImageFileImpl::writerCount()
+{
+    return(writerCount_);
+}
+
+int ImageFileImpl::readerCount()
+{
+    return(readerCount_);
 }
 
 ImageFileImpl::~ImageFileImpl()
 {
-    //??? warning if not closed, if open, close(), 
-
-    /// Try to close if not already, but don't allow any exceptions to propogate to caller
+    /// Try to cancel if not already closed, but don't allow any exceptions to propogate to caller (because in dtor).
+    /// If writing, this will unlink the file, so make sure call ImageFileImpl::close explicitly before dtor runs.
     try {
-        if (file_ != NULL) {
-            close();
-        }
+        cancel();
     } catch (...) {};
 
-    /// Just in case close failed without freeing file_, do free here.
+    /// Just in case cancel failed without freeing file_, do free here.
     if (file_ != NULL) {
         delete file_;
         file_ = NULL;
@@ -3143,8 +3967,20 @@ uint64_t ImageFileImpl::allocateSpace(uint64_t byteCount, bool doExtendNow)
     return(oldLogicalStart);
 }
 
+CheckedFile* ImageFileImpl::file()
+{
+    return(file_);
+}
+
+ustring ImageFileImpl::fileName()
+{
+    // don't checkImageFileOpen, since need to get fileName to report not open
+    return(fileName_);
+}
+
 void ImageFileImpl::extensionsAdd(const ustring& prefix, const ustring& uri)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     //??? check if prefix characters ok, check if uri has a double quote char (others?)
 
     /// Check to make sure that neither prefix or uri is already defined.
@@ -3160,6 +3996,8 @@ void ImageFileImpl::extensionsAdd(const ustring& prefix, const ustring& uri)
 
 bool ImageFileImpl::extensionsLookupPrefix(const ustring& prefix, ustring& uri)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
     /// Linear search for matching prefix
     vector<NameSpace>::iterator it;
     for (it = nameSpaces_.begin(); it < nameSpaces_.end(); ++it) {
@@ -3173,6 +4011,8 @@ bool ImageFileImpl::extensionsLookupPrefix(const ustring& prefix, ustring& uri)
 
 bool ImageFileImpl::extensionsLookupUri(const ustring& uri, ustring& prefix)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
     /// Linear search for matching URI
     vector<NameSpace>::iterator it;
     for (it = nameSpaces_.begin(); it < nameSpaces_.end(); ++it) {
@@ -3184,31 +4024,55 @@ bool ImageFileImpl::extensionsLookupUri(const ustring& uri, ustring& prefix)
     return(false);
 }
 
-bool ImageFileImpl::elementNameIsExtended(const ustring& elementName)
+int ImageFileImpl::extensionsCount()
 {
-    /// Check if has a single colon
-    size_t found = elementName.find_first_of(':');
-    if (found == string::npos)
-        return(false);
-
-    /// Make sure colon isn't at beginning or end
-    if (found == 0 || found == elementName.length()-1)
-        throw E57_EXCEPTION2(E57_ERROR_BAD_ELEMENT_NAME, "elementName=" + elementName);
-
-    /// Check doesn't have two colons
-    if (elementName.find_first_of(':', found+1) != string::npos)
-        throw E57_EXCEPTION2(E57_ERROR_BAD_ELEMENT_NAME, "elementName=" + elementName);
-
-    return(true);
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(nameSpaces_.size());
 }
 
-bool ImageFileImpl::elementNameIsWellFormed(const ustring& elementName, bool allowNumber)
+ustring ImageFileImpl::extensionsPrefix(int index)
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(nameSpaces_[index].prefix);  //??? throw e57 exception here if out of bounds?
+}
+
+ustring ImageFileImpl::extensionsUri(int index)
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(nameSpaces_[index].uri);  //??? throw e57 exception here if out of bounds?
+}
+
+bool ImageFileImpl::isElementNameExtended(const ustring& elementName)
+{
+    /// don't checkImageFileOpen
+
+    /// Make sure doesn't have any "/" in it
+    size_t found = elementName.find_first_of('/');
+    if (found != string::npos)
+        return(false);
+
+    ustring prefix, localPart;
+    try {
+        /// Throws if elementName bad
+        elementNameParse(elementName, prefix, localPart);
+    } catch(E57Exception& /*ex*/) {
+        return(false);
+    }
+
+    /// If get here, the name was good, so test if found a prefix part
+    return(prefix.length() > 0);
+}
+
+bool ImageFileImpl::isElementNameLegal(const ustring& elementName, bool allowNumber)
 {
 #ifdef E57_MAX_VERBOSE
-    //cout << "elementNameIsWellFormed elementName=""" << elementName << """" << endl;
+    //cout << "isElementNameLegal elementName=""" << elementName << """" << endl;
 #endif
     try {
-        elementNameCheckWellFormed(elementName, allowNumber);
+        checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
+        /// Throws if elementName bad
+        checkElementNameLegal(elementName, allowNumber);
     } catch(E57Exception& /*ex*/) {
         return(false);
     }
@@ -3217,14 +4081,51 @@ bool ImageFileImpl::elementNameIsWellFormed(const ustring& elementName, bool all
     return(true);
 }
 
-void ImageFileImpl::elementNameCheckWellFormed(const ustring& elementName, bool allowNumber)
+bool ImageFileImpl::isPathNameLegal(const ustring& pathName)
 {
+#ifdef E57_MAX_VERBOSE
+    //cout << "isPathNameLegal elementName=""" << pathName << """" << endl;
+#endif
+    try {
+        checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
+        /// Throws if pathName bad
+        pathNameCheckWellFormed(pathName);
+    } catch(E57Exception& /*ex*/) {
+        return(false);
+    }
+
+    /// If get here, the name was good
+    return(true);
+}
+
+void ImageFileImpl::checkElementNameLegal(const ustring& elementName, bool allowNumber)
+{
+    /// no checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__)
+
+    ustring prefix, localPart;
+
+    /// Throws if bad elementName
+    elementNameParse(elementName, prefix, localPart, allowNumber);
+
+    /// If has prefix, it must be registered
+    ustring uri;
+    if (prefix.length() > 0 && !extensionsLookupPrefix(prefix, uri))
+        throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, "elementName=" + elementName + " prefix=" + prefix);
+}
+
+void ImageFileImpl::elementNameParse(const ustring& elementName, ustring& prefix, ustring& localPart, bool allowNumber)
+{
+    /// no checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__)
+
+    //??? check if elementName is good UTF-8?
+
     size_t len = elementName.length();
 
     /// Empty name is bad
     if (len == 0)
-        throw E57_EXCEPTION2(E57_ERROR_BAD_ELEMENT_NAME, "elementName=" + elementName);
-    char c = elementName[0];
+        throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, "elementName=" + elementName);
+    unsigned char c = elementName[0];
 
     /// If allowing numeric element name, check if first char is digit
     if (allowNumber && '0'<=c && c<='9') {
@@ -3232,7 +4133,7 @@ void ImageFileImpl::elementNameCheckWellFormed(const ustring& elementName, bool 
         for (size_t i = 1; i < len; i++) {
             c = elementName[i];
             if (!('0'<=c && c<='9'))
-                throw E57_EXCEPTION2(E57_ERROR_BAD_NAME_CHAR, "elementName=" + elementName);
+                throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, "elementName=" + elementName);
         }
         return;
     }
@@ -3241,51 +4142,44 @@ void ImageFileImpl::elementNameCheckWellFormed(const ustring& elementName, bool 
     /// Don't test any part of a multi-byte code point sequence (c >= 128).
     /// Don't allow ':' as first char.
     if (c<128 && !(('a'<=c && c<='z') || ('A'<=c && c<='Z') || c=='_'))
-        throw E57_EXCEPTION2(E57_ERROR_BAD_NAME_CHAR, "elementName=" + elementName);
+        throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, "elementName=" + elementName);
 
     /// If each following char is ASCII (<128), check for legality
     /// Don't test any part of a multi-byte code point sequence (c >= 128).
     for (size_t i = 1; i < len; i++) {
         c = elementName[i];
         if (c<128 && !(('a'<=c && c<='z') || ('A'<=c && c<='Z') || c=='_' || c==':' || ('0'<=c && c<='9') || c=='-' || c=='.'))
-            throw E57_EXCEPTION2(E57_ERROR_BAD_NAME_CHAR, "elementName=" + elementName);
+            throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, "elementName=" + elementName);
     }
 
-    /// If extended name, check extension is registered
-    if (elementNameIsExtended(elementName)) {
-        /// Extract prefix from field name and check is defined
-        ustring prefix, localPart, uri;
-        elementNameParse(elementName, prefix, localPart);
-        if (!extensionsLookupPrefix(prefix, uri))
-            throw E57_EXCEPTION2(E57_ERROR_UNKNOWN_PREFIX, "elementName=" + elementName + " prefix=" + prefix);
-    }
-}
-
-void ImageFileImpl::elementNameParse(const ustring& elementName, ustring& prefix, ustring& localPart)
-{
-    /// If has no colon, then element name is all local
+    /// Check if has at least one colon, try to split it into prefix & localPart
     size_t found = elementName.find_first_of(':');
-    if (found == string::npos) {
+    if (found != string::npos) {
+        /// Check doesn't have two colons
+        if (elementName.find_first_of(':', found+1) != string::npos)
+            throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, "elementName=" + elementName);
+
+        /// Split element name at the colon
+        /// ??? split before check first/subsequent char legal?
+        prefix    = elementName.substr(0, found);
+        localPart = elementName.substr(found+1);
+
+        if (prefix.length() == 0 || localPart.length() == 0) {
+            throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, 
+                                 "elementName=" + elementName + 
+                                 " prefix=" + prefix +
+                                 " localPart=" + localPart);
+        }
+    } else {
         prefix = "";
         localPart = elementName;
-        return;
     }
-
-    /// Make sure colon isn't at beginning or end
-    if (found == 0 || found == elementName.length()-1)
-        throw E57_EXCEPTION2(E57_ERROR_BAD_ELEMENT_NAME, "elementName=" + elementName);
-
-    /// Check doesn't have two colons
-    if (elementName.find_first_of(':', found+1) != string::npos)
-        throw E57_EXCEPTION2(E57_ERROR_BAD_ELEMENT_NAME, "elementName=" + elementName);
-
-    /// Split element name at the colon
-    prefix    = elementName.substr(0, found);
-    localPart = elementName.substr(found+1);
 }
 
 void ImageFileImpl::pathNameCheckWellFormed(const ustring& pathName)
 {
+    /// no checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__)
+
     /// Just call pathNameParse() which throws if not well formed
     bool isRelative;
     vector<ustring> fields;
@@ -3297,6 +4191,8 @@ void ImageFileImpl::pathNameParse(const ustring& pathName, bool& isRelative, vec
 #ifdef E57_MAX_VERBOSE
     cout << "pathNameParse pathname=""" << pathName << """" << endl;
 #endif
+    /// no checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__)
+
     /// Clear previous contents of fields vector
     fields.clear();
 
@@ -3316,7 +4212,7 @@ void ImageFileImpl::pathNameParse(const ustring& pathName, bool& isRelative, vec
 
         /// Get element name from in between '/', check valid
         ustring elementName = pathName.substr(start, slash-start);
-        if (!elementNameIsWellFormed(elementName))
+        if (!isElementNameLegal(elementName))
             throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, "pathName=" + pathName + " elementName=" + elementName);
 
         /// Add to list
@@ -3338,10 +4234,19 @@ void ImageFileImpl::pathNameParse(const ustring& pathName, bool& isRelative, vec
     /// Empty relative path is not allowed
     if (isRelative && fields.size() == 0)
         throw E57_EXCEPTION2(E57_ERROR_BAD_PATH_NAME, "pathName=" + pathName);
+
+#ifdef E57_MAX_VERBOSE
+    cout << "pathNameParse returning: isRelative=" << isRelative << " fields.size()=" << fields.size() << " fields=";
+    for (int i = 0; i < fields.size(); i++)
+        cout << fields[i] << ",";
+    cout << endl;
+#endif
 }
 
 ustring ImageFileImpl::pathNameUnparse(bool isRelative, const vector<ustring>& fields)
 {
+    /// no checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__)
+
     ustring path;
 
     if (!isRelative)
@@ -3354,10 +4259,24 @@ ustring ImageFileImpl::pathNameUnparse(bool isRelative, const vector<ustring>& f
     return(path);
 }
 
+void ImageFileImpl::checkImageFileOpen(const char* srcFileName, int srcLineNumber, const char* srcFunctionName)
+{
+    if (!isOpen()) {
+        throw E57Exception(E57_ERROR_IMAGEFILE_NOT_OPEN,
+                           "fileName=" + fileName(),
+                           srcFileName,
+                           srcLineNumber,
+                           srcFunctionName);
+    }
+}
+
 void ImageFileImpl::dump(int indent, ostream& os)
 {
-    os << space(indent) << "fname:     " << fname_ << endl;
-    os << space(indent) << "isWriter:  " << isWriter_ << endl;
+    /// no checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__)
+    os << space(indent) << "fileName:    " << fileName_ << endl;
+    os << space(indent) << "writerCount: " << writerCount_ << endl;
+    os << space(indent) << "readerCount: " << readerCount_ << endl;
+    os << space(indent) << "isWriter:    " << isWriter_ << endl;
     for (int i=0; i < extensionsCount(); i++)
         os << space(indent) << "nameSpace[" << i << "]: prefix=" << extensionsPrefix(i) << " uri=" << extensionsUri(i) << endl;
     os << space(indent) << "root:      " << endl;
@@ -3369,6 +4288,7 @@ unsigned ImageFileImpl::bitsNeeded(int64_t minimum, int64_t maximum)
     /// Relatively quick way to compute ceil(log2(maximum - minimum + 1)));
     /// Uses only integer operations and is machine independent (no assembly code).
     /// Find the bit position of the first 1 (from left) in the binary form of stateCountMinus1.
+    ///??? move to E57Utility?
 
     uint64_t stateCountMinus1 = maximum - minimum;
     unsigned log2 = 0;
@@ -3428,10 +4348,10 @@ void main()
     test1(-128, 127);
     cout << endl;
 
-    test1(INT8_MIN, INT8_MAX);
-    test1(INT16_MIN, INT16_MAX);
-    test1(INT32_MIN, INT32_MAX);
-    test1(INT64_MIN, INT64_MAX);
+    test1(E57_INT8_MIN, E57_INT8_MAX);
+    test1(E57_INT16_MIN, E57_INT16_MAX);
+    test1(E57_INT32_MIN, E57_INT32_MAX);
+    test1(E57_INT64_MIN, E57_INT64_MAX);
     cout << endl;
 
     for (int i=0; i < 64; i++) {
@@ -3453,35 +4373,54 @@ void main()
 
 //================================================================
 
+const size_t   CheckedFile::physicalPageSizeLog2 = 10;  // physical page size is 2 raised to this power
+const size_t   CheckedFile::physicalPageSize = 1 << physicalPageSizeLog2;
+const uint64_t CheckedFile::physicalPageSizeMask = physicalPageSize-1;
+const size_t   CheckedFile::logicalPageSize = physicalPageSize - 4;
+
 CheckedFile::CheckedFile(ustring fileName, Mode mode)
 : fileName_(fileName),
   fd_(-1)
 {
     switch (mode) {
         case readOnly:
-            fd_ = open(fileName_.c_str()/*???*/, O_RDONLY|O_BINARY);
-            if (fd_ < 0)
-                throw E57_EXCEPTION2(E57_ERROR_OPEN_FAILED, "fd=" + toString(fd_));
+            fd_ = open64(fileName_, O_RDONLY|O_BINARY, 0);
             readOnly_ = true;
             logicalLength_ = physicalToLogical(length(physical));
             break;
         case writeCreate:
             /// File truncated to zero length if already exists
-            fd_ = open(fileName_.c_str()/*???*/, O_RDWR|O_CREAT|O_TRUNC|O_BINARY, S_IWRITE|S_IREAD);
-            if (fd_ < 0)
-                throw E57_EXCEPTION2(E57_ERROR_OPEN_FAILED, "fd=" + toString(fd_));
+            fd_ = open64(fileName_, O_RDWR|O_CREAT|O_TRUNC|O_BINARY, S_IWRITE|S_IREAD);
             readOnly_ = false;
             logicalLength_ = 0;
             break;
         case writeExisting:
-            fd_ = open(fileName_.c_str()/*???*/, O_RDWR|O_BINARY);
-            if (fd_ < 0)
-                throw E57_EXCEPTION2(E57_ERROR_OPEN_FAILED, "fd=" + toString(fd_));
+            fd_ = open64(fileName_, O_RDWR|O_BINARY, 0);
             readOnly_ = false;
             logicalLength_ = physicalToLogical(length(physical)); //???
             break;
     }    
 }
+
+int CheckedFile::open64(ustring fileName, int flags, int mode)
+{
+#if defined(_MSC_VER)
+    int result = _open(fileName_.c_str()/*???*/, flags, mode);
+#elif defined(__GNUC__)
+    int result = open(fileName_.c_str()/*???*/, flags, mode);
+#else
+#  error "no supported compiler defined"
+#endif
+    if (result < 0) {
+        throw E57_EXCEPTION2(E57_ERROR_OPEN_FAILED,
+                             "result=" + toString(result)
+                             + " fileName=" + fileName
+                             + " flags=" + toString(flags)
+                             + " mode=" + toString(mode));
+    }
+    return(result);
+}
+
 
 CheckedFile::~CheckedFile()
 {
@@ -3492,10 +4431,11 @@ CheckedFile::~CheckedFile()
     }
 }
 
-void CheckedFile::read(char* buf, size_t nRead, size_t bufSize)
+void CheckedFile::read(char* buf, size_t nRead, size_t /*bufSize*/)
 {
 //??? what if read past logical end?, or physical end?
 //??? need to keep track of logical length?
+//??? check bufSize OK
 
 #ifdef SAFE_MODE
     uint64_t end = position(logical) + nRead;
@@ -3600,11 +4540,26 @@ CheckedFile& CheckedFile::operator<<(uint64_t i)
     return(*this << ss.str());
 }
 
+CheckedFile& CheckedFile::operator<<(float f)
+{
+    //??? is 7 digits right number?
+    return(writeFloatingPoint(f, 7));
+}
+
 CheckedFile& CheckedFile::operator<<(double d)
 {
-    //??? is 17 digits right number?, try to remove trailing zeros?
+    //??? is 17 digits right number?
+    return(writeFloatingPoint(d, 17));
+}
+
+template<class FTYPE> CheckedFile& CheckedFile::writeFloatingPoint(FTYPE value, int precision)
+{
+#ifdef E57_MAX_VERBOSE
+    cout << "CheckedFile::writeFloatingPoint, value=" << value << " precision=" << precision << endl;
+#endif
+
     stringstream ss;
-    ss << scientific << setprecision(17) << d;
+    ss << scientific << setprecision(precision) << value;
 
     /// Try to remove trailing zeroes and decimal point
     /// E.g. 1.23456000000000000e+005  ==> 1.23456e+005
@@ -3642,12 +4597,12 @@ CheckedFile& CheckedFile::operator<<(double d)
 
 #ifdef E57_MAX_DEBUG
     /// Double check same value
-    double old_value = atof(old_s.c_str());
-    double new_value = atof(s.c_str());
+    FTYPE old_value = static_cast<FTYPE>(atof(old_s.c_str()));
+    FTYPE new_value = static_cast<FTYPE>(atof(s.c_str()));
     if (old_value != new_value)
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "fileName=" + fileName_ + " oldValue=" + toString(old_value) + " newValue=" + toString(new_value));
-    if (new_value != d)
-        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "fileName=" + fileName_ + " newValue=" + toString(d) + " oldValue=" + toString(d));
+    if (new_value != value)
+        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "fileName=" + fileName_ + " newValue=" + toString(new_value) + " value=" + toString(value));
 #endif
 
     return(*this << s);
@@ -3657,29 +4612,54 @@ void CheckedFile::seek(uint64_t offset, OffsetMode omode)
 {
 #ifdef SAFE_MODE
     //??? check for seek beyond logicalLength_
-    __int64 pos = static_cast<__int64>(omode==physical ? offset : logicalToPhysical(offset));
+    int64_t pos = static_cast<int64_t>(omode==physical ? offset : logicalToPhysical(offset));
 
 #ifdef E57_MAX_VERBOSE
     // cout << "seek offset=" << offset << " omode=" << omode << " pos=" << pos << endl; //???
 #endif
-    __int64 result = _lseeki64(fd_, pos, SEEK_SET);  //??? Microsoft dependency
-    if (result < 0)
-        throw E57_EXCEPTION2(E57_ERROR_LSEEK_FAILED, "fileName=" + fileName_ + " result=" + toString(result));
-#endif  // SAFE_MODE
+    lseek64(pos, SEEK_SET);
+#endif
+}
+
+uint64_t CheckedFile::lseek64(int64_t offset, int whence)
+{
+#if defined(WIN32)
+#  if defined(_MSC_VER)
+    __int64 result = _lseeki64(fd_, offset, whence);
+#  elif defined(__GNUC__)
+#    ifdef E57_MAX_DEBUG
+    if (sizeof(off_t) != sizeof(offset))
+        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "sizeof(off_t)=" + toString(sizeof(off_t)));
+#    endif
+    int64_t result = ::lseek(fd_, offset, whence);
+#  else
+#    error "no supported compiler defined"
+#  endif
+#elif defined(LINUX)
+    int64_t result = ::lseek64(fd_, offset, whence);
+#else
+#  error "no supported OS platform defined"
+#endif
+    if (result < 0) {
+        throw E57_EXCEPTION2(E57_ERROR_LSEEK_FAILED, 
+                             "fileName=" + fileName_ 
+                             + " offset=" + toString(offset)
+                             + " whence=" + toString(whence)
+                             + " result=" + toString(result));
+    }
+    return(static_cast<uint64_t>(result));
 }
 
 uint64_t CheckedFile::position(OffsetMode omode)
 {
 #ifdef SAFE_MODE
     /// Get current file cursor position
-    __int64 pos = _lseeki64(fd_, 0LL, SEEK_CUR);  //??? Microsoft dependency
-    if (pos < 0)
-        throw E57_EXCEPTION2(E57_ERROR_LSEEK_FAILED, "fileName=" + fileName_ + " pos=" + toString(pos));
+    uint64_t pos = lseek64(0LL, SEEK_CUR);
 
     if (omode==physical)
-        return(static_cast<uint64_t>(pos));
+        return(pos);
     else
-        return(physicalToLogical(static_cast<uint64_t>(pos)));
+        return(physicalToLogical(pos));
 #endif  // SAFE_MODE
 }
 
@@ -3689,21 +4669,15 @@ uint64_t CheckedFile::length(OffsetMode omode)
     if (omode==physical) {
         //??? is there a 64bit length call?
         /// Get current file cursor position
-        __int64 original_pos = _lseeki64(fd_, 0LL, SEEK_CUR);  //??? Microsoft dependency
-        if (original_pos < 0)
-            throw E57_EXCEPTION2(E57_ERROR_LSEEK_FAILED, "fileName=" + fileName_ + " originalPos=" + toString(original_pos));
+        uint64_t original_pos = lseek64(0LL, SEEK_CUR);
 
         /// Get current file cursor position
-        __int64 end_pos = _lseeki64(fd_, 0LL, SEEK_END);  //??? Microsoft dependency
-        if (end_pos < 0)
-            throw E57_EXCEPTION2(E57_ERROR_LSEEK_FAILED, "fileName=" + fileName_ + " endPos=" + toString(end_pos));
+        uint64_t end_pos = lseek64(0LL, SEEK_END);
 
         /// Restore original position
-        __int64 result = _lseeki64(fd_, original_pos, SEEK_SET);  //??? Microsoft dependency    
-        if (result < 0)
-            throw E57_EXCEPTION2(E57_ERROR_LSEEK_FAILED, "fileName=" + fileName_ + " result=" + toString(result));
+        lseek64(original_pos, SEEK_SET);
 
-        return(static_cast<uint64_t>(end_pos));
+        return(end_pos);
     } else
         return(logicalLength_);
 #endif  // SAFE_MODE
@@ -3796,11 +4770,40 @@ void CheckedFile::close()
         if (currentPageDirty_)
             finishPage();
 #endif  // SAFE_MODE
+#if defined(_MSC_VER)
+        int result = ::_close(fd_);
+#elif defined(__GNUC__)
         int result = ::close(fd_);
+#else
+#  error "no supported compiler defined"
+#endif
         if (result < 0)
             throw E57_EXCEPTION2(E57_ERROR_CLOSE_FAILED, "fileName=" + fileName_ + " result=" + toString(result));
         fd_ = -1;
     }
+}
+
+void CheckedFile::unlink()
+{
+    if (fd_ >= 0) {
+#if defined(_MSC_VER)
+        int result = ::_close(fd_);
+#elif defined(__GNUC__)
+        int result = ::close(fd_);
+#else
+#  error "no supported compiler defined"
+#endif
+        if (result < 0)
+            throw E57_EXCEPTION2(E57_ERROR_CLOSE_FAILED, "fileName=" + fileName_ + " result=" + toString(result));
+        fd_ = -1;
+    }
+
+    /// Try to unlink the file, don't report a failure
+    int result = ::unlink(fileName_.c_str()); //??? unicode support here
+#ifdef E57_MAX_VERBOSE
+    if (result < 0)
+        cout << "::unlink() failed, result=" << result << endl;
+#endif
 }
 
 size_t CheckedFile::efficientBufferSize(size_t logicalBytes)
@@ -3818,14 +4821,22 @@ uint32_t CheckedFile::checksum(char* buf, size_t size)
     crcCalculator_.reset();
     crcCalculator_.process_bytes(buf, size);
     uint32_t crc = crcCalculator_.checksum();
-    swab(crc);
+    swab(crc); //!!! inside BIGENDIAN?
     return(crc);
 #else
-    ///??? for now
-    uint32_t sum = 0;
-    for (size_t i = 0; i < size; i++)
-        sum += static_cast<uint32_t>(buf[i]);
-    return(sum+1);
+    /// For page size performance testing purposes, approximate the computation time for
+    /// computing checksum on a multiple of shorter blocks in the page.
+    /// This doesn't produce a legal file format, but approximates the processing time of smaller pages.
+    const int blocksPerPage = 1;
+    int bytesPerBlock = size / blocksPerPage;
+    uint32_t crc;
+    for (int block = 0; block < blocksPerPage; block++) {
+        crcCalculator_.reset();
+        crcCalculator_.process_bytes(&buf[block*bytesPerBlock], bytesPerBlock);
+        crc = crcCalculator_.checksum();
+        swab(crc);
+    }
+    return(crc);
 #endif
 #endif  // SAFE_MODE
 }
@@ -3857,13 +4868,19 @@ void CheckedFile::readPhysicalPage(char* page_buffer, uint64_t page)
         /// Seek to start of physical page
         seek(page*physicalPageSize, physical);
 
+#if defined(_MSC_VER)
+        int result = ::_read(fd_, page_buffer, physicalPageSize);
+#elif defined(__GNUC__)
         int result = ::read(fd_, page_buffer, physicalPageSize);
-        if (result != physicalPageSize)
+#else
+#  error "no supported compiler defined"
+#endif
+        if (result < 0 || static_cast<size_t>(result) != physicalPageSize)
             throw E57_EXCEPTION2(E57_ERROR_READ_FAILED, "fileName=" + fileName_ + " result=" + toString(result));
 
         uint32_t check_sum = checksum(page_buffer, logicalPageSize);
         if(*reinterpret_cast<uint32_t*>(&page_buffer[logicalPageSize]) != check_sum) {  //??? little endian dependency
-            throw E57_EXCEPTION2(E57_ERROR_CHECKSUM_MISMATCH,
+            throw E57_EXCEPTION2(E57_ERROR_BAD_CHECKSUM,
                                  "fileName=" + fileName_
                                  + " computedChecksum=" + toString(check_sum)
                                  + " storedChecksum=" + toString(*reinterpret_cast<uint32_t*>(&page_buffer[logicalPageSize]))
@@ -3886,7 +4903,13 @@ void CheckedFile::writePhysicalPage(char* page_buffer, uint64_t page)
     /// Seek to start of physical page
     seek(page*physicalPageSize, physical);
     
+#if defined(_MSC_VER)
+    int result = ::_write(fd_, page_buffer, physicalPageSize);
+#elif defined(__GNUC__)
     int result = ::write(fd_, page_buffer, physicalPageSize);
+#else
+#  error "no supported compiler defined"
+#endif
     if (result < 0)
         throw E57_EXCEPTION2(E57_ERROR_WRITE_FAILED, "fileName=" + fileName_ + " result=" + toString(result));
 }
@@ -3909,7 +4932,7 @@ void printState(CheckedFile& cf)
 int main()
 {
     try {
-        CheckedFile cf("checked_file_test.e57", CheckedFile::writeCreate);
+        CheckedFile cf("checked_file_test._e57", CheckedFile::writeCreate);
         
         printState(cf);
         
@@ -4309,7 +5332,7 @@ void IndexPacket::verify(unsigned bufferLength, uint64_t totalRecordCount, uint6
         throw E57_EXCEPTION2(E57_ERROR_BAD_CV_PACKET, "indexLevel=" + toString(indexLevel) + " entryCount=" + toString(entryCount));
 
     /// If not later version, verify reserved fields are zero. ??? test file version
-    /// if (version <= E57_VERSION_MAJOR) { //???
+    /// if (version <= E57_FORMAT_MAJOR) { //???
     for (unsigned i=0; i < sizeof(reserved1); i++) {
         if (reserved1[i] != 0)
             throw E57_EXCEPTION2(E57_ERROR_BAD_CV_PACKET, "i=" + toString(i));
@@ -4481,16 +5504,24 @@ void EmptyPacketHeader::dump(int indent, std::ostream& os)
 ///================================================================
 
 struct SortByBytestreamNumber {
-    bool operator () (Encoder* lhs , Encoder* rhs) const {
+    bool operator () (shared_ptr<Encoder> lhs , shared_ptr<Encoder> rhs) const {
         return(lhs->bytestreamNumber() < rhs->bytestreamNumber());
     }
 };
 
 CompressedVectorWriterImpl::CompressedVectorWriterImpl(shared_ptr<CompressedVectorNodeImpl> ni, vector<SourceDestBuffer>& sbufs)
-: cVector_(ni),
+: isOpen_(false),  // set to true when succeed below
+  cVector_(ni),
   seekIndex_()      /// Init seek index for random access to beginning of chunks
 {
     //???  check if cvector already been written (can't write twice)
+
+    /// Empty sbufs is an error
+    if (sbufs.size() == 0) {
+        throw E57_EXCEPTION2(E57_ERROR_BAD_API_ARGUMENT,
+                             "imageFileName=" + cVector_->imageFileName()
+                             + " cvPathName=" + cVector_->pathName());
+    }
 
     /// Get CompressedArray's prototype node (all array elements must match this type)
     proto_ = cVector_->getPrototype();
@@ -4532,19 +5563,24 @@ CompressedVectorWriterImpl::CompressedVectorWriterImpl(shared_ptr<CompressedVect
     }
 #endif
     
-    shared_ptr<ImageFileImpl> imf(ni->fileParent_);
+    shared_ptr<ImageFileImpl> imf(ni->destImageFile_);
 
     /// Reserve space for CompressedVector binary section header, record location so can save to when writer closes.
     /// Request that file be extended with zeros since we will write to it at a later time (when writer closes).
     sectionHeaderLogicalStart_ = imf->allocateSpace(sizeof(CompressedVectorSectionHeader), true);
 
-    isOpen_                 = true;
     sectionLogicalLength_   = 0;
     dataPhysicalOffset_     = 0;
     topIndexPhysicalOffset_ = 0;
     recordCount_            = 0;
     dataPacketsCount_       = 0;
     indexPacketsCount_      = 0;
+
+    /// Just before return (and can't throw) increment writer count  ??? safer way to assure don't miss close?
+    imf->incrWriterCount();
+
+    /// If get here, the writer is open
+    isOpen_ = true;
 }
 
 CompressedVectorWriterImpl::~CompressedVectorWriterImpl()
@@ -4559,10 +5595,6 @@ CompressedVectorWriterImpl::~CompressedVectorWriterImpl()
     } catch (...) {
         //??? report?
     }
-
-    /// Free allocated channels
-    for (unsigned i=0; i < bytestreams_.size(); i++)
-        delete bytestreams_.at(i);
 }
 
 void CompressedVectorWriterImpl::close()
@@ -4570,6 +5602,14 @@ void CompressedVectorWriterImpl::close()
 #ifdef E57_MAX_VERBOSE
     cout << "CompressedVectorWriterImpl::close() called" << endl; //???
 #endif
+    shared_ptr<ImageFileImpl> imf(cVector_->destImageFile_);
+
+    /// Before anything that can throw, decrement writer count
+    imf->decrWriterCount();
+
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    /// don't call checkWriterOpen();
+
     if (!isOpen_)
         return;
 
@@ -4584,8 +5624,6 @@ void CompressedVectorWriterImpl::close()
         packetWrite();
         flush();
     }
-
-    shared_ptr<ImageFileImpl> imf(cVector_->fileParent_);
 
     /// Compute length of whole section we just wrote (from section start to current start of free space).
     sectionLogicalLength_ = imf->unusedLogicalStart_ - sectionHeaderLogicalStart_;
@@ -4603,6 +5641,10 @@ void CompressedVectorWriterImpl::close()
     cout << "  CompressedVectorSectionHeader:" << endl;
     header.dump(4); //???
 #endif
+#ifdef E57_DEBUG
+    /// Verify OK before write it.
+    header.verify(imf->file_->length(CheckedFile::physical));
+#endif
     header.swab();  /// swab if neccesary
 
     /// Write header at beginning of section, previously allocated
@@ -4613,55 +5655,74 @@ void CompressedVectorWriterImpl::close()
     cVector_->setRecordCount(recordCount_);
     cVector_->setBinarySectionLogicalStart(sectionHeaderLogicalStart_);
 
+    /// Free channels
+    bytestreams_.clear();
+
 #ifdef E57_MAX_VERBOSE
     cout << "  CompressedVectorWriter:" << endl;
     dump(4);
 #endif
 }
 
+bool CompressedVectorWriterImpl::isOpen()
+{
+    /// don't checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__), or checkWriterOpen()
+    return(isOpen_);
+}
+
+boost::shared_ptr<CompressedVectorNodeImpl> CompressedVectorWriterImpl::compressedVectorNode()
+{
+    return(cVector_);
+}
+
 void CompressedVectorWriterImpl::setBuffers(vector<SourceDestBuffer>& sbufs)
 {
-    ///??? handle empty sbufs?
+    /// don't checkImageFileOpen
 
-    /// Check sbufs well formed: no dups, no missing, no extra  ???matching number of entries
+    /// If had previous sbufs_, check to see if new ones have changed in incompatible way
+    if (sbufs_.size() > 0) {
+        if (sbufs_.size() != sbufs.size()) {
+            throw E57_EXCEPTION2(E57_ERROR_BUFFERS_NOT_COMPATIBLE,
+                                 "oldSize=" + toString(sbufs_.size())
+                                 + " newSize=" + toString(sbufs.size()));
+        }
+        for (size_t i = 0; i < sbufs_.size(); i++) {
+            shared_ptr<SourceDestBufferImpl> oldbuf = sbufs_[i].impl();
+            shared_ptr<SourceDestBufferImpl> newBuf = sbufs[i].impl();
+
+            /// Throw exception if old and new not compatible
+            oldbuf->checkCompatible(newBuf);
+        }
+    }
+
+    /// Check sbufs well formed: no dups, no missing, no extra
     /// For writing, all data fields in prototype must be presented for writing at same time.
     proto_->checkBuffers(sbufs, false);
 
     sbufs_ = sbufs;
 }
 
-void CompressedVectorWriterImpl::write(vector<SourceDestBuffer>& sbufs, unsigned requestedElementCount)
+void CompressedVectorWriterImpl::write(vector<SourceDestBuffer>& sbufs, unsigned requestedRecordCount)
 {
-    ///??? check exactly compatible with existing sbufs, if any
-    ///??? check that ImageFile is still open
-
-    if (!isOpen_) {
-        throw E57_EXCEPTION2(E57_ERROR_WRITER_NOT_OPEN,
-                             "imageFileName=" + cVector_->imageFileName()
-                             + " cvPathName=" + cVector_->pathName());
-    }
+    /// don't checkImageFileOpen, write(unsigned) will do it
+    /// don't checkWriterOpen(), write(unsigned) will do it
 
     setBuffers(sbufs);
-    write(requestedElementCount);
+    write(requestedRecordCount);
 }
 
-void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
+void CompressedVectorWriterImpl::write(unsigned requestedRecordCount)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "CompressedVectorWriterImpl::write() called" << endl; //???
 #endif
-   ///??? check that ImageFile is still open
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    checkWriterOpen(__FILE__, __LINE__, __FUNCTION__);
 
-    if (!isOpen_) {
-        throw E57_EXCEPTION2(E57_ERROR_WRITER_NOT_OPEN,
-                             "imageFileName=" + cVector_->imageFileName()
-                             + " cvPathName=" + cVector_->pathName());
-    }
-
-    /// Check that requestedElementCount is not larger than the sbufs
-    if (requestedElementCount > sbufs_.at(0).impl()->capacity()) {
+    /// Check that requestedRecordCount is not larger than the sbufs
+    if (requestedRecordCount > sbufs_.at(0).impl()->capacity()) {
         throw E57_EXCEPTION2(E57_ERROR_BAD_API_ARGUMENT,
-                             "requested=" + toString(requestedElementCount)
+                             "requested=" + toString(requestedRecordCount)
                              + " capacity=" + toString(sbufs_.at(0).impl()->capacity())
                              + " imageFileName=" + cVector_->imageFileName()
                              + " cvPathName=" + cVector_->pathName());
@@ -4671,19 +5732,19 @@ void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
     for (unsigned i=0; i < sbufs_.size(); i++)
         sbufs_.at(i).impl()->rewind();
 
-    /// Loop until all channels have completed requestedElementCount transfers
-    uint64_t endRecordIndex = recordCount_ + requestedElementCount;
+    /// Loop until all channels have completed requestedRecordCount transfers
+    uint64_t endRecordIndex = recordCount_ + requestedRecordCount;
     for (;;) {
         /// Calc remaining record counts for all channels
-        uint64_t totalElementCount = 0;
+        uint64_t totalRecordCount = 0;
         for (unsigned i=0; i < bytestreams_.size(); i++)
-            totalElementCount += endRecordIndex - bytestreams_.at(i)->currentRecordIndex();
+            totalRecordCount += endRecordIndex - bytestreams_.at(i)->currentRecordIndex();
 #ifdef E57_MAX_VERBOSE
-        cout << "  totalElementCount=" << totalElementCount << endl; //???
+        cout << "  totalRecordCount=" << totalRecordCount << endl; //???
 #endif
 
         /// We are done if have no more work, break out of loop
-        if (totalElementCount == 0)
+        if (totalRecordCount == 0)
             break;
 
         /// Estimate how many records can write before have enough data to fill data packet to efficient length
@@ -4742,7 +5803,7 @@ void CompressedVectorWriterImpl::write(unsigned requestedElementCount)
         }
     }
 
-    recordCount_ += requestedElementCount;
+    recordCount_ += requestedRecordCount;
 
     /// When we leave this function, will likely still have data in channel ioBuffers as well as partial words in Encoder registers.
 }
@@ -4817,7 +5878,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 #endif
 
     /// Get smart pointer to ImageFileImpl from associated CompressedVector
-    shared_ptr<ImageFileImpl> imf(cVector_->fileParent_);
+    shared_ptr<ImageFileImpl> imf(cVector_->destImageFile_);
 
     /// Use temp buf in object (is 64KBytes long) instead of allocating each time here
     char* packet = reinterpret_cast<char*>(&dataPacket_);
@@ -4935,8 +5996,41 @@ void CompressedVectorWriterImpl::flush()
         bytestreams_.at(i)->registerFlushToOutput();
 }
 
+void CompressedVectorWriterImpl::checkImageFileOpen(const char* srcFileName, int srcLineNumber, const char* srcFunctionName)
+{
+#if 0
+!!! how get destImageFile?
+    /// Throw an exception if destImageFile (destImageFile_) isn't open
+    shared_ptr<CompressedVectorNodeImpl> cv(cVector_);
+
+!!! how get destImageFile?
+    shared_ptr<ImageFileImpl> destImageFile(destImageFile_);
+    if (!destImageFile->isOpen()) {
+        throw E57Exception(E57_ERROR_IMAGEFILE_NOT_OPEN,
+                           "fileName=" + destImageFile->fileName(),
+                           srcFileName,
+                           srcLineNumber,
+                           srcFunctionName);
+    }
+XXX
+#endif
+}
+
+void CompressedVectorWriterImpl::checkWriterOpen(const char* srcFileName, int srcLineNumber, const char* srcFunctionName)
+{
+    if (!isOpen_) {
+        throw E57Exception(E57_ERROR_WRITER_NOT_OPEN,
+                           "imageFileName=" + cVector_->imageFileName() + " cvPathName=" + cVector_->pathName(),
+                           srcFileName,
+                           srcLineNumber,
+                           srcFunctionName);
+    }
+}
+
 void CompressedVectorWriterImpl::dump(int indent, std::ostream& os)
 {
+    os << space(indent) << "isOpen:" << isOpen_ << endl;
+
     for (unsigned i = 0; i < sbufs_.size(); i++) {
         os << space(indent) << "sbufs[" << i << "]:" << endl;
         sbufs_.at(i).dump(indent+4, os);
@@ -4978,11 +6072,13 @@ void CompressedVectorWriterImpl::dump(int indent, std::ostream& os)
 ///================================================================
 
 CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVectorNodeImpl> cvi, vector<SourceDestBuffer>& dbufs)
-: cVector_(cvi)
+: isOpen_(false),  // set to true when succeed below
+  cVector_(cvi)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "CompressedVectorReaderImpl() called" << endl; //???
 #endif
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
 
     /// Allow reading of a completed CompressedVector, whether file is being read or currently being written.
     ///??? what other situations need checking for?  
@@ -4991,7 +6087,7 @@ CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVect
 
     /// Empty dbufs is an error
     if (dbufs.size() == 0) {
-        throw E57_EXCEPTION2(E57_ERROR_BUFFER_NOT_SPECIFIED,
+        throw E57_EXCEPTION2(E57_ERROR_BAD_API_ARGUMENT,
                              "imageFileName=" + cVector_->imageFileName()
                              + " cvPathName=" + cVector_->pathName());
     }
@@ -5007,7 +6103,7 @@ CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVect
         vector<SourceDestBuffer> theDbuf;
         theDbuf.push_back(dbufs.at(i));
 
-        Decoder* decoder =  Decoder::DecoderFactory(i, cVector_, theDbuf, ustring());
+        shared_ptr<Decoder> decoder =  Decoder::DecoderFactory(i, cVector_, theDbuf, ustring());
 
         /// Calc which stream the given path belongs to.  This depends on position of the node in the proto tree.
         shared_ptr<NodeImpl> readNode = proto_->get(dbufs.at(i).pathName());
@@ -5023,7 +6119,7 @@ CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVect
     /// Get how many records are actually defined
     maxRecordCount_ = cvi->childCount();
 
-    shared_ptr<ImageFileImpl> imf(cVector_->fileParent_);
+    shared_ptr<ImageFileImpl> imf(cVector_->destImageFile_);
 
     //??? what if fault in this constructor?
     cache_ = new PacketReadCache(imf->file_, 4/*???*/);
@@ -5040,6 +6136,10 @@ CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVect
     imf->file_->seek(sectionLogicalStart, CheckedFile::logical);
     imf->file_->read(reinterpret_cast<char*>(&sectionHeader), sizeof(sectionHeader));
     sectionHeader.swab();  /// swab if neccesary
+
+#ifdef E57_DEBUG
+    sectionHeader.verify(imf->file_->length(CheckedFile::physical));
+#endif
 
     /// Pre-calc end of section, so can tell when we are out of packets.
     sectionEndLogicalOffset_ = sectionLogicalStart + sectionHeader.sectionLogicalLength;
@@ -5066,39 +6166,66 @@ CompressedVectorReaderImpl::CompressedVectorReaderImpl(shared_ptr<CompressedVect
             chan->currentBytestreamBufferLength = dpkt->getBytestreamBufferLength(chan->bytestreamNumber);
         }
     }
+
+    /// Just before return (and can't throw) increment reader count  ??? safer way to assure don't miss close?
+    imf->incrReaderCount();
+
+    /// If get here, the reader is open
+    isOpen_ = true;
 }
 
 CompressedVectorReaderImpl::~CompressedVectorReaderImpl()
 {
 #ifdef E57_MAX_VERBOSE
     cout << "~CompressedVectorReaderImpl() called" << endl; //???
-#endif
-#ifdef E57_MAX_VERBOSE
-    //cout << "CompressedVectorWriterImpl:" << endl;
     //dump(4);
 #endif
-    /// Free allocated decoders
-    for (unsigned i=0; i < channels_.size(); i++)
-        delete channels_.at(i).decoder;
 
-    delete cache_;
+    if (isOpen_) {
+        try {
+            close();  ///??? what if already closed?
+        } catch (...) {
+                //??? report?
+        }
+    }
 }
 
 void CompressedVectorReaderImpl::setBuffers(vector<SourceDestBuffer>& dbufs)
 {
-    ///??? handle empty dbufs?
+    /// don't checkImageFileOpen
+    /// don't checkReaderOpen
 
     /// Check dbufs well formed: no dups, no extra, missing is ok
     proto_->checkBuffers(dbufs, true);
+
+    /// If had previous dbufs_, check to see if new ones have changed in incompatible way
+    if (dbufs_.size() > 0) {
+        if (dbufs_.size() != dbufs.size()) {
+            throw E57_EXCEPTION2(E57_ERROR_BUFFERS_NOT_COMPATIBLE,
+                                 "oldSize=" + toString(dbufs_.size())
+                                 + " newSize=" + toString(dbufs.size()));
+        }
+        for (size_t i = 0; i < dbufs_.size(); i++) {
+            shared_ptr<SourceDestBufferImpl> oldBuf = dbufs_[i].impl();
+            shared_ptr<SourceDestBufferImpl> newBuf = dbufs[i].impl();
+
+            /// Throw exception if old and new not compatible
+            oldBuf->checkCompatible(newBuf);
+        }
+    }
 
     dbufs_ = dbufs;
 }
 
 unsigned CompressedVectorReaderImpl::read(vector<SourceDestBuffer>& dbufs)
 {
-    ///??? check exactly compatible with existing dbufs, if any
+    /// don't checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__), read() will do it
 
+    checkReaderOpen(__FILE__, __LINE__, __FUNCTION__);
+
+    /// Check compatible with current dbufs
     setBuffers(dbufs);
+
     return(read());
 }
 
@@ -5107,6 +6234,8 @@ unsigned CompressedVectorReaderImpl::read()
 #ifdef E57_MAX_VERBOSE
     cout << "CompressedVectorReaderImpl::read() called" << endl; //???
 #endif
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    checkReaderOpen(__FILE__, __LINE__, __FUNCTION__);
 
     /// Rewind all dbufs so start writing to them at beginning
     for (unsigned i=0; i < dbufs_.size(); i++)
@@ -5124,7 +6253,7 @@ unsigned CompressedVectorReaderImpl::read()
         uint64_t earliestPacketLogicalOffset = earliestPacketNeededForInput();
 
         /// If nobody's hungry, we are done with the read
-        if (earliestPacketLogicalOffset == UINT64_MAX)
+        if (earliestPacketLogicalOffset == E57_UINT64_MAX)
             break;
 
         /// Feed packet to the hungry decoders
@@ -5152,7 +6281,7 @@ unsigned CompressedVectorReaderImpl::read()
 
 uint64_t CompressedVectorReaderImpl::earliestPacketNeededForInput()
 {
-    uint64_t earliestPacketLogicalOffset = UINT64_MAX;
+    uint64_t earliestPacketLogicalOffset = E57_UINT64_MAX;
     unsigned earliestChannel = 0;
     for (unsigned i = 0; i < channels_.size(); i++) {
         DecodeChannel* chan = &channels_[i];
@@ -5168,7 +6297,7 @@ uint64_t CompressedVectorReaderImpl::earliestPacketNeededForInput()
         }
     }
 #ifdef E57_MAX_VERBOSE
-    if (earliestPacketLogicalOffset == UINT64_MAX)
+    if (earliestPacketLogicalOffset == E57_UINT64_MAX)
         cout << "earliestPacketNeededForInput returning none found" << endl;
     else
         cout << "earliestPacketNeededForInput returning " << earliestPacketLogicalOffset << " for channel[" << earliestChannel << "]" << endl;
@@ -5180,7 +6309,7 @@ void CompressedVectorReaderImpl::feedPacketToDecoders(uint64_t currentPacketLogi
 {
     /// Read earliest packet into cache and send data to decoders with unblocked output
     bool channelHasExhaustedPacket = false;
-    uint64_t nextPacketLogicalOffset = UINT64_MAX;
+    uint64_t nextPacketLogicalOffset = E57_UINT64_MAX;
     {
         /// Get packet at currentPacketLogicalOffset into memory.
         char* anyPacket = NULL;  
@@ -5248,7 +6377,7 @@ void CompressedVectorReaderImpl::feedPacketToDecoders(uint64_t currentPacketLogi
 
     /// If some channel has exhausted this packet, find next data packet and update currentPacketLogicalOffset for all interested channels.
     if (channelHasExhaustedPacket) {
-        if (nextPacketLogicalOffset < UINT64_MAX) {
+        if (nextPacketLogicalOffset < E57_UINT64_MAX) { //??? huh?
             /// Get packet at nextPacketLogicalOffset into memory.
             char* anyPacket = NULL;  
             auto_ptr<PacketLock> packetLock = cache_->lock(nextPacketLogicalOffset, anyPacket);
@@ -5316,23 +6445,85 @@ uint64_t CompressedVectorReaderImpl::findNextDataPacket(uint64_t nextPacketLogic
     }                
 
     /// Ran off end of section, so return failure code.
-    return(UINT64_MAX);
+    return(E57_UINT64_MAX);
 }
 
-void CompressedVectorReaderImpl::seek(uint64_t recordNumber)
+void CompressedVectorReaderImpl::seek(uint64_t /*recordNumber*/)
 {
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
     ///!!! implement
     throw E57_EXCEPTION1(E57_ERROR_NOT_IMPLEMENTED);
+}
+
+bool CompressedVectorReaderImpl::isOpen()
+{
+    /// don't checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__), or checkReaderOpen()
+    return(isOpen_);
+}
+
+boost::shared_ptr<CompressedVectorNodeImpl> CompressedVectorReaderImpl::compressedVectorNode()
+{
+    return(cVector_);
 }
 
 void CompressedVectorReaderImpl::close()
 {
-    ///!!! implement
-    throw E57_EXCEPTION1(E57_ERROR_NOT_IMPLEMENTED);
+    /// Before anything that can throw, decrement reader count
+    shared_ptr<ImageFileImpl> imf(cVector_->destImageFile_);
+    imf->decrReaderCount();
+
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+
+    /// No error if reader not open
+    if (!isOpen_)
+        return;
+
+    /// Destroy decoders
+    channels_.clear();
+
+    delete cache_;
+    cache_ = NULL;
+
+    isOpen_ = false;
+}
+
+void CompressedVectorReaderImpl::checkImageFileOpen(const char* srcFileName, int srcLineNumber, const char* srcFunctionName)
+{
+#if 0
+!!! how get destImageFile?
+    /// Throw an exception if destImageFile (destImageFile_) isn't open
+    shared_ptr<CompressedVectorNodeImpl> cv(cVector_);
+
+!!! how get destImageFile?
+    shared_ptr<ImageFileImpl> destImageFile(destImageFile_);
+    if (!destImageFile->isOpen()) {
+        throw E57Exception(E57_ERROR_IMAGEFILE_NOT_OPEN,
+                           "fileName=" + destImageFile->fileName());
+                           srcFileName,
+                           srcLineNumber,
+                           srcFunctionName);
+    }
+XXX
+#endif
+}
+
+void CompressedVectorReaderImpl::checkReaderOpen(const char* srcFileName, int srcLineNumber, const char* srcFunctionName)
+{
+    if (!isOpen_) {
+        throw E57Exception(E57_ERROR_READER_NOT_OPEN,
+                           "imageFileName=" + cVector_->imageFileName()
+                           + " cvPathName=" + cVector_->pathName(),
+                           srcFileName,
+                           srcLineNumber,
+                           srcFunctionName);
+    }
 }
 
 void CompressedVectorReaderImpl::dump(int indent, std::ostream& os)
 {
+    os << space(indent) << "isOpen:" << isOpen_ << endl;
+
     for (unsigned i = 0; i < dbufs_.size(); i++) {
         os << space(indent) << "dbufs[" << i << "]:" << endl;
         dbufs_[i].dump(indent+4, os);
@@ -5358,10 +6549,10 @@ void CompressedVectorReaderImpl::dump(int indent, std::ostream& os)
 //================================================================
 //================================================================
 
-Encoder* Encoder::EncoderFactory(unsigned bytestreamNumber,
+shared_ptr<Encoder> Encoder::EncoderFactory(unsigned bytestreamNumber,
                                  shared_ptr<CompressedVectorNodeImpl> cVector,
                                  vector<SourceDestBuffer>& sbufs,
-                                 ustring& codecPath)
+                                 ustring& /*codecPath*/)
 {
     //??? For now, only handle one input
     if (sbufs.size() != 1)
@@ -5384,26 +6575,35 @@ Encoder* Encoder::EncoderFactory(unsigned bytestreamNumber,
                 throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "elementName=" + encodeNode->elementName());
 
             /// Get pointer to parent ImageFileImpl, to call bitsNeeded()
-            shared_ptr<ImageFileImpl> imf(encodeNode->fileParent_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
+            shared_ptr<ImageFileImpl> imf(encodeNode->destImageFile_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
 
             unsigned bitsPerRecord = imf->bitsNeeded(ini->minimum(), ini->maximum());
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
             /// Constuct Integer encoder with appropriate register size, based on number of bits stored.
             if (bitsPerRecord == 0) {
-                return(new ConstantIntegerEncoder(bytestreamNumber, sbuf, ini->minimum()));
+                shared_ptr<Encoder> encoder(new ConstantIntegerEncoder(bytestreamNumber, sbuf, ini->minimum()));
+                return(encoder);
             } else if (bitsPerRecord <= 8) {
-                return(new BitpackIntegerEncoder<uint8_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
-                                                          ini->minimum(), ini->maximum(), 1.0, 0.0));
+                shared_ptr<Encoder> encoder(new BitpackIntegerEncoder<uint8_t>(false, bytestreamNumber, sbuf,
+                                                                               E57_DATA_PACKET_MAX/*!!!*/,
+                                                                               ini->minimum(), ini->maximum(), 1.0, 0.0));
+                return(encoder);
             } else if (bitsPerRecord <= 16) {
-                return(new BitpackIntegerEncoder<uint16_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
-                                                           ini->minimum(), ini->maximum(), 1.0, 0.0));
+                shared_ptr<Encoder> encoder(new BitpackIntegerEncoder<uint16_t>(false, bytestreamNumber, sbuf,
+                                                                                E57_DATA_PACKET_MAX/*!!!*/, 
+                                                                                ini->minimum(), ini->maximum(), 1.0, 0.0));
+                return(encoder);
             } else if (bitsPerRecord <= 32) {
-                return(new BitpackIntegerEncoder<uint32_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
-                                                           ini->minimum(), ini->maximum(), 1.0, 0.0));
+                shared_ptr<Encoder> encoder(new BitpackIntegerEncoder<uint32_t>(false, bytestreamNumber, sbuf,
+                                                                                E57_DATA_PACKET_MAX/*!!!*/, 
+                                                                                ini->minimum(), ini->maximum(), 1.0, 0.0));
+                return(encoder);
             } else {
-                return(new BitpackIntegerEncoder<uint64_t>(false, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
-                                                           ini->minimum(), ini->maximum(), 1.0, 0.0));
+                shared_ptr<Encoder> encoder(new BitpackIntegerEncoder<uint64_t>(false, bytestreamNumber, sbuf,
+                                                                                E57_DATA_PACKET_MAX/*!!!*/, 
+                                                                                ini->minimum(), ini->maximum(), 1.0, 0.0));
+                return(encoder);
             }
         }
         case E57_SCALED_INTEGER: {
@@ -5412,26 +6612,38 @@ Encoder* Encoder::EncoderFactory(unsigned bytestreamNumber,
                 throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "elementName=" + encodeNode->elementName());
 
             /// Get pointer to parent ImageFileImpl, to call bitsNeeded()
-            shared_ptr<ImageFileImpl> imf(encodeNode->fileParent_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
+            shared_ptr<ImageFileImpl> imf(encodeNode->destImageFile_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
 
             unsigned bitsPerRecord = imf->bitsNeeded(sini->minimum(), sini->maximum());
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
             /// Constuct ScaledInteger encoder with appropriate register size, based on number of bits stored.
             if (bitsPerRecord == 0) {
-                return(new ConstantIntegerEncoder(bytestreamNumber, sbuf, sini->minimum()));
+                shared_ptr<Encoder> encoder(new ConstantIntegerEncoder(bytestreamNumber, sbuf, sini->minimum()));
+                return(encoder);
             } else if (bitsPerRecord <= 8) {
-                return(new BitpackIntegerEncoder<uint8_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
-                                                          sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
+                shared_ptr<Encoder> encoder(new BitpackIntegerEncoder<uint8_t>(true, bytestreamNumber, sbuf,
+                                                                               E57_DATA_PACKET_MAX/*!!!*/,
+                                                                               sini->minimum(), sini->maximum(),
+                                                                               sini->scale(), sini->offset()));
+                return(encoder);
             } else if (bitsPerRecord <= 16) {
-                return(new BitpackIntegerEncoder<uint16_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
-                                                           sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
+                shared_ptr<Encoder> encoder(new BitpackIntegerEncoder<uint16_t>(true, bytestreamNumber, sbuf,
+                                                                                E57_DATA_PACKET_MAX/*!!!*/, 
+                                                                                sini->minimum(), sini->maximum(),
+                                                                                sini->scale(), sini->offset()));
+                return(encoder);
             } else if (bitsPerRecord <= 32) {
-                return(new BitpackIntegerEncoder<uint32_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
-                                                           sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
+                shared_ptr<Encoder> encoder(new BitpackIntegerEncoder<uint32_t>(true, bytestreamNumber, sbuf,
+                                                                                E57_DATA_PACKET_MAX/*!!!*/, 
+                                                                                sini->minimum(), sini->maximum(),
+                                                                                sini->scale(), sini->offset()));
+                return(encoder);
             } else {
-                return(new BitpackIntegerEncoder<uint64_t>(true, bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, 
-                                                           sini->minimum(), sini->maximum(), sini->scale(), sini->offset()));
+                shared_ptr<Encoder> encoder(new BitpackIntegerEncoder<uint64_t>(true, bytestreamNumber, sbuf,
+                                                                                E57_DATA_PACKET_MAX/*!!!*/, 
+                                                                                sini->minimum(), sini->maximum(),
+                                                                                sini->scale(), sini->offset()));
             }
         }
         case E57_FLOAT: {
@@ -5440,10 +6652,13 @@ Encoder* Encoder::EncoderFactory(unsigned bytestreamNumber,
                 throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "elementName=" + encodeNode->elementName());
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
-            return(new BitpackFloatEncoder(bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/, fni->precision()));
+            shared_ptr<Encoder> encoder(new BitpackFloatEncoder(bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/,
+                                                                fni->precision()));
+            return(encoder);
         }
         case E57_STRING: {
-            return(new BitpackStringEncoder(bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/));
+            shared_ptr<Encoder> encoder(new BitpackStringEncoder(bytestreamNumber, sbuf, E57_DATA_PACKET_MAX/*!!!*/));
+            return(encoder);
         }
         default:
             throw E57_EXCEPTION2(E57_ERROR_BAD_PROTOTYPE, "nodeType=" + toString(encodeNode->type()));
@@ -5833,10 +7048,10 @@ void BitpackStringEncoder::dump(int indent, std::ostream& os)
 
 //================================================================
 
-Decoder* Decoder::DecoderFactory(unsigned bytestreamNumber, //!!! name ok?
+shared_ptr<Decoder> Decoder::DecoderFactory(unsigned bytestreamNumber, //!!! name ok?
                                  shared_ptr<CompressedVectorNodeImpl> cVector,
                                  vector<SourceDestBuffer>& dbufs,
-                                 ustring& codecPath)
+                                 const ustring& /*codecPath*/)
 {
     //!!! verify single dbuf
 
@@ -5859,23 +7074,37 @@ Decoder* Decoder::DecoderFactory(unsigned bytestreamNumber, //!!! name ok?
                 throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "elementName=" + decodeNode->elementName());
 
             /// Get pointer to parent ImageFileImpl, to call bitsNeeded()
-            shared_ptr<ImageFileImpl> imf(decodeNode->fileParent_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
+            shared_ptr<ImageFileImpl> imf(decodeNode->destImageFile_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
 
             unsigned bitsPerRecord = imf->bitsNeeded(ini->minimum(), ini->maximum());
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
             /// Constuct Integer decoder with appropriate register size, based on number of bits stored.
-            if (bitsPerRecord == 0)
-                return(new ConstantIntegerDecoder(false, bytestreamNumber, dbufs.at(0), ini->minimum(), 1.0, 0.0, maxRecordCount));
-            else if (bitsPerRecord <= 8)
-                return(new BitpackIntegerDecoder<uint8_t>(false, bytestreamNumber, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
-            else if (bitsPerRecord <= 16)
-                return(new BitpackIntegerDecoder<uint16_t>(false, bytestreamNumber, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
-            else if (bitsPerRecord <= 32)
-                return(new BitpackIntegerDecoder<uint32_t>(false, bytestreamNumber, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
-            else
-                return(new BitpackIntegerDecoder<uint64_t>(false, bytestreamNumber, dbufs.at(0), ini->minimum(), ini->maximum(), 1.0, 0.0, maxRecordCount));
-
+            if (bitsPerRecord == 0) {
+                shared_ptr<Decoder> decoder(new ConstantIntegerDecoder(false, bytestreamNumber, dbufs.at(0),
+                                                                       ini->minimum(), 1.0, 0.0, maxRecordCount));
+                return(decoder);
+            } else if (bitsPerRecord <= 8) {
+                shared_ptr<Decoder> decoder(new BitpackIntegerDecoder<uint8_t>(false, bytestreamNumber, dbufs.at(0),
+                                                                               ini->minimum(), ini->maximum(),
+                                                                               1.0, 0.0, maxRecordCount));
+                return(decoder);
+            } else if (bitsPerRecord <= 16) {
+                shared_ptr<Decoder> decoder(new BitpackIntegerDecoder<uint16_t>(false, bytestreamNumber, dbufs.at(0),
+                                                                                ini->minimum(), ini->maximum(),
+                                                                                1.0, 0.0, maxRecordCount));
+                return(decoder);
+            } else if (bitsPerRecord <= 32) {
+                shared_ptr<Decoder> decoder(new BitpackIntegerDecoder<uint32_t>(false, bytestreamNumber, dbufs.at(0),
+                                                                                ini->minimum(), ini->maximum(),
+                                                                                1.0, 0.0, maxRecordCount));
+                return(decoder);
+            } else {
+                shared_ptr<Decoder> decoder(new BitpackIntegerDecoder<uint64_t>(false, bytestreamNumber, dbufs.at(0),
+                                                                                ini->minimum(), ini->maximum(),
+                                                                                1.0, 0.0, maxRecordCount));
+                return(decoder);
+            }
         }
         case E57_SCALED_INTEGER: {
             shared_ptr<ScaledIntegerNodeImpl> sini = dynamic_pointer_cast<ScaledIntegerNodeImpl>(decodeNode);  // downcast to correct type
@@ -5883,33 +7112,55 @@ Decoder* Decoder::DecoderFactory(unsigned bytestreamNumber, //!!! name ok?
                 throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "elementName=" + decodeNode->elementName());
 
             /// Get pointer to parent ImageFileImpl, to call bitsNeeded()
-            shared_ptr<ImageFileImpl> imf(decodeNode->fileParent_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
+            shared_ptr<ImageFileImpl> imf(decodeNode->destImageFile_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
 
             unsigned bitsPerRecord = imf->bitsNeeded(sini->minimum(), sini->maximum());
 
             //!!! need to pick smarter channel buffer sizes, here and elsewhere
             /// Constuct ScaledInteger dencoder with appropriate register size, based on number of bits stored.
-            if (bitsPerRecord == 0)
-                return(new ConstantIntegerDecoder(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->scale(), sini->offset(), maxRecordCount));
-            else if (bitsPerRecord <= 8)
-                return(new BitpackIntegerDecoder<uint8_t>(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
-            else if (bitsPerRecord <= 16)
-                return(new BitpackIntegerDecoder<uint16_t>(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
-            else if (bitsPerRecord <= 32)
-                return(new BitpackIntegerDecoder<uint32_t>(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
-            else
-                return(new BitpackIntegerDecoder<uint64_t>(true, bytestreamNumber, dbufs.at(0), sini->minimum(), sini->maximum(), sini->scale(), sini->offset(), maxRecordCount));
-
+            if (bitsPerRecord == 0) {
+                shared_ptr<Decoder> decoder(new ConstantIntegerDecoder(true, bytestreamNumber, dbufs.at(0),
+                                                                       sini->minimum(), sini->scale(),
+                                                                       sini->offset(), maxRecordCount));
+                return(decoder);
+            } else if (bitsPerRecord <= 8) {
+                shared_ptr<Decoder> decoder(new BitpackIntegerDecoder<uint8_t>(true, bytestreamNumber, dbufs.at(0),
+                                                                               sini->minimum(), sini->maximum(),
+                                                                               sini->scale(), sini->offset(),
+                                                                               maxRecordCount));
+                return(decoder);
+            } else if (bitsPerRecord <= 16) {
+                shared_ptr<Decoder> decoder(new BitpackIntegerDecoder<uint16_t>(true, bytestreamNumber, dbufs.at(0),
+                                                                                sini->minimum(), sini->maximum(),
+                                                                                sini->scale(), sini->offset(),
+                                                                                maxRecordCount));
+                return(decoder);
+            } else if (bitsPerRecord <= 32) {
+                shared_ptr<Decoder> decoder(new BitpackIntegerDecoder<uint32_t>(true, bytestreamNumber, dbufs.at(0),
+                                                                                sini->minimum(), sini->maximum(),
+                                                                                sini->scale(), sini->offset(),
+                                                                                maxRecordCount));
+                return(decoder);
+            } else {
+                shared_ptr<Decoder> decoder(new BitpackIntegerDecoder<uint64_t>(true, bytestreamNumber, dbufs.at(0),
+                                                                                sini->minimum(), sini->maximum(),
+                                                                                sini->scale(), sini->offset(),
+                                                                                maxRecordCount));
+                return(decoder);
+            }
         }
         case E57_FLOAT: {
             shared_ptr<FloatNodeImpl> fni = dynamic_pointer_cast<FloatNodeImpl>(decodeNode);  // downcast to correct type
             if (!fni)  // check if failed
                 throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "elementName=" + decodeNode->elementName());
 
-            return(new BitpackFloatDecoder(bytestreamNumber, dbufs.at(0), fni->precision(), maxRecordCount));
+            shared_ptr<Decoder> decoder(new BitpackFloatDecoder(bytestreamNumber, dbufs.at(0),
+                                                                fni->precision(), maxRecordCount));
+            return(decoder);
         }
         case E57_STRING: {
-            return(new BitpackStringDecoder(bytestreamNumber, dbufs.at(0), maxRecordCount));
+            shared_ptr<Decoder> decoder(new BitpackStringDecoder(bytestreamNumber, dbufs.at(0), maxRecordCount));
+            return(decoder);
         }
         default:
             throw E57_EXCEPTION2(E57_ERROR_BAD_PROTOTYPE, "nodeType=" + toString(decodeNode->type()));
@@ -5926,8 +7177,8 @@ Decoder::Decoder(unsigned bytestreamNumber)
 
 BitpackDecoder::BitpackDecoder(unsigned bytestreamNumber, SourceDestBuffer& dbuf, unsigned alignmentSize, uint64_t maxRecordCount)
 : Decoder(bytestreamNumber),
-  inBuffer_(1024),            //!!! need to pick smarter channel buffer sizes
-  destBuffer_(dbuf.impl())
+  destBuffer_(dbuf.impl()),
+  inBuffer_(1024)            //!!! need to pick smarter channel buffer sizes
 {
     currentRecordIndex_     = 0;
     maxRecordCount_         = maxRecordCount;
@@ -6420,8 +7671,10 @@ PacketReadCache::PacketReadCache(CheckedFile* cFile, unsigned packetCount)
 PacketReadCache::~PacketReadCache()
 {
     /// Free allocated packet buffers
-    for (unsigned i=0; i < entries_.size(); i++)
+    for (unsigned i=0; i < entries_.size(); i++) {
         delete [] entries_.at(i).buffer_;
+        entries_.at(i).buffer_ = NULL;
+    }
 }
 
 auto_ptr<PacketLock> PacketReadCache::lock(uint64_t packetLogicalOffset, char* &pkt)
@@ -6502,6 +7755,7 @@ void PacketReadCache::markDiscarable(uint64_t packetLogicalOffset)
 
 void PacketReadCache::unlock(unsigned lockedEntry)
 {
+//??? why lockedEntry not used?
 #ifdef E57_MAX_VERBOSE
     cout << "PacketReadCache::unlock() called, lockedEntry=" << lockedEntry << endl;
 #endif
@@ -6620,7 +7874,7 @@ void PacketReadCache::dump(int indent, std::ostream& os)
 
 //================================================================
 
-DecodeChannel::DecodeChannel(SourceDestBuffer dbuf_arg, Decoder* decoder_arg, unsigned bytestreamNumber_arg, uint64_t maxRecordCount_arg)
+DecodeChannel::DecodeChannel(SourceDestBuffer dbuf_arg, shared_ptr<Decoder> decoder_arg, unsigned bytestreamNumber_arg, uint64_t maxRecordCount_arg)
 : dbuf(dbuf_arg),
   decoder(decoder_arg),
   bytestreamNumber(bytestreamNumber_arg)
@@ -6684,7 +7938,7 @@ BitpackIntegerEncoder<RegisterT>::BitpackIntegerEncoder(bool isScaledInteger, un
 : BitpackEncoder(bytestreamNumber, sbuf, outputMaxSize, sizeof(RegisterT))
 {
     /// Get pointer to parent ImageFileImpl
-    shared_ptr<ImageFileImpl> imf(sbuf.impl()->fileParent_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
+    shared_ptr<ImageFileImpl> imf(sbuf.impl()->destImageFile_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
 
     isScaledInteger_    = isScaledInteger;
     minimum_            = minimum;
@@ -6936,7 +8190,7 @@ unsigned ConstantIntegerEncoder::outputAvailable()
     return(0);
 }
 
-void ConstantIntegerEncoder::outputRead(char* dest, unsigned byteCount)
+void ConstantIntegerEncoder::outputRead(char* /*dest*/, unsigned byteCount)
 {
     /// Should never request any output data
     if (byteCount > 0)
@@ -6961,7 +8215,7 @@ unsigned ConstantIntegerEncoder::outputGetMaxSize()
     return(0);
 }
 
-void ConstantIntegerEncoder::outputSetMaxSize(unsigned byteCount)
+void ConstantIntegerEncoder::outputSetMaxSize(unsigned /*byteCount*/)
 {
     /// Ignore, since don't produce any output
 }
@@ -6984,7 +8238,7 @@ BitpackIntegerDecoder<RegisterT>::BitpackIntegerDecoder(bool isScaledInteger, un
 : BitpackDecoder(bytestreamNumber, dbuf, sizeof(RegisterT), maxRecordCount)
 {
     /// Get pointer to parent ImageFileImpl
-    shared_ptr<ImageFileImpl> imf(dbuf.impl()->fileParent_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
+    shared_ptr<ImageFileImpl> imf(dbuf.impl()->destImageFile_);  //??? should be function for this,  imf->parentFile()  --> ImageFile?
 
     isScaledInteger_    = isScaledInteger;
     minimum_            = minimum;

@@ -45,12 +45,12 @@ SUCH DAMAGE.
 
 #include <sys/timeb.h>
 #include <time.h>
-#include <math.h> // for fmod()
+#include <math.h> /* for fmod() */
 #include "gnss_error.h"
 #include "time_conversion.h"
 #include "constants.h"
 
-#ifndef WIN32
+#ifndef WIN32 
   #define _CRT_SECURE_NO_DEPRECATE  
 #endif
 
@@ -148,7 +148,7 @@ BOOL TIMECONV_GetSystemTime(
 {
   BOOL result;
 
-#ifdef WIN32
+#if defined(WIN32) && !defined(__GNUC__)
   struct _timeb timebuffer; // found in <sys/timeb.h>   
 #else
   struct timeb timebuffer;
@@ -157,7 +157,7 @@ BOOL TIMECONV_GetSystemTime(
   double timebuffer_time_in_seconds;
   //char *timeline; // for debugging
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
+#ifdef _CRT_SECURE_NO_DEPRECATE
   if( _ftime_s( &timebuffer ) != 0 )
   {
     GNSS_ERROR_MSG( "if( _ftime_s( &timebuffer ) != 0 )" );
@@ -165,7 +165,7 @@ BOOL TIMECONV_GetSystemTime(
   }
 #else
 
-#ifdef WIN32
+#if defined(WIN32) && !defined(__GNUC__)
   _ftime( &timebuffer );
 #else
   ftime( &timebuffer );

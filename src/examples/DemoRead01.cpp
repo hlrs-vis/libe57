@@ -93,7 +93,7 @@ void printSomePoints(ImageFile imf, CompressedVectorNode points)
 
     /// The prototype should have a field named either "cartesianX" or "sphericalRange".
     if (proto.isDefined("cartesianX") && proto.isDefined("cartesianY") && proto.isDefined("cartesianZ")) {
-#if 1
+#if 1  //??? pick one?
         /// Make a list of buffers to receive the xyz values.
         const int N = 4;
         vector<SourceDestBuffer> destBuffers;
@@ -125,7 +125,7 @@ void printSomePoints(ImageFile imf, CompressedVectorNode points)
         for (unsigned i=0; i < gotCount; i++)
             cout << "  " << i << ". columnIndex=" << columnIndex[i] << endl;
 #endif
-
+        reader.close();
     } else if (proto.isDefined("sphericalRange")) {
         //??? not implemented yet
     } else

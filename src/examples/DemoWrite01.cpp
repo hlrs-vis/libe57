@@ -29,7 +29,7 @@
 using namespace e57;
 using namespace std;
 
-int main(int argc, char** argv)
+int main(int /*argc*/, char** /*argv*/)
 {
     try {
         /// Open new file for writing, get the initialized root node (a Structure).
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 
         /// Add guid to scan0.
         /// Path name: "/data3D/0/guid".
-        char* scanGuid0 = "3F2504E0-4F89-11D3-9A0C-0305E82C3301";
+        const char* scanGuid0 = "3F2504E0-4F89-11D3-9A0C-0305E82C3301";
         scan0.set("guid", StringNode(imf, scanGuid0));
 
         /// Add an extension field as an example
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
         proto.set("rowIndex",    IntegerNode(imf, 0, 0, 1));
         proto.set("columnIndex", IntegerNode(imf, 0, 0, 4));
         proto.set("returnIndex", IntegerNode(imf, 0, 0, 0));
-        proto.set("returnCount", IntegerNode(imf, 0, 1, 1));
+        proto.set("returnCount", IntegerNode(imf, 1, 1, 1));
         proto.set("timeStamp",   FloatNode(imf, 0.0, E57_DOUBLE));
         proto.set("intensity",   IntegerNode(imf, 0, 0, 255));
         proto.set("colorRed",    FloatNode(imf, 0.0, E57_SINGLE, 0.0, 1.0));
@@ -150,7 +150,7 @@ int main(int argc, char** argv)
         StructureNode lineGroupProto = StructureNode(imf);
         lineGroupProto.set("idElementValue",    IntegerNode(imf, 0, 0, 4));
         lineGroupProto.set("startPointIndex",   IntegerNode(imf, 0, 0, 9));
-        lineGroupProto.set("pointCount",        IntegerNode(imf, 0, 1, 2));
+        lineGroupProto.set("pointCount",        IntegerNode(imf, 1, 1, 2));
 
         /// Add cartesian bounds to line group prototype
         /// Will define path names like:
@@ -323,6 +323,7 @@ int main(int argc, char** argv)
         {
             CompressedVectorWriter writer = points.writer(sourceBuffers);
             writer.write(N);
+            writer.close();
         }
 
         ///================
@@ -352,6 +353,7 @@ int main(int argc, char** argv)
         {
             CompressedVectorWriter writer = groups.writer(groupSDBuffers);
             writer.write(NG);
+            writer.close();
         }
 
         imf.close();

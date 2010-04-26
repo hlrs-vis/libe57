@@ -1,5 +1,5 @@
 /*
- * E57Foundation.h - public header of E57 format reference implementation.
+ * E57Foundation.h - public header of E57 Foundation API for reading/writing .e57 files.
  *
  * Copyright 2009 - 2010 Kevin Ackley (kackley@gwi.net)
  * 
@@ -28,6 +28,8 @@
 #ifndef E57FOUNDATION_H_INCLUDED
 #define E57FOUNDATION_H_INCLUDED
 
+//! @file  E57Foundation.h header file for the E57 Foundation API
+
 // Define the following symbol to enable heap corruption and memory leakage debugging:
 //#define E57_DEBUG_MEMORY 1
 #if E57_DEBUG_MEMORY
@@ -39,39 +41,98 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "stdint.h"     // for uint8_t, uint16_t, uint32_t, etc...
+#include <float.h>
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/cstdint.hpp>    // for int8_t, int16_t, int32_t, etc...
 
+// Use Boost type names for signed/unsigned integers in various witdths
+using boost::int8_t;
+using boost::uint8_t;
+using boost::int16_t;
+using boost::uint16_t;
+using boost::int32_t;
+using boost::uint32_t;
+using boost::int64_t;
+using boost::uint64_t;
+
+#ifndef DOXYGEN  // Doxygen is not handling namespaces well in @includelineno commands, so disable
 namespace e57 {
+#endif
 
 // Shorthand for unicode string
+//! @brief UTF-8 encodeded Unicode string
 typedef std::string ustring;
 
+//! @brief Identifiers for types of E57 elements
 enum NodeType {
-    E57_STRUCTURE         = 1,
-    E57_VECTOR            = 2,
-    E57_COMPRESSED_VECTOR = 3,
-    E57_INTEGER           = 4,
-    E57_SCALED_INTEGER    = 5,
-    E57_FLOAT             = 6,
-    E57_STRING            = 7,
-    E57_BLOB              = 8
+    E57_STRUCTURE         = 1,  //!< StructureNode class
+    E57_VECTOR            = 2,  //!< VectorNode class
+    E57_COMPRESSED_VECTOR = 3,  //!< CompressedVectorNode class
+    E57_INTEGER           = 4,  //!< IntegerNode class
+    E57_SCALED_INTEGER    = 5,  //!< ScaledIntegerNode class
+    E57_FLOAT             = 6,  //!< FloatNode class
+    E57_STRING            = 7,  //!< StringNode class
+    E57_BLOB              = 8   //!< BlobNode class
 };
 
+//! @brief The IEEE floating point number precisions supported
 enum FloatPrecision {
-    E57_SINGLE = 0,
-    E57_DOUBLE = 1
+    E57_SINGLE = 1,  //!< 32 bit IEEE floating point number format
+    E57_DOUBLE = 2   //!< 64 bit IEEE floating point number format
 };
 
-// The URI of E57 v1.0 standard XML namespace
+//! @brief Identifies the representations of memory elements API can transfer data to/from
+enum MemoryRepresentation {
+    E57_INT8     = 1,  //!< 8 bit signed integer
+    E57_UINT8    = 2,  //!< 8 bit unsigned integer
+    E57_INT16    = 3,  //!< 16 bit signed integer
+    E57_UINT16   = 4,  //!< 16 bit unsigned integer
+    E57_INT32    = 5,  //!< 32 bit signed integer
+    E57_UINT32   = 6,  //!< 32 bit unsigned integer
+    E57_INT64    = 7,  //!< 64 bit signed integer
+    E57_BOOL     = 8,  //!< C++ boolean type
+    E57_REAL32   = 9,  //!< C++ float type
+    E57_REAL64   = 10, //!< C++ double type
+    E57_USTRING  = 11  //!< Unicode UTF-8 std::string
+};
+
+//! @brief The major version number of the Foundation API
+const int E57_FOUNDATION_API_MAJOR = 0;
+
+//! @brief The minor version number of the Foundation API
+const int E57_FOUNDATION_API_MINOR = 51;
+
+//! @brief The URI of ASTM E57 v1.0 standard XML namespace
 // Used to identify the standard field names and the grammar that relates them.
 // Will typically be associated with the default namespace in an E57 file.
-// Field names in the default namespace have no prefix (e.g. "cartesianX" as opposed to "las:edgeOfFlightLine").
 #define E57_V1_0_URI "http://www.astm.org/COMMIT/E57/2010-e57-v0.5" //??? change to v1.0 before final release
 
-// The URI of the LAS extension.    ??? should not be in E57Foundation.h, should be in separate file with names of fields
-// Used to identify the extended field names for encoding data from LAS files (LAS versions 1.0 to 1.3).
-// By convention, will typically be used with prefix "las".  ???"las13"?
-#define LAS_V1_0_URI "http://www.astm.org/COMMIT/E57/2010-las-v0.5" //??? change to v1.0 before final release
+//! @cond documentNonPublic   The following aren't documented
+// Minimum and maximum values for integers
+const int8_t   E57_INT8_MIN   = -128;
+const int8_t   E57_INT8_MAX   = 127;
+const int16_t  E57_INT16_MIN  = -32768;
+const int16_t  E57_INT16_MAX  = 32767;
+const int32_t  E57_INT32_MIN  = -2147483647 - 1;
+const int32_t  E57_INT32_MAX  = 2147483647;
+const int64_t  E57_INT64_MIN  = -9223372036854775807LL - 1;
+const int64_t  E57_INT64_MAX  = 9223372036854775807LL;
+const uint8_t  E57_UINT8_MIN  = 0U;
+const uint8_t  E57_UINT8_MAX  = 0xffU; /* 255U */
+const uint16_t E57_UINT16_MIN = 0U;
+const uint16_t E57_UINT16_MAX = 0xffffU; /* 65535U */
+const uint32_t E57_UINT32_MIN = 0U;
+const uint32_t E57_UINT32_MAX = 0xffffffffU;  /* 4294967295U */
+const uint64_t E57_UINT64_MIN = 0ULL;
+const uint64_t E57_UINT64_MAX = 0xffffffffffffffffULL; /* 18446744073709551615ULL */
+
+const float  E57_FLOAT_MIN  = -FLT_MAX;
+const float  E57_FLOAT_MAX  = FLT_MAX;
+const double E57_DOUBLE_MIN = -DBL_MAX;
+const double E57_DOUBLE_MAX = DBL_MAX;
+//! @endcond
 
 // Forward references to classes in this header
 class Node;
@@ -88,25 +149,25 @@ class StringNode;
 class BlobNode;
 class ImageFile;
 
-//???doc
+//! @cond documentNonPublic   The following isn't part of the API, and isn't documented.
 //??? Can define operator-> that will make implementation more readable
 // Internal implementation files should include e57FoundationImpl.h first which defines symbol E57_INTERNAL_IMPLEMENTATION_ENABLE.
 // Normal API users should not define this symbol.
+// Basically the internal version allows access to the pointer to the implementation (impl_)
 #ifdef E57_INTERNAL_IMPLEMENTATION_ENABLE
 #  define E57_OBJECT_IMPLEMENTATION(T)                              \
 public:                                                             \
-    std::tr1::shared_ptr<T##Impl> impl() const {return(impl_);};    \
+    boost::shared_ptr<T##Impl> impl() const {return(impl_);};       \
 protected:                                                          \
-    std::tr1::shared_ptr<T##Impl> impl_;
+    boost::shared_ptr<T##Impl> impl_;
 #else
 #  define E57_OBJECT_IMPLEMENTATION(T)                              \
 protected:                                                          \
-    std::tr1::shared_ptr<T##Impl> impl_;
+    boost::shared_ptr<T##Impl> impl_;
 #endif
+//! @endcond
 
-#if 1 //$$$
 // Forward references to implementation in other headers (so don't have to include E57FoundationImpl.h)
-//??? test all needed?
 class NodeImpl;
 class StructureNodeImpl;
 class VectorNodeImpl;
@@ -117,33 +178,31 @@ class CompressedVectorNodeImpl;
 class IntegerNodeImpl;
 class ScaledIntegerNodeImpl;
 class FloatNodeImpl;
-class StringNodeImpl;
 class BlobNodeImpl;
 class ImageFileImpl;
-class E57XmlParser;  //??? needed?
-class Encoder;  //??? needed?
-class Decoder;  //??? needed?
-template <typename RegisterT> class BitpackIntegerEncoder;  //??? needed?
-#endif
 
 class Node {
 public:
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    NodeType    type() const;
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doDowncast=true);
+    bool        operator==(Node n2) const;
+    bool        operator!=(Node n2) const;
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
 #ifdef E57_INTERNAL_IMPLEMENTATION_ENABLE
-    explicit    Node(std::tr1::shared_ptr<NodeImpl>);  // internal use only
+    explicit    Node(boost::shared_ptr<NodeImpl>);  // internal use only
 #endif
 private:   //=================
-                Node();                 // Not defined, can't default construct Node, see StructureNode(), IntegerNode()...
-
+                Node();                 // No default constructor is defined for Node
 protected: //=================
-    friend NodeImpl;
+    friend class NodeImpl;
 
     E57_OBJECT_IMPLEMENTATION(Node)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -151,34 +210,38 @@ protected: //=================
 
 class StructureNode {
 public:
-                StructureNode(ImageFile imf);
+                StructureNode(ImageFile destImageFile);
 
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
+    int64_t     childCount() const;
+    bool        isDefined(const ustring& pathName) const;
+    Node        get(int64_t index) const;
+    Node        get(const ustring& pathName) const;
+    void        set(const ustring& pathName, Node n);
 
-    int64_t     childCount();
-    bool        isDefined(const ustring& pathName);
-    Node        get(int64_t index);
-    Node        get(const ustring& pathName);
-    void        set(const ustring& pathName, Node n, bool autoPathCreate = false);
-    void        append(Node n);
+    // Up/Down cast conversion
+                operator Node() const;
+    explicit    StructureNode(const Node& n);
 
-    // Up/Down cast conversion //???split into two comments
-                operator Node();
-    explicit    StructureNode(Node& n);
+    // Common generic Node functions
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
 
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doUpcast=true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                StructureNode();                 // No default constructor is defined for StructureNode
 protected: //=================
-    friend ImageFile;
+    friend class ImageFile;
 
-                StructureNode(std::tr1::shared_ptr<StructureNodeImpl> ni);    // internal use only
-                StructureNode(std::tr1::weak_ptr<ImageFileImpl> fileParent);  // internal use only
+                StructureNode(boost::shared_ptr<StructureNodeImpl> ni);    // internal use only
+                StructureNode(boost::weak_ptr<ImageFileImpl> fileParent);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(StructureNode)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -187,34 +250,39 @@ protected: //=================
 
 class VectorNode {
 public:
-    explicit    VectorNode(ImageFile imf, bool allowHeteroChildren = false);
+    explicit    VectorNode(ImageFile destImageFile, bool allowHeteroChildren = false);
 
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
+    bool        allowHeteroChildren() const;
 
-    bool        allowHeteroChildren();
-
-    int64_t     childCount();
-    bool        isDefined(const ustring& pathName);
-    Node        get(int64_t index);  //??? allow Node get(const ustring& pathName); and set...
+    int64_t     childCount() const;
+    bool        isDefined(const ustring& pathName) const;
+    Node        get(int64_t index) const;
+    Node        get(const ustring& pathName) const;
     void        append(Node n);
 
     // Up/Down cast conversion
-                operator Node();
-    explicit    VectorNode(Node& n);
+                operator Node() const;
+    explicit    VectorNode(const Node& n);
             
+    // Common generic Node functions
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
+
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doUpcast=true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                VectorNode();                 // No default constructor is defined for VectorNode
 protected: //=================
-    Node        get(const ustring& pathName);           // not available ???allow if numeric string
-    void        set(const ustring& pathName, Node n, bool autoPathCreate = false);  // not available ???allow if numeric string
+    friend class CompressedVectorNode;
 
-                VectorNode(std::tr1::shared_ptr<VectorNodeImpl> ni);  // internal use only
+                VectorNode(boost::shared_ptr<VectorNodeImpl> ni);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(VectorNode)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -222,39 +290,43 @@ protected: //=================
 
 class SourceDestBuffer {
 public:
-    SourceDestBuffer(ImageFile imf, ustring pathName, int8_t* b,   unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(int8_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, uint8_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(uint8_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, int16_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(int16_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, uint16_t* b, unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(uint16_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, int32_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(int32_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, uint32_t* b, unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(uint32_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, int64_t* b,  unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(int64_t));
-    SourceDestBuffer(ImageFile imf, ustring pathName, bool* b,     unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(bool));
-    SourceDestBuffer(ImageFile imf, ustring pathName, float* b,    unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(float));
-    SourceDestBuffer(ImageFile imf, ustring pathName, double* b,   unsigned capacity, bool doConversion = false, bool doScaling = false, 
-                     size_t stride = sizeof(double));
-    SourceDestBuffer(ImageFile imf, ustring pathName, std::vector<ustring>* b);
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int8_t* b,   unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(int8_t));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint8_t* b,  unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(uint8_t));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int16_t* b,  unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(int16_t));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint16_t* b, unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(uint16_t));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int32_t* b,  unsigned capacity, 
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(int32_t));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint32_t* b, unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(uint32_t));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int64_t* b,  unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(int64_t));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, bool* b,     unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(bool));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, float* b,    unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(float));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, double* b,   unsigned capacity,
+                     bool doConversion = false, bool doScaling = false, size_t stride = sizeof(double));
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, std::vector<ustring>* b);
 
-    ustring         pathName();
-    enum MemoryRep  elementType();
-    unsigned        capacity();
-    bool            doConversion();
-    bool            doScaling();
-    size_t          stride();
+    ustring         pathName() const;
+    enum MemoryRepresentation  memoryRepresentation() const;
+    unsigned        capacity() const;
+    bool            doConversion() const;
+    bool            doScaling() const;
+    size_t          stride() const;
 
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void            dump(int indent = 0, std::ostream& os = std::cout) const;
+    void            checkInvariant(bool doRecurse = true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                    SourceDestBuffer();                 // No default constructor is defined for SourceDestBuffer
+
 protected: //=================
 
     E57_OBJECT_IMPLEMENTATION(SourceDestBuffer)  // Internal implementation details, not part of API, must be last in object
@@ -265,17 +337,21 @@ class CompressedVectorReader {
 public:
     unsigned    read();
     unsigned    read(std::vector<SourceDestBuffer>& dbufs);
-    void        seek(uint64_t recordNumber); //$$$ not implemented yet
+    void        seek(int64_t recordNumber); // !!! not implemented yet
     void        close();
+    bool        isOpen();
+    CompressedVectorNode compressedVectorNode() const;
 
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                CompressedVectorReader();          // No default constructor is defined for CompressedVectorReader
 protected: //=================
-    //??? no default ctor, copy
-    friend CompressedVectorNode;
+    friend class CompressedVectorNode;
 
-                CompressedVectorReader(std::tr1::shared_ptr<CompressedVectorReaderImpl> ni);
+                CompressedVectorReader(boost::shared_ptr<CompressedVectorReaderImpl> ni);
 
     E57_OBJECT_IMPLEMENTATION(CompressedVectorReader)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -283,18 +359,22 @@ protected: //=================
 
 class CompressedVectorWriter {
 public:
-    void        write(unsigned requestedElementCount);
-    void        write(std::vector<SourceDestBuffer>& sbufs, unsigned requestedElementCount);
+    void        write(unsigned requestedRecordCount);
+    void        write(std::vector<SourceDestBuffer>& sbufs, unsigned requestedRecordCount);
     void        close();
+    bool        isOpen();
+    CompressedVectorNode compressedVectorNode() const;
 
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                CompressedVectorWriter();          // No default constructor is defined for CompressedVectorWriter
 protected: //=================
-    //??? no default ctor, copy
-    friend CompressedVectorNode;
+    friend class CompressedVectorNode;
 
-                CompressedVectorWriter(std::tr1::shared_ptr<CompressedVectorWriterImpl> ni);
+                CompressedVectorWriter(boost::shared_ptr<CompressedVectorWriterImpl> ni);
 
     E57_OBJECT_IMPLEMENTATION(CompressedVectorWriter)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -302,34 +382,41 @@ protected: //=================
 
 class CompressedVectorNode {
 public:
-    explicit    CompressedVectorNode(ImageFile imf, Node prototype, Node codecs);
+    explicit    CompressedVectorNode(ImageFile destImageFile, Node prototype, VectorNode codecs);
 
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
-
-    int64_t     childCount();
-    bool        isDefined(const ustring& pathName); //??? needed?
-    Node        prototype();
+    int64_t     childCount() const;
+    Node        prototype() const;
+    VectorNode  codecs() const;
 
     // Iterators
-    CompressedVectorWriter writer(std::vector<SourceDestBuffer>& sbufs);  //??? totalRecordCount?
-    CompressedVectorReader reader(std::vector<SourceDestBuffer>& dbufs);  //??? totalRecordCount?
+    CompressedVectorWriter writer(std::vector<SourceDestBuffer>& sbufs);
+    CompressedVectorReader reader(std::vector<SourceDestBuffer>& dbufs);
 
     // Up/Down cast conversion
-                operator Node();
-    explicit    CompressedVectorNode(Node& n);
+                operator Node() const;
+    explicit    CompressedVectorNode(const Node& n);
             
+    // Common generic Node functions
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
+
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doUpcast=true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                CompressedVectorNode();           // No default constructor is defined for CompressedVectorNode
 protected: //=================
-    friend E57XmlParser;
+    friend class CompressedVectorReader;
+    friend class CompressedVectorWriter;
+    friend class E57XmlParser;
 
-                CompressedVectorNode(std::tr1::shared_ptr<CompressedVectorNodeImpl> ni);  // internal use only
+                CompressedVectorNode(boost::shared_ptr<CompressedVectorNodeImpl> ni);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(CompressedVectorNode)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -337,29 +424,34 @@ protected: //=================
 
 class IntegerNode {
 public:
-    explicit    IntegerNode(ImageFile imf, int64_t  value, int64_t  minimum = INT64_MIN, int64_t  maximum = INT64_MAX);
+    explicit    IntegerNode(ImageFile destImageFile, int64_t value = 0, int64_t minimum = E57_INT64_MIN, int64_t maximum = E57_INT64_MAX);
 
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
-
-    int64_t     value();
-    int64_t     minimum();
-    int64_t     maximum();
+    int64_t     value() const;
+    int64_t     minimum() const;
+    int64_t     maximum() const;
 
     // Up/Down cast conversion
-                operator Node();
-    explicit    IntegerNode(Node& n);
+                operator Node() const;
+    explicit    IntegerNode(const Node& n);
             
+    // Common generic Node functions
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
+
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doUpcast=true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                IntegerNode();                 // No default constructor is defined for IntegerNode
 protected: //=================
 
-                IntegerNode(std::tr1::shared_ptr<IntegerNodeImpl> ni);  // internal use only
+                IntegerNode(boost::shared_ptr<IntegerNodeImpl> ni);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(IntegerNode)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -367,33 +459,38 @@ protected: //=================
 
 class ScaledIntegerNode {
 public:
-    explicit    ScaledIntegerNode(ImageFile imf, int64_t  value, int64_t  minimum = INT64_MIN, int64_t  maximum = INT64_MAX,  
+    explicit    ScaledIntegerNode(ImageFile destImageFile, int64_t value = 0, int64_t minimum = E57_INT64_MIN, int64_t maximum = E57_INT64_MAX,  
                                   double scale = 1.0, double offset = 0.0);
 
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
-
-    int64_t     rawValue();
-    double      scaledValue();
-    int64_t     minimum();
-    int64_t     maximum();
-    double      scale();
-    double      offset();
+    int64_t     rawValue() const;
+    double      scaledValue() const;
+    int64_t     minimum() const;
+    int64_t     maximum() const;
+    double      scale() const;
+    double      offset() const;
 
     // Up/Down cast conversion
-                operator Node();
-    explicit    ScaledIntegerNode(Node& n);
+                operator Node() const;
+    explicit    ScaledIntegerNode(const Node& n);
             
+    // Common generic Node functions
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
+
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doUpcast=true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                ScaledIntegerNode();                 // No default constructor is defined for ScaledIntegerNode
 protected: //=================
 
-                ScaledIntegerNode(std::tr1::shared_ptr<ScaledIntegerNodeImpl> ni);  // internal use only
+                ScaledIntegerNode(boost::shared_ptr<ScaledIntegerNodeImpl> ni);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(ScaledIntegerNode)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -401,33 +498,36 @@ protected: //=================
 
 class FloatNode {
 public:
-    explicit    FloatNode(ImageFile imf, float value, FloatPrecision precision = E57_SINGLE,
-                          double minimum = DOUBLE_MIN, double  maximum = DOUBLE_MAX);
-    explicit    FloatNode(ImageFile imf, double value, FloatPrecision precision = E57_DOUBLE,
-                          double minimum = DOUBLE_MIN, double  maximum = DOUBLE_MAX);
+    explicit    FloatNode(ImageFile destImageFile, double value = 0.0, FloatPrecision precision = E57_DOUBLE,
+                          double minimum = E57_DOUBLE_MIN, double  maximum = E57_DOUBLE_MAX);
 
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
-
-    double      value();
-    FloatPrecision precision();
-    double      minimum();
-    double      maximum();
+    double      value() const;
+    FloatPrecision precision() const;
+    double      minimum() const;
+    double      maximum() const;
 
     // Up/Down cast conversion
-                operator Node();
-    explicit    FloatNode(Node& n);
+                operator Node() const;
+    explicit    FloatNode(const Node& n);
             
+    // Common generic Node functions
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
+
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doUpcast=true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                FloatNode();                 // No default constructor is defined for FloatNode
 protected: //=================
 
-                FloatNode(std::tr1::shared_ptr<FloatNodeImpl> ni);  // internal use only
+                FloatNode(boost::shared_ptr<FloatNodeImpl> ni);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(FloatNode)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -435,27 +535,32 @@ protected: //=================
 
 class StringNode {
 public:
-    explicit    StringNode(ImageFile imf, ustring value = ""); //??? explicit?, need default ""?
+    explicit    StringNode(ImageFile destImageFile, const ustring value = "");
 
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
-
-    ustring     value();
+    ustring     value() const;
 
     // Up/Down cast conversion
-                operator Node();
-    explicit    StringNode(Node& n);
+                operator Node() const;
+    explicit    StringNode(const Node& n);
             
+    // Common generic Node functions
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
+
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doUpcast=true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                StringNode();                 // No default constructor is defined for StringNode
 protected: //=================
-    friend StringNodeImpl;
-                StringNode(std::tr1::shared_ptr<StringNodeImpl> ni);  // internal use only
+    friend class StringNodeImpl;
+                StringNode(boost::shared_ptr<StringNodeImpl> ni);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(StringNode)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -463,33 +568,38 @@ protected: //=================
 
 class BlobNode {
 public:
-    explicit    BlobNode(ImageFile imf, uint64_t byteCount);
+    explicit    BlobNode(ImageFile destImageFile, int64_t byteCount);
 
-    NodeType    type();
-    bool        isRoot();
-    Node        parent();
-    ustring     pathName();
-    ustring     elementName();
-
-    int64_t     byteCount();
-    void        read(uint8_t* buf, uint64_t start, size_t byteCount);
-    void        write(uint8_t* buf, uint64_t start, size_t byteCount);
+    int64_t     byteCount() const;
+    void        read(uint8_t* buf,  int64_t start, size_t byteCount);
+    void        write(uint8_t* buf, int64_t start, size_t byteCount);
 
     // Up/Down cast conversion
-                operator Node();
-    explicit    BlobNode(Node& n);
+                operator Node() const;
+    explicit    BlobNode(const Node& n);
             
+    // Common generic Node functions
+    bool        isRoot() const;
+    Node        parent() const;
+    ustring     pathName() const;
+    ustring     elementName() const;
+    ImageFile   destImageFile() const;
+    bool        isAttached() const;
+
     // Diagnostic functions:
-    void        dump(int indent = 0, std::ostream& os = std::cout);
+    void        dump(int indent = 0, std::ostream& os = std::cout) const;
+    void        checkInvariant(bool doRecurse = true, bool doUpcast=true);
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                BlobNode();                 // No default constructor is defined for BlobNode
 protected: //=================
-    friend E57XmlParser;
+    friend class E57XmlParser;
 
-                BlobNode(std::tr1::shared_ptr<BlobNodeImpl> ni);       // internal use only
+                BlobNode(boost::shared_ptr<BlobNodeImpl> ni);       // internal use only
 
                 // Internal use only, create blob already in a file
-                BlobNode(ImageFile imf, uint64_t fileOffset, uint64_t length);
+                BlobNode(ImageFile destImageFile, int64_t fileOffset, int64_t length);
 
     E57_OBJECT_IMPLEMENTATION(BlobNode)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
@@ -498,109 +608,140 @@ protected: //=================
 class ImageFile {
 public:
                     ImageFile(const ustring& fname, const ustring& mode, const ustring& configuration = "");
-    StructureNode   root();
+    StructureNode   root() const;
     void            close();
     void            cancel();
+    bool            isOpen() const;
+    bool            isWritable() const;
+    ustring         fileName() const;
+    int             writerCount() const;
+    int             readerCount() const;
 
     // Manipulate registered extensions in the file
     void            extensionsAdd(const ustring& prefix, const ustring& uri);
-    bool            extensionsLookupPrefix(const ustring& prefix, ustring& uri);
-    bool            extensionsLookupUri(const ustring& uri, ustring& prefix);
-    int             extensionsCount();
-    ustring         extensionsPrefix(int index);
-    ustring         extensionsUri(int index);
+    bool            extensionsLookupPrefix(const ustring& prefix, ustring& uri) const;
+    bool            extensionsLookupUri(const ustring& uri, ustring& prefix) const;
+    int             extensionsCount() const;
+    ustring         extensionsPrefix(int index) const;
+    ustring         extensionsUri(int index) const;
 
     // Field name functions:
-    bool            elementNameIsExtended(const ustring& elementName);
-    bool            elementNameIsWellFormed(const ustring& elementName, bool allowNumber = true);
-    void            elementNameParse(const ustring& elementName, ustring& prefix, ustring& localPart);
+    bool            isElementNameExtended(const ustring& elementName) const;
+    void            elementNameParse(const ustring& elementName, ustring& prefix, ustring& localPart) const;
 
     // Diagnostic functions:
-    void            dump(int indent = 0, std::ostream& os = std::cout);
+    void            dump(int indent = 0, std::ostream& os = std::cout) const;
+    void            checkInvariant(bool doRecurse = true);
+    bool            operator==(ImageFile imf2) const;
+    bool            operator!=(ImageFile imf2) const;
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
+private:   //=================
+                    ImageFile();                 // No default constructor is defined for ImageFile
+                    ImageFile(double);           // Give a second dummy constructor, better error msg for: ImageFile(0)
 protected: //=================
-    //??? copy, default ctor, assign
+    //??? workaround?
+    friend class Node;
+    friend class StructureNode;
+    friend class VectorNode;
+    friend class CompressedVectorNode;
+    friend class IntegerNode;
+    friend class ScaledIntegerNode;
+    friend class FloatNode;
+    friend class StringNode;
+    friend class BlobNode;
 
-    ImageFile(std::tr1::shared_ptr<ImageFileImpl> imfi);  // internal use only
+                    ImageFile(boost::shared_ptr<ImageFileImpl> imfi);  // internal use only
 
     E57_OBJECT_IMPLEMENTATION(ImageFile)  // Internal implementation details, not part of API, must be last in object
 //! \endcond
 };
-
+                   
+//! @brief Numeric error identifiers used in E57Exception
 enum ErrorCode {
-    E57_SUCCESS                                 = 0,
-    E57_ERROR_BAD_CV_HEADER                     = 1,
-    E57_ERROR_BAD_CV_PACKET                     = 2,
-    E57_ERROR_CHILD_INDEX_OUT_OF_BOUNDS         = 3,
-    E57_ERROR_SET_TWICE                         = 4,
-    E57_ERROR_HOMOGENEOUS_VIOLATION             = 5,
-    E57_ERROR_VALUE_NOT_REPRESENTABLE           = 6,
-    E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE    = 7,
-    E57_ERROR_REAL64_TOO_LARGE                  = 8,
-    E57_ERROR_EXPECTING_NUMERIC                 = 9,
-    E57_ERROR_EXPECTING_USTRING                 = 10,
-    E57_ERROR_INTERNAL                          = 11,
-    E57_ERROR_BAD_XML_FORMAT                    = 12,
-    E57_ERROR_XML_PARSER                        = 13,
-    E57_ERROR_BAD_API_ARGUMENT                  = 14,
-    E57_ERROR_FILE_IS_READ_ONLY                 = 15,
-    E57_ERROR_CHECKSUM_MISMATCH                 = 16,
-    E57_ERROR_OPEN_FAILED                       = 17,
-    E57_ERROR_CLOSE_FAILED                      = 18,
-    E57_ERROR_READ_FAILED                       = 19,
-    E57_ERROR_WRITE_FAILED                      = 20,
-    E57_ERROR_LSEEK_FAILED                      = 21,
-    E57_ERROR_PATH_UNDEFINED                    = 22,
-    E57_ERROR_BAD_BUFFER                        = 23,
-    E57_ERROR_NO_BUFFER_FOR_ELEMENT             = 24,
-    E57_ERROR_BUFFER_SIZE_MISMATCH              = 25,
-    E57_ERROR_BUFFER_DUPLICATE_PATHNAME         = 26,
-    E57_ERROR_BAD_FILE_SIGNATURE                = 27,
-    E57_ERROR_UNKNOWN_FILE_VERSION              = 28,
-    E57_ERROR_BAD_FILE_LENGTH                   = 29,
-    E57_ERROR_XML_PARSER_INIT                   = 30,
-    E57_ERROR_DUPLICATE_NAMESPACE_PREFIX        = 31,
-    E57_ERROR_DUPLICATE_NAMESPACE_URI           = 32,
-    E57_ERROR_FILE_NOT_OPEN                     = 33,
-    E57_ERROR_BUFFER_NOT_SPECIFIED              = 34,
-    E57_ERROR_BAD_PROTOTYPE                     = 35,
-    E57_ERROR_VALUE_OUT_OF_BOUNDS               = 36,
-    E57_ERROR_CONVERSION_REQUIRED               = 37,
-    E57_ERROR_READ_MODE_REQUIRED                = 38,
-    E57_ERROR_BAD_ELEMENT_NAME                  = 39,
-    E57_ERROR_BAD_PATH_NAME                     = 40,
-    E57_ERROR_BAD_NAME_CHAR                     = 41,
-    E57_ERROR_UNKNOWN_PREFIX                    = 42,
-    E57_ERROR_NOT_IMPLEMENTED                   = 43,
-    E57_ERROR_BAD_NODE_TYPECAST                 = 44,
-    E57_ERROR_WRITER_NOT_OPEN                   = 45,
-    E57_ERROR_READER_NOT_OPEN                   = 46,
-};
-
+    /*
+     * N.B.  *** When changing error strings here, remember to update the error strings in E57Foundation.cpp ****
+     */
+    E57_SUCCESS                                 = 0,  //!< operation was successful
+    E57_ERROR_BAD_CV_HEADER                     = 1,  //!< a CompressedVector binary header was bad
+    E57_ERROR_BAD_CV_PACKET                     = 2,  //!< a CompressedVector binary packet was bad
+    E57_ERROR_CHILD_INDEX_OUT_OF_BOUNDS         = 3,  //!< a numerical index identifying a child was out of bounds
+    E57_ERROR_SET_TWICE                         = 4,  //!< attempted to set an existing child element to a new value
+    E57_ERROR_HOMOGENEOUS_VIOLATION             = 5,  //!< attempted to add an E57 Element that would have made the children of a homogenous Vector have different types
+    E57_ERROR_VALUE_NOT_REPRESENTABLE           = 6,  //!< a value could not be represented in the requested type
+    E57_ERROR_SCALED_VALUE_NOT_REPRESENTABLE    = 7,  //!< after scaling the result could not be represented in the requested type
+    E57_ERROR_REAL64_TOO_LARGE                  = 8,  //!< a 64 bit IEEE float was too large to store in a 32 bit IEEE float
+    E57_ERROR_EXPECTING_NUMERIC                 = 9,  //!< Expecting numeric representation in user's buffer, found ustring
+    E57_ERROR_EXPECTING_USTRING                 = 10, //!< Expecting string representation in user's buffer, found numeric
+    E57_ERROR_INTERNAL                          = 11, //!< An unrecoverable inconsistent internal state was detected
+    E57_ERROR_BAD_XML_FORMAT                    = 12, //!< E57 primitive not encoded in XML correctly
+    E57_ERROR_XML_PARSER                        = 13, //!< XML not well formed
+    E57_ERROR_BAD_API_ARGUMENT                  = 14, //!< bad API function argument provided by user
+    E57_ERROR_FILE_IS_READ_ONLY                 = 15, //!< can't modify read only file
+    E57_ERROR_BAD_CHECKSUM                      = 16, //!< checksum mismatch, file is corrupted
+    E57_ERROR_OPEN_FAILED                       = 17, //!< open() failed
+    E57_ERROR_CLOSE_FAILED                      = 18, //!< close() failed
+    E57_ERROR_READ_FAILED                       = 19, //!< read() failed
+    E57_ERROR_WRITE_FAILED                      = 20, //!< write() failed
+    E57_ERROR_LSEEK_FAILED                      = 21, //!< lseek() failed
+    E57_ERROR_PATH_UNDEFINED                    = 22, //!< E57 element path well formed but not defined
+    E57_ERROR_BAD_BUFFER                        = 23, //!< bad SourceDestBuffer
+    E57_ERROR_NO_BUFFER_FOR_ELEMENT             = 24, //!< no buffer specified for an element in CompressedVectorNode during write
+    E57_ERROR_BUFFER_SIZE_MISMATCH              = 25, //!< SourceDestBuffers not all same size
+    E57_ERROR_BUFFER_DUPLICATE_PATHNAME         = 26, //!< duplicate pathname in CompressedVectorNode read/write
+    E57_ERROR_BAD_FILE_SIGNATURE                = 27, //!< file signature not "ASTM-E57"
+    E57_ERROR_UNKNOWN_FILE_VERSION              = 28, //!< incompatible file version
+    E57_ERROR_BAD_FILE_LENGTH                   = 29, //!< size in file header not same as actual
+    E57_ERROR_XML_PARSER_INIT                   = 30, //!< XML parser failed to initialize
+    E57_ERROR_DUPLICATE_NAMESPACE_PREFIX        = 31, //!< namespace prefix already defined
+    E57_ERROR_DUPLICATE_NAMESPACE_URI           = 32, //!< namespace URI already defined
+    E57_ERROR_BAD_PROTOTYPE                     = 33, //!< bad prototype in CompressedVectorNode
+    E57_ERROR_BAD_CODECS                        = 34, //!< bad codecs in CompressedVectorNode
+    E57_ERROR_VALUE_OUT_OF_BOUNDS               = 35, //!< element value out of min/max bounds
+    E57_ERROR_CONVERSION_REQUIRED               = 36, //!< conversion required to assign element value, but not requested
+    E57_ERROR_BAD_PATH_NAME                     = 37, //!< E57 path name is not well formed
+    E57_ERROR_NOT_IMPLEMENTED                   = 38, //!< functionality not implemented
+    E57_ERROR_BAD_NODE_DOWNCAST                 = 39, //!< bad downcast from Node to specific node type
+    E57_ERROR_WRITER_NOT_OPEN                   = 40, //!< CompressedVectorWriter is no longer open
+    E57_ERROR_READER_NOT_OPEN                   = 41, //!< CompressedVectorReader is no longer open
+    E57_ERROR_NODE_UNATTACHED                   = 42, //!< node is not yet attached to tree of ImageFile
+    E57_ERROR_ALREADY_HAS_PARENT                = 43, //!< node already has a parent
+    E57_ERROR_DIFFERENT_DEST_IMAGEFILE          = 44, //!< nodes were constructed with different destImageFiles
+    E57_ERROR_IMAGEFILE_NOT_OPEN                = 45, //!< destImageFile is no longer open
+    E57_ERROR_BUFFERS_NOT_COMPATIBLE            = 46, //!< SourceDestBuffers not compatible with previously given ones
+    E57_ERROR_TOO_MANY_WRITERS                  = 47, //!< too many open CompressedVectorWriters of an ImageFile
+    E57_ERROR_TOO_MANY_READERS                  = 48, //!< too many open CompressedVectorReaders of an ImageFile
+    E57_ERROR_BAD_CONFIGURATION                 = 49, //!< bad configuration string
+    E57_ERROR_INVARIANCE_VIOLATION              = 50  //!< class invariance constraint violation in debug mode
+    /*
+     * N.B.  *** When changing error strings here, remember to update the error strings in E57Foundation.cpp ****
+     */
+};                                                                                                                                                                                                                                 
+                                                      
 class E57Exception : public std::exception {
 public:
-    virtual void        report(char* reportingFileName=NULL, int reportingLineNumber=0, char* reportingFunctionName=NULL, std::ostream& os = std::cout);
-    virtual ErrorCode   errorCode();
-    virtual ustring     context();
-    virtual const char* what();
+    virtual void        report(const char* reportingFileName=NULL, int reportingLineNumber=0, const char* reportingFunctionName=NULL, std::ostream& os = std::cout) const;
+    virtual ErrorCode   errorCode() const;
+    virtual ustring     context() const;
+    virtual const char* what() const throw();
 
     // For debugging purposes:
-    virtual char*       sourceFileName();
-    virtual char*       sourceFunctionName();
-    virtual int         sourceLineNumber();
+    virtual const char* sourceFileName() const;
+    virtual const char* sourceFunctionName() const;
+    virtual int         sourceLineNumber() const;
 
 //! \cond documentNonPublic   The following isn't part of the API, and isn't documented.
-    E57Exception(ErrorCode ecode, ustring context,
-                 char* srcFileName = NULL, int srcLineNumber = 0, char* srcFunctionName = NULL);
+    E57Exception(ErrorCode ecode, const ustring context,
+                 const char* srcFileName = NULL, int srcLineNumber = 0, const char* srcFunctionName = NULL);
+    ~E57Exception() throw() {};
 
+private:   //=================
+                E57Exception();                 // No default constructor is defined for E57Exception
 protected: //=================
-    //??? copy, default ctor, assign
-
     ErrorCode   errorCode_;
     ustring     context_;
-    char*       sourceFileName_;
-    char*       sourceFunctionName_;
+    const char* sourceFileName_;
+    const char* sourceFunctionName_;
     int         sourceLineNumber_;
 //! \endcond
 };
@@ -608,7 +749,7 @@ protected: //=================
 class E57Utilities {
 public:
     // Constructor (does nothing for now)
-                E57Utilities(const ustring& configuration = "") {};
+                E57Utilities(const ustring& /*configuration*/ = "") {};
 
     // Get latest version of ASTM standard supported, and library id string
     void        getVersions(int& astmMajor, int& astmMinor, ustring& libraryId);
@@ -617,10 +758,12 @@ public:
     ustring     errorCodeToString(ErrorCode ecode);
 
     // Direct read of XML representation in E57 file
-    uint64_t    rawXmlLength(const ustring& fname);
-    void        rawXmlRead(const ustring& fname, uint8_t* buf, uint64_t start, size_t byteCount);
+    int64_t     rawXmlLength(const ustring& fname);
+    void        rawXmlRead(const ustring& fname, uint8_t* buf, int64_t start, size_t byteCount);
 };
 
-};  // end namespace e57
+#ifndef DOXYGEN
+}  // end namespace e57
+#endif
 
 #endif // E57FOUNDATION_H_INCLUDED
