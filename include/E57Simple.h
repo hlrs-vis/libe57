@@ -60,7 +60,7 @@ namespace e57 {
 //
 
 //! e57::Point is a location of a lidar point in 3D space.
-class Point{
+class Point {
 public:
 	double		x;	//!< position on the X axis as a double
 	double		y;	//!< position on the Y axis as a double
@@ -68,7 +68,7 @@ public:
 };
 
 //! e57::PointF is a location of a lidar point in 3D space using a float real
-class PointF{
+class PointF {
 public:
 	float		x;	//!< position on the X axis as a float
 	float		y;	//!< position on the Y axis as a float
@@ -76,7 +76,7 @@ public:
 };
 
 //! e57::range is a location of a lidar point in 3D space using polar coordinates.
-class Range{
+class Range {
 public:
 	double		r;	//!< range the distance to the point as a double
 	double		e;	//!< elevation angle from the horizontal plane as a double
@@ -84,7 +84,7 @@ public:
 };
 
 //! e57::Translation is a direction vector from the origin to a point.
-class Translation{
+class Translation {
 public:
 	double		x;	//!< position on the X axis as a double
 	double		y;	//!< position on the Y axis as a double
@@ -96,7 +96,7 @@ public:
 //
 //! e57::Quaternion is a quaternion which represents a rigid body rotation.
 
-class Quaternion{
+class Quaternion {
 public:
 	double		w;	//!< The real part as a double
 	double		x;	//!< The i component of the quaternion as a double
@@ -110,7 +110,7 @@ public:
 //
 //! e57::RigidBodyTransform is a structure that defines a rigid body transform in cartesian coordinates.
 
-class RigidBodyTransform{
+class RigidBodyTransform {
 public:
 	e57::Quaternion		rotation;		//!< A unit quaternion representing the rotation, R, of the transform
 	e57::Translation	translation;	//!< The translation point vector, t, of the transform
@@ -122,7 +122,7 @@ public:
 //
 //! e57::CartesianBounds structure specifies an axis-aligned box in local cartesian coordinates.
 
-class CartesianBounds{
+class CartesianBounds {
 public:
 	double		xMinimum;	//!< The minimum extent of the bounding box in the X direction
 	double		xMaximum;	//!< The maximum extent of the bounding box in the X direction
@@ -138,7 +138,7 @@ public:
 //
 //! e57::SphericalBounds structure stores teh bounds of some data in spherical coordinates.
 
-class SphericalBounds{
+class SphericalBounds {
 public:
 	double		rangeMinimum;		//!< The minimum extent of the bounding region in the r direction
 	double		rangeMaximum;		//!< The maximum extent of the bounding region in the r direction
@@ -157,7 +157,7 @@ public:
 	562 floating point number, stored as an E57 Float element which is based on the Global Positioning
 	563 System (GPS) time scale. */
 
-class DateTime{
+class DateTime {
 public:
 	double		dateTimeValue;		//!< The time, in seconds, since GPS time was zero. This time specification may include fractions of a second
 	int			isGpsReferenced;	//!< This element should be present, and its value set to 1 if, and only if, the time stored in the dateTimeValue element is truly referenced to GPS time
@@ -193,7 +193,7 @@ public:
 //
 //! e57::LineGroupRecord is a structure that stores information about a single group of points in a row or column
 
-class LineGroupRecord{
+class LineGroupRecord {
 public:
 	int						idElementValue;		//!< A user-defined identifier for this group
 	int						startPointIndex;	//!< The record number of the first point in the continuous interval
@@ -208,7 +208,7 @@ public:
 //
 //! e57::GroupingByLine is a structure that stores a set of point groups organized by the rowIndex or columnIndex attribute of the PointRecord
 
-class GroupingByLine{
+class GroupingByLine {
 public:
 	ustring		idElementName;		//!< The name of the PointRecord element that identifies which group the point is in. The value of this string must be “rowIndex” or “columnIndex”
 	int			groupsSize;			//!< Size of the compressedVector of LineGroupRecord structures
@@ -220,7 +220,7 @@ public:
 //
 //! e57::PointGroupingSchemes structure structure supports the division of points within an Data3D into logical groupings
 
-class PointGroupingSchemes{
+class PointGroupingSchemes {
 public:
 	GroupingByLine	groupingByLine;	//!< Grouping information by row or column index
 };
@@ -231,7 +231,7 @@ public:
 //
 //! e57::PointRecord is a structure that stores the information for an individual 3D imaging system point measurement.
 
-class PointRecord{
+class PointRecord {
 public:
 	double		cartesianX;		//!< The X coordinate (in meters) of the point in Cartesian coordinates
 	double		cartesianY;		//!< The Y coordinate (in meters) of the point in Cartesian coordinates
@@ -289,6 +289,32 @@ public:
 	int							pointsSize;		//!< Size of the compressed vector of PointRecord structures referring to the binary data that actually stores the point data
 
 	e57::PointGroupingSchemes	pointGroupingSchemes;	//!< The defined schemes that group points in different ways
+};
+
+////////////////////////////////////////////////////////////////////
+//
+//	e57::PointStandardizedFieldsAvailable
+//
+//! The e57::PointStandardizedFieldAvailable is a structure use to interrogate if standardized fields are available
+
+class PointStandardizedFieldsAvailable {
+public:
+	bool	isValid;
+	bool	row;
+	bool	column;
+	bool	multipleReturnIndex;
+	bool	multipleReturnCount;
+	bool	x;
+	bool	y;
+	bool	z;
+	bool	range;
+	bool	azimuth;
+	bool	elevation;
+	bool	intensity;
+	bool	colorRed;
+	bool	colorGreen;
+	bool	colorBlue;
+	bool	timestamp;
 };
 ////////////////////////////////////////////////////////////////////
 //
@@ -374,33 +400,6 @@ public:
 	e57::CylindricalProjection			cylindricalRepresentation;		//!< Representation for an image using the cylindrical camera projection model
 };
 
-//! e57::Color is an 
-typedef struct _Color{
-	uint8_t		r;
-	uint8_t		g;
-	uint8_t		b;
-	uint8_t		a;
-}	Color;
-
-typedef enum _Location{
-	Loc_File		= 0,
-	Loc_Image		= 1,
-	Loc_Picture		= 2,
-	Loc_Point		= 3
-}	loc_t;
-
-typedef enum _Type{
-	Type_None		= 0,
-	Type_String		= 1,
-	Type_Integer	= 2,
-	Type_Real32		= 3,
-	Type_Real64		= 4,
-	Type_DateTime	= 5,
-	Type_Position	= 6,
-	Type_Quaternion	= 7,
-	Type_Color		= 8
-}   type_t;
-
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Reader
@@ -441,27 +440,14 @@ virtual bool		GetE57Root(
 
 ////////////////////////////////////////////////////////////////////
 //
-//	Scanner Image 3d data
-//
-//! This function returns the total number of Image Blocks
-virtual	int32_t		GetData3DCount( void);
-
-//! This function returns the Data3D header and positions the cursor
-virtual bool		GetData3D( 
-						int32_t		index,	//!< This in the index into the images3D vector
-						Data3D *	data3DHeader //!< pointer to the Data3D structure to receive the image information
-						);	//!< /return Returns true if sucessful
-
-////////////////////////////////////////////////////////////////////
-//
 //	Camera Image picture data
 //
 //! This function returns the total number of Picture Blocks
-virtual	int32_t		GetImage2DCount( void);
+virtual	int32_t		GetCameraImageCount( void);
 
 //! This function returns the cameraImages header and positions the cursor
-virtual bool		GetImage2D( 
-						int32_t		index,		//!< This in the index into the images2D vector
+virtual bool		GetCameraImage( 
+						int32_t			index,		//!< This in the index into the cameraImages vector
 						CameraImage *	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
 						);						//!< /return Returns true if sucessful
 
@@ -473,153 +459,24 @@ virtual	int64_t		ReadImage2DData(
 						int64_t		count		//!< size of desired chuck or buffer size
 						);						//!< /return Returns the number of bytes transferred.
 
-/////////////////////////////////////////////////////////////////////
-//	Property system
-//	loc_t	locType		is location of property   Loc_File, Loc_Image, Loc_Picture, Loc_Point
-//	int32_t locIndex	is the block of the Image or Picture
-//	int32_t proIndex	is the property index as ordered in the file
+////////////////////////////////////////////////////////////////////
+//
+//	Scanner Image 3d data
+//
+//! This function returns the total number of Image Blocks
+virtual	int32_t		GetData3DCount( void);
 
-//! This function returns the total number of available properties in a given location and block
-virtual		int32_t		GetPropertyCount(loc_t				locType,	//!< location type
-											 int32_t			locIndex	//!< block index
-											 );
+//! This function returns the Data3D header and positions the cursor
+virtual bool		GetData3D( 
+						int32_t		index,	//!< This in the index into the images3D vector
+						Data3D *	data3DHeader //!< pointer to the Data3D structure to receive the image information
+						);	//!< /return Returns true if sucessful
 
-//! This function returns the name and type of the property in a given location and block
-virtual		ustring		GetPropertyName(loc_t				locType,	//!< location type
-											int32_t				locIndex,	//!< block index
-											int32_t				proIndex,	//!< property index
-											type_t *			proType = NULL //!< returns the type of the data
-											);
-
-//! This function returns the string property using the given location, block index, and property index
-virtual		ustring		GetPropertyString(loc_t				locType,	//!< location type
-											  int32_t			locIndex,	//!< block index
-											  int32_t			proIndex	//!< property index
-											  );
-
-//! This function returns the string property using the given location, block index, and property name
-virtual		ustring		GetPropertyString(loc_t				locType,	//!< location type
-											  int32_t			locIndex,	//!< block index
-											  const ustring &	proName		//!< name of the property
-											  );
-
-//! This function returns a long integer property using the given location, block index, and property name
-virtual		int64_t			GetPropertyInteger(loc_t			locType,	//!< location type
-											   int32_t			locIndex,	//!< block index
-											   int32_t			proIndex	//!< property index
-											   );
-
-//! This function returns a long integer property using the given location, block index, and property name
-virtual		int64_t			GetPropertyInteger(loc_t			locType,	//!< location type
-											   int32_t			locIndex,	//!< block index
-											   const ustring &	proName		//!< name of the property
-											   );
-
-//! This function returns a real property using the given location, block index, and property name
-virtual		double		GetPropertyReal(loc_t				locType,	//!< location type
-											int32_t				locIndex,	//!< block index
-											int32_t				proIndex	//!< property index
-											);
-
-//! This function returns a real property using the given location, block index, and property name
-virtual		double		GetPropertyReal(loc_t				locType,	//!< location type
-											int32_t				locIndex,	//!< block index
-											const ustring &	proName		//!< name of the property
-											);
-
-//! This function returns a Data Time property using the given location, block index, and property index
-virtual		double		GetPropertyDateTime(loc_t			locType,	//!< location type
-												int32_t			locIndex,	//!< block index
-											    int32_t			proIndex	//!< property index
-												);
-
-//! This function returns a Data Time property using the given location, block index, and property name
-virtual		double		GetPropertyDateTime(loc_t			locType,	//!< location type
-												int32_t			locIndex,	//!< block index
-												const ustring & proName	//!< name of the property
-												);
-
-//! This function returns a Color property using the given location, block index, and property index
-virtual		e57::Color			GetPropertyColor(loc_t				locType,	//!< location type
-											 int32_t			locIndex,	//!< block index
-											 int32_t			proIndex	//!< property index
-											 );
-
-//! This function returns a Color property using the given location, block index, and property name
-virtual		e57::Color			GetPropertyColor(loc_t				locType,	//!< location type
-											 int32_t			locIndex,	//!< block index
-											 const ustring &	proName	//!< name of the property
-											 );
-
-//! This function returns a Quaternion perperty using the given location, block index, and property index
-virtual		e57::Quaternion			GetPropertyQuaternion(loc_t			locType,	//!< location type
-												  int32_t		locIndex,	//!< block index
-												  int32_t		proIndex	//!< property index
-												  );
-
-//! This function returns a Quaternion perperty using the given location, block index, and property name
-virtual		e57::Quaternion			GetPropertyQuaternion(loc_t			locType,	//!< location type
-												  int32_t		locIndex,	//!< block index
-												  const ustring & proName	//!< name of the property
-												  );
-
-//! This function returns a Position perperty using the given location, block index, and property index
-virtual		e57::Point			GetPropertyPosition(loc_t			locType,	//!< location type
-												int32_t			locIndex,	//!< block index
-												int32_t			proIndex	//!< property index
-												);
-
-//! This function returns a Position perperty using the given location, block index, and property name
-virtual		e57::Point			GetPropertyPosition(loc_t			locType,	//!< location type
-												int32_t			locIndex,	//!< block index
-												const ustring & proName	//!< name of the property
-												);
-
-/////////////////////////////////////////////////////////////////////
-//	Per Loc_Picture Data 
-/////////////////////////////////////
-
-//! This function returns the total number of Picture Blocks
-virtual		int32_t			GetPictureCount( void);
-
-//! This function returns the block size of the Picture
-virtual		int64_t			GetPictureSize(int32_t		locIndex	//!< picture block index
-										   );
-
-//! This function reads the block
-virtual		int64_t			ReadPictureData(int32_t		locIndex,	//!< picture block index
-											int8_t *	pBuffer,	//!< pointer the buffer
-											int64_t		start,		//!< position in the block to start reading
-											int64_t		count		//!< size of desired chuck or buffer size
-											);						//!< /return Returns the number of bytes transferred.
-
-//////////////////////////////////////////////////////////////////////
-//	Per Loc_Image Data 
-/////////////////////////////////////
-//	Get total number of available scans
-
-
-//! This function returns the block size of the Image
-virtual		int64_t			GetImageSize(int32_t		locIndex	//!< image block index
-										 );
-
-//////////////////////////////////////////////////////////////////////
-//	Per Loc_Image Loc_Point Data 
-/////////////////////////////////////
-
-// Loc_Point Record Metadata
-
-//! This function returns the total number of Fields in the point data
-virtual		int32_t			GetImageFieldCount(int32_t	locIndex	//!< image block index
-											   );
-
-//! This function returns the name, bit size, scaler, and type of the field
-virtual		ustring		GetImageFieldName(int32_t	locIndex,		//!< image block index
-											  int32_t	fieldIndex,		//!< field index
-											  int32_t *	bitSize,		//!< size of the field in bits
-											  double* fieldScaler,	//!< scaler of the field
-											  type_t *	type			//!< field type
-											  );
+//! This function returns the active fields available
+virtual	bool		GetPointStandardizedFieldsAvailable(
+						int32_t		index,	//!< This in the index into the images3D vector
+						PointStandardizedFieldsAvailable * pointFields //!< pointer to the Data3D structure to receive the PointStandardizedFieldsAvailable information
+						);
 
 // Loc_Image data information
 
@@ -637,27 +494,8 @@ virtual		void		GetImagePointSize(int32_t	locIndex,	//!< image block index
 virtual		int32_t		GetImagePointSizeGroups(int32_t	locIndex		//!< image block index
 												);
 
-//KA: Interrogate if standardized fields are available.  Maybe better if return a struct
-struct PointStandardizedFieldsAvailable {
-	bool	isValid;
-	bool	row;
-	bool	column;
-	bool	multipleReturnIndex;
-	bool	multipleReturnCount;
-	bool	x;
-	bool	y;
-	bool	z;
-	bool	range;
-	bool	azimuth;
-	bool	elevation;
-	bool	intensity;
-	bool	colorRed;
-	bool	colorGreen;
-	bool	colorBlue;
-	bool	timestamp;
-};
 
-PointStandardizedFieldsAvailable GetPointStandardizedFieldsAvailable(int32_t imageIndex);
+
 
 //KA: Interrogate what fields (standardized and extensions) are available
 std::vector<ustring> GetPointFieldsAvailable(int32_t imageIndex);;
@@ -726,9 +564,9 @@ virtual		void		ReadImagePointIntensity(int32_t		locIndex,		//!< image block inde
 											int32_t	group,
 											double *I);
 
-virtual		void 		ReadImagePointColor(int32_t		locIndex,		//!< image block index
-											int32_t		group,
-											e57::Color*  Color);
+//virtual		void 		ReadImagePointColor(int32_t		locIndex,		//!< image block index
+//											int32_t		group,
+//											e57::Color*  Color);
 
 virtual		void		ReadImagePointTime(int32_t		locIndex,		//!< image block index
 										   int32_t		group,
@@ -755,6 +593,69 @@ virtual		void		ReadImagePointFieldString(int32_t		locIndex,		//!< image block in
 												  const ustring	fieldName,	
 												  ustring *		value);
 
-};
+}; //end Reader class
+
+
+////////////////////////////////////////////////////////////////////
+//
+//	e57::Writer
+//
+
+//! This is the E57 Writer class
+
+class	Writer{
+public:
+
+//! This function returns an E57::Writer pointer and opens the file
+static e57::Writer* CreateWriter(
+						const ustring & filePath	//!< file path string
+						);	//!< /return This returns a e57::Writer object which should be deleted when finish
+
+//! This function is the constructor for the writer class
+					Writer(
+						const ustring & filePath		//!< file path string
+						);
+
+//! This function is the destructor for the writer class
+virtual				~Writer(void);
+
+//! This function returns true if the file is open
+virtual	bool		IsOpen(void);
+
+//! This function closes the file
+virtual	void		Close(void);
+
+//! This function sets up the coordiateMetadata field in the E57Root
+virtual void		SetCoordinateMetaData( const ustring & metaData);
+
+
+////////////////////////////////////////////////////////////////////
+//
+//	Camera Image picture data
+//
+
+//! This function sets up the cameraImages header and positions the cursor
+//* The user needs to config a CameraImage structure with all the camera information before making this call. */
+virtual int32_t		NewCameraImage( 
+						CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
+						);						//!< /return Returns the cameraImage index
+
+//! This function writes the block
+virtual	int64_t		WriteImage2DData(
+						int32_t		index,		//!< picture block index
+						void *		pBuffer,	//!< pointer the buffer
+						int64_t		start,		//!< position in the block to start writing
+						int64_t		count		//!< size of desired chuck or buffer size
+						);						//!< /return Returns the number of bytes written
+
+//! This function sets up the Data3D header and positions the cursor for the binary data
+//* The user needs to config a Data3D structure with all the scanning information before making this call. */
+
+virtual int32_t		NewData3D( 
+						Data3D & data3DHeader //!< pointer to the Data3D structure to receive the image information
+						);	//!< /return Returns the index of the new scan.
+
+}; //end Writer class
+
 }; //end namespace
 #endif
