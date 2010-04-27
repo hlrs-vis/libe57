@@ -447,13 +447,13 @@ virtual	int32_t		GetCameraImageCount( void);
 
 //! This function returns the cameraImages header and positions the cursor
 virtual bool		GetCameraImage( 
-						int32_t			index,		//!< This in the index into the cameraImages vector
+						int32_t			imageIndex,		//!< This in the index into the cameraImages vector
 						CameraImage *	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
 						);						//!< /return Returns true if sucessful
 
 //! This function reads the block
-virtual	int64_t		ReadImage2DData(
-						int32_t		index,		//!< picture block index
+virtual	int64_t		ReadCameraImageData(
+						int32_t		imageIndex,		//!< picture block index
 						void *		pBuffer,	//!< pointer the buffer
 						int64_t		start,		//!< position in the block to start reading
 						int64_t		count		//!< size of desired chuck or buffer size
@@ -468,130 +468,67 @@ virtual	int32_t		GetData3DCount( void);
 
 //! This function returns the Data3D header and positions the cursor
 virtual bool		GetData3D( 
-						int32_t		index,	//!< This in the index into the images3D vector
+						int32_t		dataIndex,	//!< This in the index into the images3D vector
 						Data3D *	data3DHeader //!< pointer to the Data3D structure to receive the image information
 						);	//!< /return Returns true if sucessful
 
+//! This function returns the size of the point data
+virtual	void		GetData3DPointSize(
+						int32_t		dataIndex,	//!< image block index
+						int32_t *	row,		//!< image row size
+						int32_t *	column		//!< image column size
+						);
+
+//! This function returns the number of point groups
+virtual int32_t		GetData3DGroupSize(
+						int32_t		dataIndex		//!< image block index
+						);
+
 //! This function returns the active fields available
-virtual	bool		GetPointStandardizedFieldsAvailable(
-						int32_t		index,	//!< This in the index into the images3D vector
+virtual	bool		GetData3DStandardizedFieldsAvailable(
+						int32_t		dataIndex,		//!< This in the index into the images3D vector
 						PointStandardizedFieldsAvailable * pointFields //!< pointer to the Data3D structure to receive the PointStandardizedFieldsAvailable information
 						);
 
-// Loc_Image data information
+//! This function returns the point data fields fetched in single call
+//* All the non-NULL buffers in the call below have number of elements = count */
 
-///////////////////// BELOW NOT DONE YET ////////////////////////////////////////////////////////
-///////////////////// BELOW NOT DONE YET ////////////////////////////////////////////////////////
-///////////////////// BELOW NOT DONE YET ////////////////////////////////////////////////////////
-///////////////////// BELOW NOT DONE YET ////////////////////////////////////////////////////////
-///////////////////// BELOW NOT DONE YET ////////////////////////////////////////////////////////
+virtual int64_t		GetData3DStandardPoints(
+						int32_t		dataIndex,
+						int64_t		startPointIndex,
+						int64_t		count,
+						bool*		isValid,
+						int32_t*	row,
+						int32_t*	column,
+						int32_t*	multipleReturnIndex,
+						int32_t*	multipleReturnCount,
+						double*		x,
+						double*		y,
+						double*		z,
+						double*		range,
+						double*		azimuth,
+						double*		elevation,
+						double*		intensity,
+						double*		colorRed,
+						double*		colorGreen,
+						double*		colorBlue,
+						double*		timestamp
+						);
 
-virtual		void		GetImagePointSize(int32_t	locIndex,	//!< image block index
-										  int32_t *	row,		//!< image row size
-										  int32_t * column		//!< image column size
-										  );
+//! This function interrogate what fields (standardized and extensions) are available
+virtual bool		GetData3DGeneralFieldsAvailable(
+						int32_t					dataIndex,
+						std::vector<ustring>&	fieldsAvailable);
 
-virtual		int32_t		GetImagePointSizeGroups(int32_t	locIndex		//!< image block index
-												);
-
-
-
-
-//KA: Interrogate what fields (standardized and extensions) are available
-std::vector<ustring> GetPointFieldsAvailable(int32_t imageIndex);;
-
-
-virtual		void		GetImagePointFieldsAvailable(int32_t	locIndex,		//!< image block index
-													 bool *		groups,
-													 bool *		xyz,
-													 bool *		rae,
-													 bool *		intensity,
-													 bool *		color,
-													 bool *		time,
-													 bool *		attributes);
-//KA: Explicit point groups not in API, see Issue 14
-//
-//	Group Information
-//
-//virtual		void		GetImageGroupStatus(int32_t		locIndex,		//!< image block index
-//											int32_t		group,			
-//											uint32_t*	Status,				//could be per line information
-//											uint32_t*	TimeStamp);
-
-//////////////////////////////////////////////////////////////////////
-//	Loc_Point Data 
-/////////////////////////////////////
-
-//KA: point data fields fetched in single call, see Issue 13
-//all the non-NULL buffers in the call below have number of elements = count
-
-int64_t GetStandardPoints(int32_t imageIndex, int64_t startPointIndex, int64_t count,
-	bool*		isValid,
-	int32_t*	row,
-	int32_t*	column,
-	int32_t*	multipleReturnIndex,
-	int32_t*	multipleReturnCount,
-	double*		x,
-	double*		y,
-	double*		z,
-	double*		range,
-	double*		azimuth,
-	double*		elevation,
-	double*		intensity,
-	double*		colorRed,
-	double*		colorGreen,
-	double*		colorBlue,
-	double*		timestamp);
-
-int64_t GetGeneralPoints(int32_t imageIndex, int64_t startPointIndex, int64_t pointCount,
-	bool*	         isValid,
-	vector<ustring>   numericFieldNames,
-	vector<double*>  numericBuffers,
-	vector<ustring>   stringFieldNames,
-	vector<ustring*>  stringBuffers);
-
-virtual		void		ReadImagePointXYZ(int32_t		locIndex,		//!< image block index
-										  int32_t		group,
-										  e57::Point*	XYZ,			//array size is the number of measures
-										  uint16_t*		Status);
-
-virtual		void		ReadImagePointRAE(int32_t		locIndex,		//!< image block index
-										  int32_t		group,
-										  e57::Range*		RAE,
-										  uint16_t*		Status);
-
-virtual		void		ReadImagePointIntensity(int32_t		locIndex,		//!< image block index
-											int32_t	group,
-											double *I);
-
-//virtual		void 		ReadImagePointColor(int32_t		locIndex,		//!< image block index
-//											int32_t		group,
-//											e57::Color*  Color);
-
-virtual		void		ReadImagePointTime(int32_t		locIndex,		//!< image block index
-										   int32_t		group,
-										   double *	Time);
-
-virtual		void		ReadImagePointStatus(int32_t		locIndex,		//!< image block index
-											 int32_t		group,
-											 uint16_t *	Status);
-//
-//	User per point attributes
-//
-virtual		void		ReadImagePointFieldDouble(int32_t			locIndex,		//!< image block index
-												  int32_t			group,
-												  const ustring	fieldName,	//name as described in data format string
-												  double *		value);
-
-virtual		void		ReadImagePointFieldLong(int32_t			locIndex,		//!< image block index
-												int32_t			group,
-												const ustring  fieldName,	//could be any standard name
-												int32_t *		value);
-
-virtual		void		ReadImagePointFieldString(int32_t		locIndex,		//!< image block index
-												  int32_t		    group,		//Do we want per point strings?
-												  const ustring	fieldName,	
-												  ustring *		value);
+virtual int64_t		GetData3DGeneralPoints(
+						int32_t				dataIndex,
+						int64_t				startPointIndex,
+						int64_t				pointCount,
+						bool*				isValid,
+						vector<ustring>&	numericFieldNames,
+						vector<double*>&	numericBuffers,
+						vector<ustring>&	stringFieldNames,
+						vector<ustring*>&	stringBuffers);
 
 }; //end Reader class
 
@@ -626,7 +563,9 @@ virtual	bool		IsOpen(void);
 virtual	void		Close(void);
 
 //! This function sets up the coordiateMetadata field in the E57Root
-virtual void		SetCoordinateMetaData( const ustring & metaData);
+virtual void		SetCoordinateMetaData(
+						const ustring & metaData	//!< Information describing the Coordinate Reference System to be used for the file
+						);
 
 
 ////////////////////////////////////////////////////////////////////
@@ -641,8 +580,8 @@ virtual int32_t		NewCameraImage(
 						);						//!< /return Returns the cameraImage index
 
 //! This function writes the block
-virtual	int64_t		WriteImage2DData(
-						int32_t		index,		//!< picture block index
+virtual	int64_t		WriteCameraImage(
+						int32_t		imageIndex,	//!< picture block index
 						void *		pBuffer,	//!< pointer the buffer
 						int64_t		start,		//!< position in the block to start writing
 						int64_t		count		//!< size of desired chuck or buffer size
@@ -655,6 +594,41 @@ virtual int32_t		NewData3D(
 						Data3D & data3DHeader //!< pointer to the Data3D structure to receive the image information
 						);	//!< /return Returns the index of the new scan.
 
+virtual int64_t		WriteData3DStandardPoints(
+						int32_t		dataIndex,
+						int64_t		startPointIndex,
+						int64_t		count,
+						bool*		isValid,
+						int32_t*	row,
+						int32_t*	column,
+						int32_t*	multipleReturnIndex,
+						int32_t*	multipleReturnCount,
+						double*		x,
+						double*		y,
+						double*		z,
+						double*		range,
+						double*		azimuth,
+						double*		elevation,
+						double*		intensity,
+						double*		colorRed,
+						double*		colorGreen,
+						double*		colorBlue,
+						double*		timestamp
+						);
+//! This function sets the extensions field that will be available
+virtual bool		SetData3DGeneralFieldsAvailable(
+						int32_t					dataIndex,
+						std::vector<ustring>&	fieldsAvailable);
+
+virtual int64_t		WriteData3DGeneralPoints(
+						int32_t				dataIndex,
+						int64_t				startPointIndex,
+						int64_t				pointCount,
+						bool*				isValid,
+						vector<ustring>&	numericFieldNames,
+						vector<double*>&	numericBuffers,
+						vector<ustring>&	stringFieldNames,
+						vector<ustring*>&	stringBuffers);
 }; //end Writer class
 
 }; //end namespace
