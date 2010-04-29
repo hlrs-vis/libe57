@@ -58,7 +58,7 @@ namespace e57 {
 //
 //	e57::Point
 //
-
+/*
 //! e57::Point is a location of a lidar point in 3D space.
 class Point {
 public:
@@ -82,6 +82,7 @@ public:
 	double		e;	//!< elevation angle from the horizontal plane as a double
 	double		a;	//!< aximuth angle from the X axis as a double
 };
+*/
 
 //! e57::Translation is a direction vector from the origin to a point.
 class Translation {
@@ -227,6 +228,32 @@ public:
 
 ////////////////////////////////////////////////////////////////////
 //
+//	e57::PointStandardizedFieldsAvailable
+//
+//! The e57::PointStandardizedFieldAvailable is a structure use to interrogate if standardized fields are available
+
+class PointStandardizedFieldsAvailable {
+public:
+	bool	isValid;			//!< indicates that the PointRecord valid field is active
+	bool	rowIndex;			//!< indicates that the PointRecord rowIndex field is active
+	bool	columnIndex;		//!< indicates that the PointRecord columnIndex field is active
+	bool	returnIndex;		//!< indicates that the PointRecord returnIndex field is active
+	bool	returnCount;		//!< indicates that the PointRecord returnCount field is active
+	bool	x;					//!< indicates that the PointRecord cartesianX field is active
+	bool	y;					//!< indicates that the PointRecord cartesianY field is active
+	bool	z;					//!< indicates that the PointRecord cartesianZ field is active
+	bool	range;				//!< indicates that the PointRecord sphericalRange field is active
+	bool	azimuth;			//!< indicates that the PointRecord sphericalAzimuth field is active
+	bool	elevation;			//!< indicates that the PointRecord sphericalElevation field is active
+	bool	intensity;			//!< indicates that the PointRecord intensity field is active
+	bool	colorRed;			//!< indicates that the PointRecord colorRed field is active
+	bool	colorGreen;			//!< indicates that the PointRecord colorGreen field is active
+	bool	colorBlue;			//!< indicates that the PointRecord colorBlue field is active
+	bool	timestamp;			//!< indicates that the PointRecord timeStamp field is active
+};
+
+////////////////////////////////////////////////////////////////////
+//
 //	e57::PointRecord
 //
 //! e57::PointRecord is a structure that stores the information for an individual 3D imaging system point measurement.
@@ -278,7 +305,7 @@ public:
 
 	float			temperature;			//!< The ambient temperature at the time of data collection.
 	float			relativeHumidity;		//!< The relative humidity at the time of data collection.
-	float			airPressure;			//!< The air pressure at the time of data collection.
+	float			atmosphericPressure;	//!< The air pressure at the time of data collection.
 
 	e57::DateTime	acquisitionStart;		//!< The start date and time that the data was recorded
 	e57::DateTime	acquisitionEnd;			//!< The end date and time that the data was recorded
@@ -286,36 +313,16 @@ public:
 	e57::RigidBodyTransform		pose;		//!< A rigid body transform that describes the coordinate frame of the 3D imaging system origin in the file-level coordinate system.
 	e57::CartesianBounds		cartesianBounds; //!< The bounding box (in Cartesian coordinates) of all the points in this Data3D (in the local coordinate system of the points).
 	e57::SphericalBounds		sphericalBounds; //!< The bounding region (in spherical coordinates) of all the points in this Data3D (in the local coordinate system of the points)
-	int							pointsSize;		//!< Size of the compressed vector of PointRecord structures referring to the binary data that actually stores the point data
 
 	e57::PointGroupingSchemes	pointGroupingSchemes;	//!< The defined schemes that group points in different ways
+	e57::PointStandardizedFieldsAvailable pointFields;	//!< This defines the active fields used in the WritePoints function.
+
+	int64_t						row;			//!< data3D row size
+	int64_t						column;			//!< data3D column size
+	int64_t						pointsSize;		//!< Total size of the compressed vector of PointRecord structures referring to the binary data that actually stores the point data
 };
 
-////////////////////////////////////////////////////////////////////
-//
-//	e57::PointStandardizedFieldsAvailable
-//
-//! The e57::PointStandardizedFieldAvailable is a structure use to interrogate if standardized fields are available
 
-class PointStandardizedFieldsAvailable {
-public:
-	bool	isValid;
-	bool	row;
-	bool	column;
-	bool	multipleReturnIndex;
-	bool	multipleReturnCount;
-	bool	x;
-	bool	y;
-	bool	z;
-	bool	range;
-	bool	azimuth;
-	bool	elevation;
-	bool	intensity;
-	bool	colorRed;
-	bool	colorGreen;
-	bool	colorBlue;
-	bool	timestamp;
-};
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::PinholeProjection
@@ -408,6 +415,9 @@ public:
 //! This is the E57 Reader class
 
 class	Reader {
+
+	ImageFile		m_imf;
+	StructureNode	m_root;
 public:
 
 //! This function returns an E57::Reader pointer and opens the file
@@ -427,7 +437,7 @@ virtual				~Reader(void);
 virtual	bool		IsOpen(void);
 
 //! This function closes the file
-virtual	void		Close(void);
+virtual	bool		Close(void);
 
 ////////////////////////////////////////////////////////////////////
 //
@@ -498,10 +508,10 @@ virtual int64_t		GetData3DStandardPoints(
 						int64_t		startPointIndex,
 						int64_t		count,
 						bool*		isValid,
-						int32_t*	row,
-						int32_t*	column,
-						int32_t*	multipleReturnIndex,
-						int32_t*	multipleReturnCount,
+						int32_t*	rowIndex,
+						int32_t*	columnIndex,
+						int32_t*	returnIndex,
+						int32_t*	returnCount,
 						double*		x,
 						double*		y,
 						double*		z,
@@ -541,16 +551,32 @@ virtual int64_t		GetData3DGeneralPoints(
 //! This is the E57 Writer class
 
 class	Writer{
+
+private:
+	ImageFile				m_imf;
+	StructureNode			m_root;
+
+	VectorNode				m_data3D;
+
+	Data3D					m_data3DHeader;
+    vector<int32_t>			m_idElementValue;
+    vector<int32_t>			m_startPointIndex;
+    vector<int32_t>			m_pointCount;
+
+	VectorNode				m_cameraImages;
+
 public:
 
 //! This function returns an E57::Writer pointer and opens the file
 static e57::Writer* CreateWriter(
-						const ustring & filePath	//!< file path string
+						const ustring & filePath,	//!< file path string
+						const ustring & coordinateMetaData	//!< Information describing the Coordinate Reference System to be used for the file
 						);	//!< /return This returns a e57::Writer object which should be deleted when finish
 
 //! This function is the constructor for the writer class
 					Writer(
-						const ustring & filePath		//!< file path string
+						const ustring & filePath,		//!< file path string
+						const ustring & coordinateMetaData	//!< Information describing the Coordinate Reference System to be used for the file
 						);
 
 //! This function is the destructor for the writer class
@@ -560,13 +586,7 @@ virtual				~Writer(void);
 virtual	bool		IsOpen(void);
 
 //! This function closes the file
-virtual	void		Close(void);
-
-//! This function sets up the coordiateMetadata field in the E57Root
-virtual void		SetCoordinateMetaData(
-						const ustring & metaData	//!< Information describing the Coordinate Reference System to be used for the file
-						);
-
+virtual	bool		Close(void);
 
 ////////////////////////////////////////////////////////////////////
 //
@@ -581,47 +601,56 @@ virtual int32_t		NewCameraImage(
 
 //! This function writes the block
 virtual	int64_t		WriteCameraImage(
-						int32_t		imageIndex,	//!< picture block index
+						int32_t		imageIndex,	//!< picture block index given by the NewCameraImage
 						void *		pBuffer,	//!< pointer the buffer
 						int64_t		start,		//!< position in the block to start writing
 						int64_t		count		//!< size of desired chuck or buffer size
 						);						//!< /return Returns the number of bytes written
 
+//! This function closes the CameraImage block
+virtual bool		CloseCameraImage(
+						int32_t		imageIndex	//!< picture block index given by the NewCameraImage
+)						;						//!< /return Returns true if successful, false otherwise
+
 //! This function sets up the Data3D header and positions the cursor for the binary data
 //* The user needs to config a Data3D structure with all the scanning information before making this call. */
 
 virtual int32_t		NewData3D( 
-						Data3D & data3DHeader //!< pointer to the Data3D structure to receive the image information
-						);	//!< /return Returns the index of the new scan.
+						Data3D &	data3DHeader //!< pointer to the Data3D structure to receive the image information
+						);						//!< /return Returns the index of the new scan's data3D block.
 
+//! This function writes out blocks of point data
 virtual int64_t		WriteData3DStandardPoints(
-						int32_t		dataIndex,
-						int64_t		startPointIndex,
-						int64_t		count,
-						bool*		isValid,
-						int32_t*	row,
-						int32_t*	column,
-						int32_t*	multipleReturnIndex,
-						int32_t*	multipleReturnCount,
-						double*		x,
-						double*		y,
-						double*		z,
-						double*		range,
-						double*		azimuth,
-						double*		elevation,
-						double*		intensity,
-						double*		colorRed,
-						double*		colorGreen,
-						double*		colorBlue,
-						double*		timestamp
+						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int64_t		idElementValue,		//!< index for this group
+						int64_t		startPointIndex,	//!< Starting index in to the "points" data vector
+						int64_t		count,				//!< size of each of the buffers given
+						bool*		isValid,			//!< pointer to a buffer with the valid indication
+						int32_t*	rowIndex,			//!< pointer to a buffer with the row index
+						int32_t*	columnIndex,		//!< pointer to a buffer with the column index
+						int32_t*	returnIndex,		//!< pointer to a buffer with the return index
+						int32_t*	returnCount,		//!< pointer to a buffer with the return count data
+						double*		x,					//!< pointer to a buffer with the x data
+						double*		y,					//!< pointer to a buffer with the y data
+						double*		z,					//!< pointer to a buffer with the z data
+						double*		range,				//!< pointer to a buffer with the range data
+						double*		azimuth,			//!< pointer to a buffer with the azimuth angle
+						double*		elevation,			//!< pointer to a buffer with the elevation angle
+						double*		intensity,			//!< pointer to a buffer with the lidar return intesity
+						double*		colorRed,			//!< pointer to a buffer with the color red data
+						double*		colorGreen,			//!< pointer to a buffer with the color green data
+						double*		colorBlue,			//!< pointer to a buffer with the color blue data
+						double*		timestamp			//!< pointer to a buffer with the time stamp data
 						);
+
 //! This function sets the extensions field that will be available
 virtual bool		SetData3DGeneralFieldsAvailable(
-						int32_t					dataIndex,
+						int32_t					dataIndex,	//!< data block index given by the NewData3D
 						std::vector<ustring>&	fieldsAvailable);
 
+//! This function writes the General data point information
 virtual int64_t		WriteData3DGeneralPoints(
-						int32_t				dataIndex,
+						int32_t				dataIndex,	//!< data block index given by the NewData3D
 						int64_t				startPointIndex,
 						int64_t				pointCount,
 						bool*				isValid,
@@ -629,6 +658,12 @@ virtual int64_t		WriteData3DGeneralPoints(
 						vector<double*>&	numericBuffers,
 						vector<ustring>&	stringFieldNames,
 						vector<ustring*>&	stringBuffers);
+
+//! This function closes the data3D block
+virtual bool		CloseData3D(
+						int32_t		dataIndex	//!< data block index given by the NewData3D
+						);						//!< /return Returns true if sucessful, false otherwise
+
 }; //end Writer class
 
 }; //end namespace
