@@ -62,6 +62,61 @@ using namespace boost;
 //
 	Data3D::Data3D(void)
 {
+	originalGuids.clear();
+	temperature = 0.;
+	relativeHumidity = 0.;
+	atmosphericPressure = 0.;
+
+	acquisitionStart.dateTimeValue = 0.;
+	acquisitionStart.isGpsReferenced = 0;
+	acquisitionEnd.dateTimeValue = 0.;
+	acquisitionEnd.isGpsReferenced = 0;
+
+	pose.rotation.w = 1.;
+	pose.rotation.x = 0.;
+	pose.rotation.y = 0.;
+	pose.rotation.z = 0.;
+	pose.translation.x = 0.;
+	pose.translation.y = 0.;
+	pose.translation.z = 0.;
+
+	cartesianBounds.xMaximum = E57_DOUBLE_MAX;
+	cartesianBounds.xMinimum = -E57_DOUBLE_MAX;
+	cartesianBounds.yMaximum = E57_DOUBLE_MAX;
+	cartesianBounds.yMinimum = -E57_DOUBLE_MAX;
+	cartesianBounds.zMaximum = E57_DOUBLE_MAX;
+	cartesianBounds.zMinimum = -E57_DOUBLE_MAX;
+
+	sphericalBounds.rangeMinimum = 0.;
+	sphericalBounds.rangeMaximum = E57_DOUBLE_MAX;
+	sphericalBounds.azimuthStart = 0.;
+	sphericalBounds.azimuthEnd = 2 * PI;
+	sphericalBounds.elevationMinimum = -PI/2.;
+	sphericalBounds.elevationMaximum = PI/2.;
+
+	pointGroupingSchemes.groupingByLine.groupsSize = 0;
+	pointGroupingSchemes.groupingByLine.idElementName = "ColumnIndex";
+
+	pointFields.azimuth = false;
+	pointFields.colorBlue = false;
+	pointFields.colorGreen = false;
+	pointFields.colorRed = false;
+	pointFields.columnIndex = false;
+	pointFields.elevation = false;
+	pointFields.intensity = false;
+	pointFields.isValid = false;
+	pointFields.range = false;
+	pointFields.returnCount = false;
+	pointFields.returnIndex = false;
+	pointFields.rowIndex = false;
+	pointFields.timestamp = false;
+	pointFields.x = false;
+	pointFields.y = false;
+	pointFields.z = false;
+
+	row = 0;
+	column = 0;
+	pointsSize = 0;
 };
 
 	Data3D::~Data3D(void)
@@ -73,6 +128,20 @@ using namespace boost;
 //
 	CameraImage::CameraImage(void)
 {
+	acquisitionDateTime.dateTimeValue = 0.;
+	acquisitionDateTime.isGpsReferenced = 0;
+
+	pose.rotation.w = 1.;
+	pose.rotation.x = 0.;
+	pose.rotation.y = 0.;
+	pose.rotation.z = 0.;
+	pose.translation.x = 0.;
+	pose.translation.y = 0.;
+	pose.translation.z = 0.;
+
+//	pinholeRepresentation;
+//	sphericalRepresentation;
+//	cylindricalRepresentation;
 };
 
 	CameraImage::~CameraImage(void)
@@ -86,6 +155,8 @@ using namespace boost;
 		const ustring & filePath)
 	: m_imf(filePath,"r")
 	, m_root(m_imf.root())
+	, m_data3D(m_root.get("/data3D"))
+	, m_cameraImages(m_root.get("/cameraImages"))
 {
 	try
 	{
@@ -147,6 +218,29 @@ bool	Reader :: Close(void)
 bool	Reader :: GetE57Root(
 	E57Root * fileHeader)	//!< This is the main header information
 {
+	try
+	{
+		fileHeader->formatName = StringNode(m_root.get("formatName")).value();
+		fileHeader->versionMajor = IntegerNode(m_root.get("versionMajor")).value();
+		fileHeader->versionMinor = IntegerNode(m_root.get("versionMinor")).value();
+		fileHeader->guid = StringNode(m_root.get("guid")).value();
+		fileHeader->coordinateMetadata = StringNode(m_root.get("coordinateMetadata")).value();
+
+		StructureNode creationDateTime(m_root.get("creationDateTime"));
+		fileHeader->creationDateTime.dateTimeValue = FloatNode(creationDateTime.get("dateTimeValue")).value();
+		fileHeader->creationDateTime.isGpsReferenced = IntegerNode(creationDateTime.get("isGpsReferenced")).value();
+
+		fileHeader->data3DSize = m_data3D.childCount();
+		fileHeader->cameraImagesSize = m_cameraImages.childCount();
+		return true;
+
+	} catch(E57Exception& ex) {
+        ex.report(__FILE__, __LINE__, __FUNCTION__);
+    } catch (std::exception& ex) {
+        cerr << "Got an std::exception, what=" << ex.what() << endl;
+    } catch (...) {
+        cerr << "Got an unknown exception" << endl;
+    }
 	return false;
 };
 
@@ -157,7 +251,7 @@ bool	Reader :: GetE57Root(
 //! This function returns the total number of Picture Blocks
 int32_t	Reader :: GetCameraImageCount( void)
 {
-	return 0;
+	return m_cameraImages.childCount();
 };
 
 //! This function returns the cameraImages header and positions the cursor
@@ -187,7 +281,7 @@ int64_t	Reader :: ReadCameraImageData(
 //! This function returns the total number of Image Blocks
 int32_t	Reader :: GetData3DCount( void)
 {
-	return 0;
+	return m_data3D.childCount();
 };
 
 //! This function returns the Data3D header and positions the cursor
@@ -328,15 +422,19 @@ int64_t	Reader :: GetData3DGeneralPoints(
 /// Path name: "/creationDateTime
         StructureNode creationDateTime = StructureNode(m_imf);
 		creationDateTime.set("dateTimeValue", FloatNode(m_imf, 1234567890.)); //!!! convert time() to GPStime
-
+		creationDateTime.set("isGpsReferenced", IntegerNode(m_imf,0));
         m_root.set("creationDateTime", creationDateTime);
 
 		m_root.set("data3D", m_data3D);
 		m_root.set("cameraImages", m_cameraImages);
- 	}
-	catch (...)
-	{
-	};
+
+	} catch(E57Exception& ex) {
+        ex.report(__FILE__, __LINE__, __FUNCTION__);
+    } catch (std::exception& ex) {
+        cerr << "Got an std::exception, what=" << ex.what() << endl;
+    } catch (...) {
+        cerr << "Got an unknown exception" << endl;
+    }
 };
 //! This function is the destructor for the writer class
 	Writer::~Writer(void)
@@ -380,7 +478,6 @@ bool	Writer :: Close(void)
 {
 	if(IsOpen())
 	{
-
 		m_idElementValue.clear();
 		m_startPointIndex.clear();
 		m_pointCount.clear();
@@ -433,6 +530,9 @@ int32_t	Writer :: NewData3D(
 	try
 	{
 		m_data3DHeader = data3DHeader;		//Make a copy
+
+		int row = data3DHeader.row;
+		int col = data3DHeader.column;
 
 		StructureNode scan = StructureNode(m_imf);
 		m_data3D.append(scan);
@@ -522,9 +622,9 @@ int32_t	Writer :: NewData3D(
         /// Will define path names like:
         ///     "/data3D/0/pointGroupingSchemes/groupingByLine/groups/0/idElementValue"
         StructureNode lineGroupProto = StructureNode(m_imf);
-        lineGroupProto.set("idElementValue",    IntegerNode(m_imf, 0, 0, 4));
-        lineGroupProto.set("startPointIndex",   IntegerNode(m_imf, 0, 0, 9));
-        lineGroupProto.set("pointCount",        IntegerNode(m_imf, 1, 1, 2));
+        lineGroupProto.set("idElementValue",    IntegerNode(m_imf, 0, 0, col));
+        lineGroupProto.set("startPointIndex",   IntegerNode(m_imf, 0, 0, row*col));
+        lineGroupProto.set("pointCount",        IntegerNode(m_imf, 0, 0, row));
 
        /// Make empty codecs vector for use in creating groups CompressedVector.
         /// If this vector is empty, it is assumed that all fields will use the BitPack codec.
@@ -542,6 +642,10 @@ int32_t	Writer :: NewData3D(
         /// Using this proto in a CompressedVector will define path names like:
         ///      "/data3D/0/points/0/cartesianX"
         StructureNode proto = StructureNode(m_imf);
+
+		if(data3DHeader.pointFields.isValid)
+			proto.set("valid",       IntegerNode(m_imf, 0, 0, 1));
+
 		if(data3DHeader.pointFields.x)
 			proto.set("cartesianX",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 //			proto.set("cartesianX",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
@@ -551,6 +655,7 @@ int32_t	Writer :: NewData3D(
 		if(data3DHeader.pointFields.z)
 			proto.set("cartesianZ",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 //			proto.set("cartesianZ",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
+
 		if(data3DHeader.pointFields.range)
 			proto.set("sphericalRange",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 //			proto.set("sphericalRange",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
@@ -560,26 +665,32 @@ int32_t	Writer :: NewData3D(
 		if(data3DHeader.pointFields.elevation)
 			proto.set("sphericalElevation",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 //			proto.set("sphericalElevation",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
-		if(data3DHeader.pointFields.isValid)
-			proto.set("valid",       IntegerNode(m_imf, 0, 0, 1));
+
 		if(data3DHeader.pointFields.rowIndex)
 			proto.set("rowIndex",    IntegerNode(m_imf, 0, 0, data3DHeader.row));
 		if(data3DHeader.pointFields.columnIndex)
 			proto.set("columnIndex", IntegerNode(m_imf, 0, 0, data3DHeader.column));
+
 		if(data3DHeader.pointFields.returnIndex)
 			proto.set("returnIndex", IntegerNode(m_imf, 0, 0, 0));
 	    if(data3DHeader.pointFields.returnCount)
 			proto.set("returnCount", IntegerNode(m_imf, 1, 1, 1));
 		if(data3DHeader.pointFields.timestamp)
 			proto.set("timeStamp",   FloatNode(m_imf, 0.0, E57_DOUBLE));
+
 		if(data3DHeader.pointFields.intensity)
-			proto.set("intensity",   IntegerNode(m_imf, 0, 0, 255));
+			proto.set("intensity",   FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
+//			proto.set("intensity",   IntegerNode(m_imf, 0, 0, 255));
 		if(data3DHeader.pointFields.colorRed)
 			proto.set("colorRed",    FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
+//			proto.set("colorRed",   IntegerNode(m_imf, 0, 0, 255));
 		if(data3DHeader.pointFields.colorGreen)
 			proto.set("colorGreen",  FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
+//			proto.set("colorGreen",   IntegerNode(m_imf, 0, 0, 255));
 		if(data3DHeader.pointFields.colorBlue)
 			proto.set("colorBlue",   FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
+//			proto.set("colorBlue",   IntegerNode(m_imf, 0, 0, 255));
+
 //        proto.set("demo:extra2", StringNode(m_imf));
 
 // Make empty codecs vector for use in creating points CompressedVector.
@@ -592,10 +703,14 @@ int32_t	Writer :: NewData3D(
         CompressedVectorNode points = CompressedVectorNode(m_imf, proto, codecs);
         scan.set("points", points);
 		return pos;
-	}
-	catch (...)
-	{
-	}
+
+	} catch(E57Exception& ex) {
+        ex.report(__FILE__, __LINE__, __FUNCTION__);
+    } catch (std::exception& ex) {
+        cerr << "Got an std::exception, what=" << ex.what() << endl;
+    } catch (...) {
+        cerr << "Got an unknown exception" << endl;
+    }
 	return -1;
 };
 
@@ -627,8 +742,8 @@ int64_t	Writer :: WriteData3DStandardPoints(
 		if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
 			return 0;
 ///////////  This is a problem because we have to do this for every call
-		StructureNode scan = (StructureNode) m_data3D.get(dataIndex);
-		CompressedVectorNode points = (CompressedVectorNode) scan.get("points");
+		StructureNode scan(m_data3D.get(dataIndex));
+		CompressedVectorNode points(scan.get("points"));
 
 		vector<SourceDestBuffer> sourceBuffers;
 		if(m_data3DHeader.pointFields.x)
@@ -666,17 +781,21 @@ int64_t	Writer :: WriteData3DStandardPoints(
 
 		CompressedVectorWriter writer = points.writer(sourceBuffers);
 		writer.write(count);
-//		writer.close();
+		writer.close();
 
 		m_idElementValue.push_back(idElementValue);
 		m_startPointIndex.push_back(startPointIndex);
 		m_pointCount.push_back(count);
 
 		return count;
-	}
-	catch (...)
-	{
-	}
+
+	} catch(E57Exception& ex) {
+        ex.report(__FILE__, __LINE__, __FUNCTION__);
+    } catch (std::exception& ex) {
+        cerr << "Got an std::exception, what=" << ex.what() << endl;
+    } catch (...) {
+        cerr << "Got an unknown exception" << endl;
+    }
 	return 0;
 };
 
@@ -686,27 +805,33 @@ bool	Writer :: CloseData3D(
 	){;						//!< /return Returns true if sucessful, false otherwise
 	if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
 		return 0;
-	try
-	{
-		StructureNode scan = (StructureNode) m_data3D.get(dataIndex);
-		CompressedVectorNode groups = (CompressedVectorNode) scan.get("groups");
+	try	{
+		StructureNode scan(m_data3D.get(dataIndex));
+		StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
+		StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+		CompressedVectorNode groups(groupingByLine.get("groups"));
 
 		int NG = m_idElementValue.size();
 
 		vector<SourceDestBuffer> groupSDBuffers;
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "idElementValue",  (int32_t*) &m_idElementValue,   NG, true));
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "startPointIndex", (int32_t*) &m_startPointIndex,  NG, true));
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "pointCount",      (int32_t*) &m_pointCount,       NG, true));
+        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "idElementValue",  (int32_t*) &m_idElementValue[0],   NG, true));
+        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "startPointIndex", (int32_t*) &m_startPointIndex[0],  NG, true));
+        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "pointCount",      (int32_t*) &m_pointCount[0],       NG, true));
 
 		CompressedVectorWriter writer = groups.writer(groupSDBuffers);
         writer.write(NG);
         writer.close();
  
 		return true;
-	}
-	catch (...)
-	{
-	}
+	
+	} catch(E57Exception& ex) {
+        ex.report(__FILE__, __LINE__, __FUNCTION__);
+    } catch (std::exception& ex) {
+        cerr << "Got an std::exception, what=" << ex.what() << endl;
+    } catch (...) {
+        cerr << "Got an unknown exception" << endl;
+    }
+
 	return false;
 };
 

@@ -388,20 +388,20 @@ public:
 //! This function is the destructor for the CameraImage class
 					~CameraImage(void);
 
-	ustring			name;				//!< A user-defined name for the CameraImage.
-	ustring			guid;				//!< A globally unique identification string for the current version of the CameraImage object
-	ustring			description;		//!< A user-defined description of the CameraImage
+	ustring			name;					//!< A user-defined name for the CameraImage.
+	ustring			guid;					//!< A globally unique identification string for the current version of the CameraImage object
+	ustring			description;			//!< A user-defined description of the CameraImage
 	e57::DateTime	acquisitionDateTime;	//!< The date and time that the image was taken
 
 	ustring			associatedData3DGuid;	//!< The globally unique identification string (guid element) for the Data3D that was being acquired when the picture was taken
 
-	ustring			sensorVendor;		//!< The name of the manufacturer for the sensor used to collect the points in this Data3D.
-	ustring			sensorModel;		//!< The model name or number for the sensor.
-	ustring			sensorSerialNumber;	//!< The serial number for the sensor.
+	ustring			sensorVendor;			//!< The name of the manufacturer for the sensor used to collect the points in this Data3D.
+	ustring			sensorModel;			//!< The model name or number for the sensor.
+	ustring			sensorSerialNumber;		//!< The serial number for the sensor.
 
 	e57::RigidBodyTransform				pose;	//!< A rigid body transform that describes the coordinate frame of the camera in the file-level coordinate system
 	
-//	e57::VisualReferenceRepresentation	visualReferenceRepresentation; //!< Representation for an image that does not define any camera projection model. The image is to be used for visual reference only
+//	e57::VisualReferenceRepresentation	visualReferenceRepresentation;  //!< Representation for an image that does not define any camera projection model. The image is to be used for visual reference only
 	e57::PinholeProjection				pinholeRepresentation;			//!< Representation for an image using the pinhole camera projection model
 	e57::SphericalProjection			sphericalRepresentation;		//!< Representation for an image using the spherical camera projection model.
 	e57::CylindricalProjection			cylindricalRepresentation;		//!< Representation for an image using the cylindrical camera projection model
@@ -416,8 +416,14 @@ public:
 
 class	Reader {
 
+private:
+
 	ImageFile		m_imf;
 	StructureNode	m_root;
+
+	VectorNode		m_data3D;
+	VectorNode		m_cameraImages;
+
 public:
 
 //! This function returns an E57::Reader pointer and opens the file
