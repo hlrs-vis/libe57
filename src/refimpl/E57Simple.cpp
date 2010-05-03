@@ -95,6 +95,7 @@ using namespace boost;
 	sphericalBounds.elevationMaximum = PI/2.;
 
 	pointGroupingSchemes.groupingByLine.groupsSize = 0;
+	pointGroupingSchemes.groupingByLine.pointSizeMaximum = 0;
 	pointGroupingSchemes.groupingByLine.idElementName = "ColumnIndex";
 
 	pointFields.azimuth = false;
@@ -216,31 +217,34 @@ bool	Reader :: Close(void)
 //
 //! This function returns the file header information
 bool	Reader :: GetE57Root(
-	E57Root * fileHeader)	//!< This is the main header information
+	E57Root & fileHeader)	//!< This is the main header information
 {
-	try
+	if(IsOpen())
 	{
-		fileHeader->formatName = StringNode(m_root.get("formatName")).value();
-		fileHeader->versionMajor = IntegerNode(m_root.get("versionMajor")).value();
-		fileHeader->versionMinor = IntegerNode(m_root.get("versionMinor")).value();
-		fileHeader->guid = StringNode(m_root.get("guid")).value();
-		fileHeader->coordinateMetadata = StringNode(m_root.get("coordinateMetadata")).value();
+		try
+		{
+			fileHeader.formatName = StringNode(m_root.get("formatName")).value();
+			fileHeader.versionMajor = IntegerNode(m_root.get("versionMajor")).value();
+			fileHeader.versionMinor = IntegerNode(m_root.get("versionMinor")).value();
+			fileHeader.guid = StringNode(m_root.get("guid")).value();
+			fileHeader.coordinateMetadata = StringNode(m_root.get("coordinateMetadata")).value();
 
-		StructureNode creationDateTime(m_root.get("creationDateTime"));
-		fileHeader->creationDateTime.dateTimeValue = FloatNode(creationDateTime.get("dateTimeValue")).value();
-		fileHeader->creationDateTime.isGpsReferenced = IntegerNode(creationDateTime.get("isGpsReferenced")).value();
+			StructureNode creationDateTime(m_root.get("creationDateTime"));
+			fileHeader.creationDateTime.dateTimeValue = FloatNode(creationDateTime.get("dateTimeValue")).value();
+			fileHeader.creationDateTime.isGpsReferenced = IntegerNode(creationDateTime.get("isGpsReferenced")).value();
 
-		fileHeader->data3DSize = m_data3D.childCount();
-		fileHeader->cameraImagesSize = m_cameraImages.childCount();
-		return true;
+			fileHeader.data3DSize = m_data3D.childCount();
+			fileHeader.cameraImagesSize = m_cameraImages.childCount();
+			return true;
 
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
+		} catch(E57Exception& ex) {
+			ex.report(__FILE__, __LINE__, __FUNCTION__);
+		} catch (std::exception& ex) {
+			cerr << "Got an std::exception, what=" << ex.what() << endl;
+		} catch (...) {
+			cerr << "Got an unknown exception" << endl;
+		}
+	}
 	return false;
 };
 
@@ -257,7 +261,7 @@ int32_t	Reader :: GetCameraImageCount( void)
 //! This function returns the cameraImages header and positions the cursor
 bool	Reader :: GetCameraImage( 
 	int32_t			imageIndex,		//!< This in the index into the cameraImages vector
-	CameraImage *	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
+	CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
 	)						//!< /return Returns true if sucessful
 {
 	return false;
@@ -287,20 +291,159 @@ int32_t	Reader :: GetData3DCount( void)
 //! This function returns the Data3D header and positions the cursor
 bool	Reader :: GetData3D( 
 	int32_t		dataIndex,	//!< This in the index into the images3D vector
-	Data3D *	data3DHeader //!< pointer to the Data3D structure to receive the image information
+	Data3D &	data3DHeader //!< pointer to the Data3D structure to receive the image information
 	)	//!< /return Returns true if sucessful
 {
+	if(IsOpen())
+	{
+		try
+		{
+			if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
+				return false;
+
+			StructureNode scan(m_data3D.get(dataIndex));
+			CompressedVectorNode points(scan.get("points"));
+
+			data3DHeader.pointsSize = points.childCount();
+			StructureNode proto(points.prototype());
+
+			StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
+			StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+			CompressedVectorNode groups(groupingByLine.get("groups"));
+
+			int groupCount = groups.childCount();	//just to look
+			StructureNode lineProto(groups.prototype());
+
+			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName =
+				StringNode(groupingByLine.get("idElementName")).value();
+
+			data3DHeader.pointGroupingSchemes.groupingByLine.groupsSize =
+			data3DHeader.column = IntegerNode(groupingByLine.get("groupsSize")).value();
+
+			data3DHeader.pointGroupingSchemes.groupingByLine.pointSizeMaximum =
+			data3DHeader.row = IntegerNode(groupingByLine.get("pointSizeMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
+
+			data3DHeader.guid = StringNode(scan.get("guid")).value();
+			data3DHeader.name = StringNode(scan.get("name")).value();
+			data3DHeader.description = StringNode(scan.get("description")).value();
+
+	// Get various sensor and version strings to scan.
+
+			data3DHeader.sensorVendor = StringNode(scan.get("sensorVendor")).value();
+			data3DHeader.sensorModel = StringNode(scan.get("sensorModel")).value();
+			data3DHeader.sensorSerialNumber = StringNode(scan.get("sensorSerialNumber")).value();
+			data3DHeader.sensorHardwareVersion = StringNode(scan.get("sensorHardwareVersion")).value();
+			data3DHeader.sensorSoftwareVersion = StringNode(scan.get("sensorSoftwareVersion")).value();
+			data3DHeader.sensorFirmwareVersion = StringNode(scan.get("sensorFirmwareVersion")).value();
+
+	// Get temp/humidity to scan.
+
+			data3DHeader.temperature = FloatNode(scan.get("temperature")).value();
+			data3DHeader.relativeHumidity = FloatNode(scan.get("relativeHumidity")).value();
+			data3DHeader.atmosphericPressure = FloatNode(scan.get("atmosphericPressure")).value();
+
+	// Get Cartesian bounding box to scan.
+	 
+			StructureNode bbox(scan.get("cartesianBounds"));
+			data3DHeader.cartesianBounds.xMinimum = FloatNode(bbox.get("xMinimum")).value();
+			data3DHeader.cartesianBounds.xMaximum = FloatNode(bbox.get("xMaximum")).value();
+			data3DHeader.cartesianBounds.yMinimum = FloatNode(bbox.get("yMinimum")).value();
+			data3DHeader.cartesianBounds.yMaximum = FloatNode(bbox.get("yMaximum")).value();
+			data3DHeader.cartesianBounds.zMinimum = FloatNode(bbox.get("zMinimum")).value();
+			data3DHeader.cartesianBounds.zMaximum = FloatNode(bbox.get("zMaximum")).value();
+
+	// Get pose structure for scan.
+
+			StructureNode pose(scan.get("pose"));
+			StructureNode rotation(pose.get("rotation"));
+			StructureNode translation(pose.get("translation"));
+
+			data3DHeader.pose.rotation.w = FloatNode(rotation.get("w")).value();
+			data3DHeader.pose.rotation.x = FloatNode(rotation.get("x")).value();
+ 			data3DHeader.pose.rotation.y = FloatNode(rotation.get("y")).value();
+ 			data3DHeader.pose.rotation.z = FloatNode(rotation.get("z")).value();
+	  
+			data3DHeader.pose.translation.x = FloatNode(translation.get("x")).value();
+ 			data3DHeader.pose.translation.y = FloatNode(translation.get("y")).value();
+ 			data3DHeader.pose.translation.z = FloatNode(translation.get("z")).value();
+	 
+	// Get start/stop acquisition times to scan.
+
+			StructureNode acquisitionStart(scan.get("acquisitionStart"));
+			data3DHeader.acquisitionStart.dateTimeValue = 
+				FloatNode(acquisitionStart.get("dateTimeValue")).value();
+			data3DHeader.acquisitionStart.isGpsReferenced = 
+				IntegerNode(acquisitionStart.get("isAtomicClockReferenced")).value();
+
+			StructureNode acquisitionEnd(scan.get("acquisitionEnd"));
+			data3DHeader.acquisitionEnd.dateTimeValue = 
+				FloatNode(acquisitionEnd.get("dateTimeValue")).value();
+			data3DHeader.acquisitionEnd.isGpsReferenced = 
+				IntegerNode(acquisitionEnd.get("isAtomicClockReferenced")).value();
+
+	// Get a prototype of datatypes that will be stored in points record.
+
+			data3DHeader.pointFields.isValid = proto.isDefined("valid");
+			data3DHeader.pointFields.x = proto.isDefined("cartesianX");
+			data3DHeader.pointFields.y = proto.isDefined("cartesianY");
+			data3DHeader.pointFields.z = proto.isDefined("cartesianZ");
+			data3DHeader.pointFields.range = proto.isDefined("sphericalRange");
+			data3DHeader.pointFields.azimuth = proto.isDefined("spherialAzimuth");
+			data3DHeader.pointFields.elevation = proto.isDefined("sphericalElevation");
+			data3DHeader.pointFields.rowIndex = proto.isDefined("rowIndex");
+			data3DHeader.pointFields.columnIndex = proto.isDefined("columnIndex");
+			data3DHeader.pointFields.returnIndex = proto.isDefined("returnIndex");
+			data3DHeader.pointFields.returnCount = proto.isDefined("returnCount");
+			data3DHeader.pointFields.intensity = proto.isDefined("intensity");
+			data3DHeader.pointFields.colorRed = proto.isDefined("colorRed");
+			data3DHeader.pointFields.colorGreen = proto.isDefined("colorGreen");
+			data3DHeader.pointFields.colorBlue = proto.isDefined("colorBlue");
+
+			m_data3DHeader = data3DHeader;		//Make a copy
+			return true;
+
+		} catch(E57Exception& ex) {
+			ex.report(__FILE__, __LINE__, __FUNCTION__);
+		} catch (std::exception& ex) {
+			cerr << "Got an std::exception, what=" << ex.what() << endl;
+		} catch (...) {
+			cerr << "Got an unknown exception" << endl;
+		}
+	}
 	return false;
 };
 
 //! This function returns the size of the point data
-void	Reader :: GetData3DPointSize(
+bool	Reader :: GetData3DPointSize(
 	int32_t		dataIndex,	//!< image block index
-	int32_t *	row,		//!< image row size
-	int32_t *	column		//!< image column size
+	int32_t &	row,		//!< image row size
+	int32_t &	column		//!< image column size
 	)
 {
+	if(IsOpen())
+	{
+		try
+		{
+			if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
+				return false;
 
+			StructureNode scan(m_data3D.get(dataIndex));
+			StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
+			StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+
+			column = IntegerNode(groupingByLine.get("groupsSize")).value();
+			row = IntegerNode(groupingByLine.get("pointSizeMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
+			return true;
+
+		} catch(E57Exception& ex) {
+			ex.report(__FILE__, __LINE__, __FUNCTION__);
+		} catch (std::exception& ex) {
+			cerr << "Got an std::exception, what=" << ex.what() << endl;
+		} catch (...) {
+			cerr << "Got an unknown exception" << endl;
+		}
+	}
+	return false;
 };
 
 //! This function returns the number of point groups
@@ -309,15 +452,6 @@ int32_t	Reader :: GetData3DGroupSize(
 	)
 {
 	return 0;
-};
-
-//! This function returns the active fields available
-bool	Reader :: GetData3DStandardizedFieldsAvailable(
-	int32_t		dataIndex,		//!< This in the index into the images3D vector
-	PointStandardizedFieldsAvailable * pointFields //!< pointer to the Data3D structure to receive the PointStandardizedFieldsAvailable information
-	)
-{
-	return false;
 };
 
 //! This function returns the point data fields fetched in single call
@@ -345,6 +479,62 @@ int64_t	Reader :: GetData3DStandardPoints(
 	double*		timestamp
 	)
 {
+	int64_t		readCount = 0;
+	try
+	{
+		if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
+			return 0;
+
+		StructureNode scan(m_data3D.get(dataIndex));
+		CompressedVectorNode points(scan.get("points"));
+
+		vector<SourceDestBuffer> destBuffers;
+		if(m_data3DHeader.pointFields.x && (x != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianX",  x,  count, true, true));
+		if(m_data3DHeader.pointFields.y && (y != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianY",  y,  count, true, true));
+		if(m_data3DHeader.pointFields.z && (z != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianZ",  z,  count, true, true));
+		if(m_data3DHeader.pointFields.range && (range != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "sphericalRange",  range,  count, true, true));
+		if(m_data3DHeader.pointFields.azimuth && (azimuth != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "spherialAzimuth",  azimuth,  count, true, true));
+		if(m_data3DHeader.pointFields.elevation && (elevation != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "sphericalElevation",  elevation,  count, true, true));
+		if(m_data3DHeader.pointFields.isValid && (isValid != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "valid",       isValid,       count, true));
+		if(m_data3DHeader.pointFields.rowIndex && (rowIndex != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "rowIndex",    rowIndex,    count, true));
+		if(m_data3DHeader.pointFields.columnIndex && (columnIndex != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "columnIndex", columnIndex, count, true));
+		if(m_data3DHeader.pointFields.returnIndex && (returnIndex != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "returnIndex", returnIndex, count, true));
+		if(m_data3DHeader.pointFields.returnCount && (returnCount != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "returnCount", returnCount, count, true));
+		if(m_data3DHeader.pointFields.timestamp && (timestamp != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "timeStamp",   timestamp,   count, true));
+		if(m_data3DHeader.pointFields.intensity && (intensity != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "intensity",   intensity,   count, true));
+		if(m_data3DHeader.pointFields.colorRed && (colorRed != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "colorRed",    colorRed,    count, true));
+		if(m_data3DHeader.pointFields.colorGreen && (colorGreen != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "colorGreen",  colorGreen,  count, true));
+		if(m_data3DHeader.pointFields.colorBlue && (colorBlue != NULL))
+			destBuffers.push_back(SourceDestBuffer(m_imf, "colorBlue",   colorBlue,   count, true));
+
+		CompressedVectorReader reader = points.reader(destBuffers);
+		reader.seek(startPointIndex);
+		readCount = reader.read();
+
+		return readCount;
+
+	} catch(E57Exception& ex) {
+        ex.report(__FILE__, __LINE__, __FUNCTION__);
+    } catch (std::exception& ex) {
+        cerr << "Got an std::exception, what=" << ex.what() << endl;
+    } catch (...) {
+        cerr << "Got an unknown exception" << endl;
+    }
 	return 0;
 };
 
@@ -614,7 +804,11 @@ int32_t	Writer :: NewData3D(
 
         /// Add idElementName to groupingByLine, specify a line is column oriented
         /// Path name: "/data3D/0/pointGroupingSchemes/groupingByLine/idElementName"
-		groupingByLine.set("idElementName", StringNode(m_imf, "columnIndex"));
+		groupingByLine.set("idElementName", StringNode(m_imf,
+			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName));
+		groupingByLine.set("groupsSize", IntegerNode(m_imf,col));
+		groupingByLine.set("pointSizeMaximum", IntegerNode(m_imf,row));		//THIS IS NOT PART OF THE STANDARD YET
+
 		///			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName));
 
 // Make a prototype of datatypes that will be stored in LineGroupRecord.
@@ -746,37 +940,37 @@ int64_t	Writer :: WriteData3DStandardPoints(
 		CompressedVectorNode points(scan.get("points"));
 
 		vector<SourceDestBuffer> sourceBuffers;
-		if(m_data3DHeader.pointFields.x)
+		if(m_data3DHeader.pointFields.x && (x != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianX",  x,  count, true, true));
-		if(m_data3DHeader.pointFields.y)
+		if(m_data3DHeader.pointFields.y && (y != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianY",  y,  count, true, true));
-		if(m_data3DHeader.pointFields.z)
+		if(m_data3DHeader.pointFields.z && (z != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianZ",  z,  count, true, true));
-		if(m_data3DHeader.pointFields.range)
+		if(m_data3DHeader.pointFields.range && (range != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "sphericalRange",  range,  count, true, true));
-		if(m_data3DHeader.pointFields.azimuth)
+		if(m_data3DHeader.pointFields.azimuth && (azimuth != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "spherialAzimuth",  azimuth,  count, true, true));
-		if(m_data3DHeader.pointFields.elevation)
+		if(m_data3DHeader.pointFields.elevation && (elevation != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "sphericalElevation",  elevation,  count, true, true));
-		if(m_data3DHeader.pointFields.isValid)
+		if(m_data3DHeader.pointFields.isValid && (isValid != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "valid",       isValid,       count, true));
-		if(m_data3DHeader.pointFields.rowIndex)
+		if(m_data3DHeader.pointFields.rowIndex && (rowIndex != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "rowIndex",    rowIndex,    count, true));
-		if(m_data3DHeader.pointFields.columnIndex)
+		if(m_data3DHeader.pointFields.columnIndex && (columnIndex != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "columnIndex", columnIndex, count, true));
-		if(m_data3DHeader.pointFields.returnIndex)
+		if(m_data3DHeader.pointFields.returnIndex && (returnIndex != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "returnIndex", returnIndex, count, true));
-		if(m_data3DHeader.pointFields.returnCount)
+		if(m_data3DHeader.pointFields.returnCount && (returnCount != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "returnCount", returnCount, count, true));
-		if(m_data3DHeader.pointFields.timestamp)
+		if(m_data3DHeader.pointFields.timestamp && (timestamp != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "timeStamp",   timestamp,   count, true));
-		if(m_data3DHeader.pointFields.intensity)
+		if(m_data3DHeader.pointFields.intensity && (intensity != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "intensity",   intensity,   count, true));
-		if(m_data3DHeader.pointFields.colorRed)
+		if(m_data3DHeader.pointFields.colorRed && (colorRed != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorRed",    colorRed,    count, true));
-		if(m_data3DHeader.pointFields.colorGreen)
+		if(m_data3DHeader.pointFields.colorGreen && (colorGreen != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorGreen",  colorGreen,  count, true));
-		if(m_data3DHeader.pointFields.colorBlue)
+		if(m_data3DHeader.pointFields.colorBlue && (colorBlue != NULL))
 			sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorBlue",   colorBlue,   count, true));
 
 		CompressedVectorWriter writer = points.writer(sourceBuffers);

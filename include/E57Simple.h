@@ -213,6 +213,7 @@ class GroupingByLine {
 public:
 	ustring		idElementName;		//!< The name of the PointRecord element that identifies which group the point is in. The value of this string must be “rowIndex” or “columnIndex”
 	int			groupsSize;			//!< Size of the compressedVector of LineGroupRecord structures
+	int			pointSizeMaximum;	//!< Maximun size in the LineGroupRecord.pointCount;
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -317,9 +318,9 @@ public:
 	e57::PointGroupingSchemes	pointGroupingSchemes;	//!< The defined schemes that group points in different ways
 	e57::PointStandardizedFieldsAvailable pointFields;	//!< This defines the active fields used in the WritePoints function.
 
-	int64_t						row;			//!< data3D row size
-	int64_t						column;			//!< data3D column size
-	int64_t						pointsSize;		//!< Total size of the compressed vector of PointRecord structures referring to the binary data that actually stores the point data
+	int64_t			row;					//!< data3D row size
+	int64_t			column;					//!< data3D column size
+	int64_t			pointsSize;				//!< Total size of the compressed vector of PointRecord structures referring to the binary data that actually stores the point data
 };
 
 
@@ -422,6 +423,8 @@ private:
 	StructureNode	m_root;
 
 	VectorNode		m_data3D;
+	Data3D			m_data3DHeader;
+
 	VectorNode		m_cameraImages;
 
 public:
@@ -451,7 +454,7 @@ virtual	bool		Close(void);
 //
 //! This function returns the file header information
 virtual bool		GetE57Root(
-						E57Root * fileHeader	//!< This is the main header information
+						E57Root & fileHeader	//!< This is the main header information
 					    );	//!< /return Returns true if sucessful
 
 ////////////////////////////////////////////////////////////////////
@@ -464,7 +467,7 @@ virtual	int32_t		GetCameraImageCount( void);
 //! This function returns the cameraImages header and positions the cursor
 virtual bool		GetCameraImage( 
 						int32_t			imageIndex,		//!< This in the index into the cameraImages vector
-						CameraImage *	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
+						CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
 						);						//!< /return Returns true if sucessful
 
 //! This function reads the block
@@ -485,25 +488,19 @@ virtual	int32_t		GetData3DCount( void);
 //! This function returns the Data3D header and positions the cursor
 virtual bool		GetData3D( 
 						int32_t		dataIndex,	//!< This in the index into the images3D vector
-						Data3D *	data3DHeader //!< pointer to the Data3D structure to receive the image information
+						Data3D &	data3DHeader //!< pointer to the Data3D structure to receive the image information
 						);	//!< /return Returns true if sucessful
 
 //! This function returns the size of the point data
-virtual	void		GetData3DPointSize(
+virtual	bool		GetData3DPointSize(
 						int32_t		dataIndex,	//!< image block index
-						int32_t *	row,		//!< image row size
-						int32_t *	column		//!< image column size
+						int32_t &	row,		//!< image row size
+						int32_t &	column		//!< image column size
 						);
 
 //! This function returns the number of point groups
 virtual int32_t		GetData3DGroupSize(
 						int32_t		dataIndex		//!< image block index
-						);
-
-//! This function returns the active fields available
-virtual	bool		GetData3DStandardizedFieldsAvailable(
-						int32_t		dataIndex,		//!< This in the index into the images3D vector
-						PointStandardizedFieldsAvailable * pointFields //!< pointer to the Data3D structure to receive the PointStandardizedFieldsAvailable information
 						);
 
 //! This function returns the point data fields fetched in single call
