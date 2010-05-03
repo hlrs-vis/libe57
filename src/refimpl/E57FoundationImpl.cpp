@@ -4404,13 +4404,20 @@ CheckedFile::CheckedFile(ustring fileName, Mode mode)
 
 int CheckedFile::open64(ustring fileName, int flags, int mode)
 {
+//??? handle utf-8 file names?
 #if defined(_MSC_VER)
-    int result = _open(fileName_.c_str()/*???*/, flags, mode);
+    int handle;
+    int err = _sopen_s(&handle, fileName_.c_str(), flags, _SH_DENYNO, mode);
+    if (handle < 0) {
+        throw E57_EXCEPTION2(E57_ERROR_OPEN_FAILED,
+                             "err=" + toString(err)
+                             + " fileName=" + fileName
+                             + " flags=" + toString(flags)
+                             + " mode=" + toString(mode));
+    }
+    return(handle);
 #elif defined(__GNUC__)
-    int result = open(fileName_.c_str()/*???*/, flags, mode);
-#else
-#  error "no supported compiler defined"
-#endif
+    int result = open(fileName_.c_str(), flags, mode);
     if (result < 0) {
         throw E57_EXCEPTION2(E57_ERROR_OPEN_FAILED,
                              "result=" + toString(result)
@@ -4419,6 +4426,9 @@ int CheckedFile::open64(ustring fileName, int flags, int mode)
                              + " mode=" + toString(mode));
     }
     return(result);
+#else
+#  error "no supported compiler defined"
+#endif
 }
 
 
@@ -4799,7 +4809,7 @@ void CheckedFile::unlink()
     }
 
     /// Try to unlink the file, don't report a failure
-    int result = ::unlink(fileName_.c_str()); //??? unicode support here
+    int result = ::_unlink(fileName_.c_str()); //??? unicode support here
 #ifdef E57_MAX_VERBOSE
     if (result < 0)
         cout << "::unlink() failed, result=" << result << endl;

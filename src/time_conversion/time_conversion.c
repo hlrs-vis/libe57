@@ -166,7 +166,7 @@ BOOL TIMECONV_GetSystemTime(
 #else
 
 #if defined(WIN32) && !defined(__GNUC__)
-  _ftime( &timebuffer );
+  _ftime64_s( &timebuffer );
 #else
   ftime( &timebuffer );
 #endif 
