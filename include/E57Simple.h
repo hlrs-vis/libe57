@@ -45,6 +45,8 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
+//! @file E57Simple.h
+
 #ifndef E57SIMPLE_H_INCLUDED
 #define E57SIMPLE_H_INCLUDED
 
@@ -161,7 +163,7 @@ public:
 class DateTime {
 public:
 	double		dateTimeValue;		//!< The time, in seconds, since GPS time was zero. This time specification may include fractions of a second
-	int			isGpsReferenced;	//!< This element should be present, and its value set to 1 if, and only if, the time stored in the dateTimeValue element is truly referenced to GPS time
+	int32_t		isGpsReferenced;	//!< This element should be present, and its value set to 1 if, and only if, the time stored in the dateTimeValue element is truly referenced to GPS time
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -183,8 +185,8 @@ public:
 	uint32_t		versionMajor;		//!< Major version number, should be 1
 	uint32_t		versionMinor;		//!< Minor version number, should be 0
 	e57::DateTime	creationDateTime;	//!< Date/time that the file was created
-	int				data3DSize;			//!< Size of the vector of data3D structures for storing 3D imaging data
-	int				cameraImagesSize;	//!< Size of the vector of cameraImage structures for storing camera images.
+	int32_t			data3DSize;			//!< Size of the Data3D vector for storing 3D imaging data
+	int32_t			cameraImagesSize;	//!< Size of the CameraImage vector for storing camera images.
 	ustring			coordinateMetadata;	//!< Information describing the Coordinate Reference System to be used for the file
 };
 
@@ -196,9 +198,9 @@ public:
 
 class LineGroupRecord {
 public:
-	int						idElementValue;		//!< A user-defined identifier for this group
-	int						startPointIndex;	//!< The record number of the first point in the continuous interval
-	int						pointCount;			//!< The number of PointRecords in the group. May be zero
+	int64_t					idElementValue;		//!< A user-defined identifier for this group
+	int64_t					startPointIndex;	//!< The record number of the first point in the continuous interval
+	int64_t					pointCount;			//!< The number of PointRecords in the group. May be zero
 	e57::CartesianBounds	cartesianBounds;	//!< The bounding box (in Cartesian coordinates) of all points in the group (in the local coordinate system of the points.)
 	e57::SphericalBounds	sphericalBounds;	//!< The bounding region (in spherical coordinates) of all the points in the group (in the local coordinate system of the points.)
 };
@@ -212,8 +214,8 @@ public:
 class GroupingByLine {
 public:
 	ustring		idElementName;		//!< The name of the PointRecord element that identifies which group the point is in. The value of this string must be “rowIndex” or “columnIndex”
-	int			groupsSize;			//!< Size of the compressedVector of LineGroupRecord structures
-	int			pointSizeMaximum;	//!< Maximun size in the LineGroupRecord.pointCount;
+	int32_t		groupsSize;			//!< Size of the compressedVector of LineGroupRecord structures
+	int32_t		pointSizeMaximum;	//!< Maximun size in the LineGroupRecord.pointCount;
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -235,7 +237,7 @@ public:
 
 class PointStandardizedFieldsAvailable {
 public:
-	bool	isValid;			//!< indicates that the PointRecord valid field is active
+	bool	valid;				//!< indicates that the PointRecord valid field is active
 	bool	rowIndex;			//!< indicates that the PointRecord rowIndex field is active
 	bool	columnIndex;		//!< indicates that the PointRecord columnIndex field is active
 	bool	returnIndex;		//!< indicates that the PointRecord returnIndex field is active
@@ -250,7 +252,7 @@ public:
 	bool	colorRed;			//!< indicates that the PointRecord colorRed field is active
 	bool	colorGreen;			//!< indicates that the PointRecord colorGreen field is active
 	bool	colorBlue;			//!< indicates that the PointRecord colorBlue field is active
-	bool	timestamp;			//!< indicates that the PointRecord timeStamp field is active
+	bool	timeStamp;			//!< indicates that the PointRecord timeStamp field is active
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -268,10 +270,10 @@ public:
 	double		sphericalAzimuth; //!< Azimuth angle (in radians) of point in spherical coordinates
 	double		sphericalElevation;	//!< Elevation angle (in radians) of point in spherical coordinates
 	bool		valid;			//!< Value = 1 if the point is considered valid, 0 otherwise
-	int			rowIndex;		//!< The row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval [0, 2^63).
-	int			columnIndex;	//!< The column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval [0, 2^63)
-	int			returnIndex;	//!< Only for multi-return sensors. The number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval [0, returnCount).
-	int			returnCount;	//!< Only for multi-return sensors. The total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63).
+	int32_t		rowIndex;		//!< The row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval [0, 2^63).
+	int32_t		columnIndex;	//!< The column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval [0, 2^63)
+	int32_t		returnIndex;	//!< Only for multi-return sensors. The number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval [0, returnCount).
+	int32_t		returnCount;	//!< Only for multi-return sensors. The total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63).
 	double		timeStamp;		//!< The time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
 	double		intensity;		//!< Point response intensity. Unit is unspecified
 	uint8_t		colorRed;		//!< Red color coefficient. Unit is unspecified.
@@ -318,11 +320,23 @@ public:
 	e57::PointGroupingSchemes	pointGroupingSchemes;	//!< The defined schemes that group points in different ways
 	e57::PointStandardizedFieldsAvailable pointFields;	//!< This defines the active fields used in the WritePoints function.
 
-	int64_t			row;					//!< data3D row size
-	int64_t			column;					//!< data3D column size
 	int64_t			pointsSize;				//!< Total size of the compressed vector of PointRecord structures referring to the binary data that actually stores the point data
 };
 
+////////////////////////////////////////////////////////////////////
+//
+//	e57::VisualReferenceRepresentation
+//
+
+//! The e57::VisualReferenceRepresentation is a structure that stores an image that is to be used only as a visual reference.
+
+class VisualReferenceRepresentation
+{
+public:
+	int64_t			jpegImage;		//!< Size of JPEG format image data in BlobNode.
+	int64_t			pngImage;		//!< Size of PNG format image data in BlobNode.
+	int64_t			imageMask;		//!< Size of PNG format image mask in BlobNode.
+};
 
 ////////////////////////////////////////////////////////////////////
 //
@@ -333,9 +347,13 @@ public:
 
 class PinholeProjection
 {
-	int				imageWidth;		//!< The image width (in pixels). Shall be positive
-	int				imageHeight;	//!< The image height (in pixels). Shall be positive
-	double			focalLength;	//!< The camera’s focal length (in meters). Shall be positive
+public:
+	int64_t			jpegImage;		//!< Size of JPEG format image data in BlobNode.
+	int64_t			pngImage;		//!< Size of PNG format image data in BlobNode.
+	int64_t			imageMask;		//!< Size of PNG format image mask in BlobNode.
+	int32_t			imageWidth;		//!< The image width (in pixels). Shall be positive
+	int32_t			imageHeight;	//!< The image height (in pixels). Shall be positive
+	double			focalLength;	//!< The camera's focal length (in meters). Shall be positive
 	double			pixelWidth;		//!< The width of the pixels in the camera (in meters). Shall be positive
 	double			pixelHeight;	//!< The height of the pixels in the camera (in meters). Shall be positive
 	double			principalPointX;//!< The X coordinate in the image of the principal point, (in pixels). The principal point is the intersection of the z axis of the camera coordinate frame with the image plane.
@@ -350,10 +368,14 @@ class PinholeProjection
 
 class SphericalProjection
 {
-	int				imageWidth;		//!< The image width (in pixels). Shall be positive
-	int				imageHeight;	//!< The image height (in pixels). Shall be positive
-	double			pixelWidth;		//!< The width of the pixels in the camera (in meters). Shall be positive
-	double			pixelHeight;	//!< The height of the pixels in the camera (in meters). Shall be positive
+public:
+	int64_t			jpegImage;		//!< Size of JPEG format image data in BlobNode.
+	int64_t			pngImage;		//!< Size of PNG format image data in BlobNode.
+	int64_t			imageMask;		//!< Size of PNG format image mask in BlobNode.
+	int32_t			imageWidth;		//!< The image width (in pixels). Shall be positive
+	int32_t			imageHeight;	//!< The image height (in pixels). Shall be positive
+	double			pixelWidth;		//!< The width of a pixel in the image (in radians). Shall be positive
+	double			pixelHeight;	//!< The height of a pixel in the image (in radians). Shall be positive.
 	double			azimuthStart;	//!< The azimuth angle (in radians) of the left side of the image. Shall be in the interval [-PI,PI].
 	double			elevationStart; //!< The elevation angle (in radians) of the top of the image. Shall be in the interval [-PI/2, PI/2].
 };
@@ -367,10 +389,14 @@ class SphericalProjection
 
 class CylindricalProjection
 {
-	int				imageWidth;		//!< The image width (in pixels). Shall be positive
-	int				imageHeight;	//!< The image height (in pixels). Shall be positive
-	double			pixelWidth;		//!< The width of the pixels in the camera (in meters). Shall be positive
-	double			pixelHeight;	//!< The height of the pixels in the camera (in meters). Shall be positive
+public:
+	int64_t			jpegImage;		//!< Size of JPEG format image data in Blob.
+	int64_t			pngImage;		//!< Size of PNG format image data in Blob.
+	int64_t			imageMask;		//!< Size of PNG format image mask in Blob.
+	int32_t			imageWidth;		//!< The image width (in pixels). Shall be positive
+	int32_t			imageHeight;	//!< The image height (in pixels). Shall be positive
+	double			pixelWidth;		//!< The width of a pixel in the image (in radians). Shall be positive
+	double			pixelHeight;	//!< The height of a pixel in the image (in meters). Shall be positive
 	double			radius;			//!< The closest distance from the cylindrical image surface to the center of projection (that is, the radius of the cylinder) (in meters). Shall be non-negative
 	double			azimuthStart;	//!< The azimuth angle (in radians) of the left side of the image. Shall be in the interval [PI,PI].
 	double			principalPointY;//!< The Y coordinate in the image of the principal point (in pixels). This is the intersection of the z = 0 plane with the image
@@ -402,7 +428,7 @@ public:
 
 	e57::RigidBodyTransform				pose;	//!< A rigid body transform that describes the coordinate frame of the camera in the file-level coordinate system
 	
-//	e57::VisualReferenceRepresentation	visualReferenceRepresentation;  //!< Representation for an image that does not define any camera projection model. The image is to be used for visual reference only
+	e57::VisualReferenceRepresentation	visualReferenceRepresentation;  //!< Representation for an image that does not define any camera projection model. The image is to be used for visual reference only
 	e57::PinholeProjection				pinholeRepresentation;			//!< Representation for an image using the pinhole camera projection model
 	e57::SphericalProjection			sphericalRepresentation;		//!< Representation for an image using the spherical camera projection model.
 	e57::CylindricalProjection			cylindricalRepresentation;		//!< Representation for an image using the cylindrical camera projection model
@@ -423,7 +449,6 @@ private:
 	StructureNode	m_root;
 
 	VectorNode		m_data3D;
-	Data3D			m_data3DHeader;
 
 	VectorNode		m_cameraImages;
 
@@ -493,15 +518,25 @@ virtual bool		GetData3D(
 
 //! This function returns the size of the point data
 virtual	bool		GetData3DPointSize(
-						int32_t		dataIndex,	//!< image block index
-						int32_t &	row,		//!< image row size
-						int32_t &	column		//!< image column size
+						int32_t		dataIndex,	//!< This in the index into the images3D vector
+						int32_t &	rowMax,		//!< This is the maximum row size
+						int32_t &	columnMax,	//!< This is the maximum column size
+						int64_t &	pointSize	//!< This is the total number of point records
 						);
 
 //! This function returns the number of point groups
 virtual int32_t		GetData3DGroupSize(
-						int32_t		dataIndex		//!< image block index
+						int32_t		dataIndex	//!< This in the index into the images3D vector
 						);
+
+//! This funtion writes out the group data
+virtual bool		GetData3DGroup(
+						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int64_t*	idElementValue,		//!< index for this group
+						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
+						int64_t*	pointCount,			//!< size of the groups given
+						int32_t		count				//!< size of each of the buffers given
+						);								//!< \return Return true if sucessful, false otherwise
 
 //! This function returns the point data fields fetched in single call
 //* All the non-NULL buffers in the call below have number of elements = count */
@@ -509,8 +544,8 @@ virtual int32_t		GetData3DGroupSize(
 virtual int64_t		GetData3DStandardPoints(
 						int32_t		dataIndex,
 						int64_t		startPointIndex,
-						int64_t		count,
-						bool*		isValid,
+						int64_t		pointCount,
+						bool*		valid,
 						int32_t*	rowIndex,
 						int32_t*	columnIndex,
 						int32_t*	returnIndex,
@@ -525,7 +560,7 @@ virtual int64_t		GetData3DStandardPoints(
 						double*		colorRed,
 						double*		colorGreen,
 						double*		colorBlue,
-						double*		timestamp
+						double*		timeStamp
 						);
 
 //! This function interrogate what fields (standardized and extensions) are available
@@ -537,7 +572,7 @@ virtual int64_t		GetData3DGeneralPoints(
 						int32_t				dataIndex,
 						int64_t				startPointIndex,
 						int64_t				pointCount,
-						bool*				isValid,
+						bool*				valid,
 						vector<ustring>&	numericFieldNames,
 						vector<double*>&	numericBuffers,
 						vector<ustring>&	stringFieldNames,
@@ -560,11 +595,6 @@ private:
 	StructureNode			m_root;
 
 	VectorNode				m_data3D;
-
-	Data3D					m_data3DHeader;
-    vector<int32_t>			m_idElementValue;
-    vector<int32_t>			m_startPointIndex;
-    vector<int32_t>			m_pointCount;
 
 	VectorNode				m_cameraImages;
 
@@ -612,23 +642,23 @@ virtual	int64_t		WriteCameraImage(
 
 //! This function closes the CameraImage block
 virtual bool		CloseCameraImage(
-						int32_t		imageIndex	//!< picture block index given by the NewCameraImage
-)						;						//!< /return Returns true if successful, false otherwise
+						int32_t		imageIndex		//!< picture block index given by the NewCameraImage
+)						;							//!< /return Returns true if successful, false otherwise
 
 //! This function sets up the Data3D header and positions the cursor for the binary data
 //* The user needs to config a Data3D structure with all the scanning information before making this call. */
 
 virtual int32_t		NewData3D( 
-						Data3D &	data3DHeader //!< pointer to the Data3D structure to receive the image information
-						);						//!< /return Returns the index of the new scan's data3D block.
+						Data3D &	data3DHeader	//!< pointer to the Data3D structure to receive the image information
+						);							//!< /return Returns the index of the new scan's data3D block.
 
 //! This function writes out blocks of point data
 virtual int64_t		WriteData3DStandardPoints(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		idElementValue,		//!< index for this group
 						int64_t		startPointIndex,	//!< Starting index in to the "points" data vector
-						int64_t		count,				//!< size of each of the buffers given
-						bool*		isValid,			//!< pointer to a buffer with the valid indication
+						int64_t		pointCount,			//!< size of each of the buffers given
+						bool*		valid,				//!< pointer to a buffer with the valid indication
 						int32_t*	rowIndex,			//!< pointer to a buffer with the row index
 						int32_t*	columnIndex,		//!< pointer to a buffer with the column index
 						int32_t*	returnIndex,		//!< pointer to a buffer with the return index
@@ -643,8 +673,17 @@ virtual int64_t		WriteData3DStandardPoints(
 						double*		colorRed,			//!< pointer to a buffer with the color red data
 						double*		colorGreen,			//!< pointer to a buffer with the color green data
 						double*		colorBlue,			//!< pointer to a buffer with the color blue data
-						double*		timestamp			//!< pointer to a buffer with the time stamp data
-						);
+						double*		timeStamp			//!< pointer to a buffer with the time stamp data
+						);								//!< \return Return the records written
+
+//! This funtion writes out the group data
+virtual bool		WriteData3DGroup(
+						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int64_t*	idElementValue,		//!< index for this group
+						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
+						int64_t*	pointCount,			//!< size of the groups given
+						int32_t		count				//!< size of each of the buffers given
+						);								//!< \return Return true if sucessful, false otherwise
 
 //! This function sets the extensions field that will be available
 virtual bool		SetData3DGeneralFieldsAvailable(
@@ -656,16 +695,17 @@ virtual int64_t		WriteData3DGeneralPoints(
 						int32_t				dataIndex,	//!< data block index given by the NewData3D
 						int64_t				startPointIndex,
 						int64_t				pointCount,
-						bool*				isValid,
+						bool*				valid,
 						vector<ustring>&	numericFieldNames,
 						vector<double*>&	numericBuffers,
 						vector<ustring>&	stringFieldNames,
-						vector<ustring*>&	stringBuffers);
+						vector<ustring*>&	stringBuffers
+						);
 
 //! This function closes the data3D block
 virtual bool		CloseData3D(
-						int32_t		dataIndex	//!< data block index given by the NewData3D
-						);						//!< /return Returns true if sucessful, false otherwise
+						int32_t				dataIndex	//!< data block index given by the NewData3D
+						);								//!< /return Returns true if sucessful, false otherwise
 
 }; //end Writer class
 
