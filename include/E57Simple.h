@@ -214,8 +214,9 @@ public:
 class GroupingByLine {
 public:
 	ustring		idElementName;		//!< The name of the PointRecord element that identifies which group the point is in. The value of this string must be “rowIndex” or “columnIndex”
-	int32_t		groupsSize;			//!< Size of the compressedVector of LineGroupRecord structures
-	int32_t		pointSizeMaximum;	//!< Maximun size in the LineGroupRecord.pointCount;
+	int64_t		groupsSize;			//!< Size of the groups compressedVector of LineGroupRecord structures
+	int64_t		pointCountMaximum;	//!< Maximun size in the LineGroupRecord.pointCount;
+	int64_t		idElementValueMaximum;	//!< Maximun size in the LineGroupRecord.idElementValue;
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -517,50 +518,47 @@ virtual bool		GetData3D(
 						);	//!< /return Returns true if sucessful
 
 //! This function returns the size of the point data
-virtual	bool		GetData3DPointSize(
+virtual	bool		GetData3DSizes(
 						int32_t		dataIndex,	//!< This in the index into the images3D vector
-						int32_t &	rowMax,		//!< This is the maximum row size
-						int32_t &	columnMax,	//!< This is the maximum column size
-						int64_t &	pointSize	//!< This is the total number of point records
-						);
-
-//! This function returns the number of point groups
-virtual int32_t		GetData3DGroupSize(
-						int32_t		dataIndex	//!< This in the index into the images3D vector
+						int64_t &	rowMax,		//!< This is the maximum row size
+						int64_t &	columnMax,	//!< This is the maximum column size
+						int64_t &	pointsSize,	//!< This is the total number of point records
+						int64_t &	groupsSize	//!< This is the total number of group reocrds
 						);
 
 //! This funtion writes out the group data
-virtual bool		GetData3DGroup(
+virtual bool		ReadData3DGroups(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int64_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
-						int64_t*	pointCount,			//!< size of the groups given
-						int32_t		count				//!< size of each of the buffers given
+						int64_t*	pointCount			//!< size of the groups given
 						);								//!< \return Return true if sucessful, false otherwise
 
-//! This function returns the point data fields fetched in single call
-//* All the non-NULL buffers in the call below have number of elements = count */
+//! This function sets up the point data fields 
+/* All the non-NULL buffers in the call below have number of elements = pointCount.
+Call the CompressedVectorReader::read() until all data is read.
+*/
 
-virtual int64_t		GetData3DStandardPoints(
-						int32_t		dataIndex,
-						int64_t		startPointIndex,
-						int64_t		pointCount,
-						bool*		valid,
-						int32_t*	rowIndex,
-						int32_t*	columnIndex,
-						int32_t*	returnIndex,
-						int32_t*	returnCount,
-						double*		x,
-						double*		y,
-						double*		z,
-						double*		range,
-						double*		azimuth,
-						double*		elevation,
-						double*		intensity,
-						double*		colorRed,
-						double*		colorGreen,
-						double*		colorBlue,
-						double*		timeStamp
+virtual CompressedVectorReader	SetUpData3DStandardPoints(
+						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int64_t		pointCount,			//!< size of each element buffer.
+						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
+						double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
+						double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
+						double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+						double*		intensity = NULL,	//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+						double*		colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+						double*		colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+						double*		colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+						double*		sphericalRange = NULL,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
+						double*		sphericalAzimuth = NULL,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
+						double*		sphericalElevation = NULL,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+						int64_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+						int64_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
 						);
 
 //! This function interrogate what fields (standardized and extensions) are available
@@ -653,28 +651,27 @@ virtual int32_t		NewData3D(
 						);							//!< /return Returns the index of the new scan's data3D block.
 
 //! This function writes out blocks of point data
-virtual int64_t		WriteData3DStandardPoints(
+virtual CompressedVectorWriter	SetUpData3DStandardPoints(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
-						int64_t		idElementValue,		//!< index for this group
-						int64_t		startPointIndex,	//!< Starting index in to the "points" data vector
 						int64_t		pointCount,			//!< size of each of the buffers given
-						bool*		valid,				//!< pointer to a buffer with the valid indication
-						int32_t*	rowIndex,			//!< pointer to a buffer with the row index
-						int32_t*	columnIndex,		//!< pointer to a buffer with the column index
-						int32_t*	returnIndex,		//!< pointer to a buffer with the return index
-						int32_t*	returnCount,		//!< pointer to a buffer with the return count data
-						double*		x,					//!< pointer to a buffer with the x data
-						double*		y,					//!< pointer to a buffer with the y data
-						double*		z,					//!< pointer to a buffer with the z data
-						double*		range,				//!< pointer to a buffer with the range data
-						double*		azimuth,			//!< pointer to a buffer with the azimuth angle
-						double*		elevation,			//!< pointer to a buffer with the elevation angle
-						double*		intensity,			//!< pointer to a buffer with the lidar return intesity
-						double*		colorRed,			//!< pointer to a buffer with the color red data
-						double*		colorGreen,			//!< pointer to a buffer with the color green data
-						double*		colorBlue,			//!< pointer to a buffer with the color blue data
-						double*		timeStamp			//!< pointer to a buffer with the time stamp data
-						);								//!< \return Return the records written
+						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
+						double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
+						double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
+						double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+						double*		intensity = NULL,	//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+						double*		colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+						double*		colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+						double*		colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+						double*		sphericalRange = NULL,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
+						double*		sphericalAzimuth = NULL,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
+						double*		sphericalElevation = NULL,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+						int64_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+						int64_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+						);
+
 
 //! This funtion writes out the group data
 virtual bool		WriteData3DGroup(
@@ -701,11 +698,6 @@ virtual int64_t		WriteData3DGeneralPoints(
 						vector<ustring>&	stringFieldNames,
 						vector<ustring*>&	stringBuffers
 						);
-
-//! This function closes the data3D block
-virtual bool		CloseData3D(
-						int32_t				dataIndex	//!< data block index given by the NewData3D
-						);								//!< /return Returns true if sucessful, false otherwise
 
 }; //end Writer class
 

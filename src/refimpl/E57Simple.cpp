@@ -49,50 +49,48 @@ An example of a typical use of this interface would be as follows:
 <tt><PRE>
 	try
 	{
-		e57::Reader*	pReader = NULL;
-		e57::E57Root	root;
-		e57::Data3D		header;
-
 // Create a Reader
 		_bstr_t bsFile = sFile;			//converts Unicode to UTF-8
-		pReader = e57::Reader::CreateReader( (char*) bsFile);
-		if(!pReader) return false;
+		e57::Reader		eReader( (char*) bsFile);
 
-//Read the root
-		pReader->GetE57Root( root);
+// Read the root
+		e57::E57Root	root;
+		eReader.GetE57Root( root);		
 
-//Get the number of scans
-		int data3DCount = pReader->GetData3DCount();
+//Get the number of scan images available
+		int data3DCount = eReader.GetData3DCount();
 
 //selecting the first scan
-		int scanIdx = 0;
+		int scanIndex = 0;
 
 //Read the scan 0 header.
-		pReader->GetData3D( scanIdx, header);
+		e57::Data3D		header;
+		eReader.GetData3D( scanIndex, header);
 
 // ...	access all the header information like
 		char* scanGuid = header.guid.c_str();
 
 //Get the Size of the Scan
-		int32_t nColumn;	
-		int32_t nRow;
-		int64_t pointSize;	//Number of points
-		pReader->GetData3DPointSize( scanIdx,nRow,nColumn,points);
+		int64_t nColumn = 0;	
+		int64_t nRow = 0;
+		int64_t nPoint = 0;	//Number of points
+		int64_t nGroup = 0;	//Number of groups
+		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPoints, nGroups);
 
 //Set up buffers
-		double* x = new double[pointSize];
-		double* y = new double[pointSize];
-		double* z = new double[pointSize];
+		double* x = new double[nPoint];
+		double* y = new double[nPoint];
+		double* z = new double[nPoint];
+		CompressedVectorReader dataReader = eReader.SetUpData3DStandardPoints( scanIndex, nPoint, NULL, x, y, z);
 
 //Read the point data
-		pReader->GetData3DStandardPoints( scanIdx, 0, pointSize,
-			NULL, NULL, NULL, NULL, NULL, x, y, z, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+		dataReader.read();
 
 // ... access the data
 
 //Close and clean up
-		pReaer->Close();	
-		delete pReader;
+		eReaer.Close();	
+
 		delete x;
 		delete y;
 		delete z;
@@ -192,7 +190,8 @@ using namespace boost;
 	sphericalBounds.elevationMaximum = PI/2.;
 
 	pointGroupingSchemes.groupingByLine.groupsSize = 0;
-	pointGroupingSchemes.groupingByLine.pointSizeMaximum = 0;
+	pointGroupingSchemes.groupingByLine.pointCountMaximum = 0;
+	pointGroupingSchemes.groupingByLine.idElementValueMaximum = 0;
 	pointGroupingSchemes.groupingByLine.idElementName = "columnIndex";
 
 	pointFields.azimuth = false;
@@ -300,12 +299,11 @@ e57::Reader* Reader::CreateReader(
 	e57::Reader* ptr = NULL;
 	try
 	{
- 		ptr = new Reader(filePath);
+		ptr = new Reader(filePath);
 	}
-	catch (...)
+	catch(...)
 	{
-		if (ptr != NULL)
-			delete ptr;
+		if (ptr != NULL) delete ptr;
 		ptr = NULL;
     }
 	return ptr;
@@ -340,29 +338,25 @@ bool	Reader :: GetE57Root(
 {
 	if(IsOpen())
 	{
-		try
-		{
-			fileHeader.formatName = StringNode(m_root.get("formatName")).value();
-			fileHeader.versionMajor = IntegerNode(m_root.get("versionMajor")).value();
-			fileHeader.versionMinor = IntegerNode(m_root.get("versionMinor")).value();
-			fileHeader.guid = StringNode(m_root.get("guid")).value();
+		fileHeader.formatName = StringNode(m_root.get("formatName")).value();
+		fileHeader.versionMajor = IntegerNode(m_root.get("versionMajor")).value();
+		fileHeader.versionMinor = IntegerNode(m_root.get("versionMinor")).value();
+		fileHeader.guid = StringNode(m_root.get("guid")).value();
+
+		if(m_root.isDefined("coordinateMetadata"))
 			fileHeader.coordinateMetadata = StringNode(m_root.get("coordinateMetadata")).value();
 
+		if(m_root.isDefined("creationDateTime"))
+		{
 			StructureNode creationDateTime(m_root.get("creationDateTime"));
 			fileHeader.creationDateTime.dateTimeValue = FloatNode(creationDateTime.get("dateTimeValue")).value();
 			fileHeader.creationDateTime.isGpsReferenced = IntegerNode(creationDateTime.get("isGpsReferenced")).value();
-
-			fileHeader.data3DSize = m_data3D.childCount();
-			fileHeader.cameraImagesSize = m_cameraImages.childCount();
-			return true;
-
-		} catch(E57Exception& ex) {
-			ex.report(__FILE__, __LINE__, __FUNCTION__);
-		} catch (std::exception& ex) {
-			cerr << "Got an std::exception, what=" << ex.what() << endl;
-		} catch (...) {
-			cerr << "Got an unknown exception" << endl;
 		}
+
+		fileHeader.data3DSize = m_data3D.childCount();
+		fileHeader.cameraImagesSize = m_cameraImages.childCount();
+
+		return true;
 	}
 	return false;
 };
@@ -385,140 +379,143 @@ bool	Reader :: GetCameraImage(
 {
 	if(IsOpen())
 	{
-		try
-		{
-			if( (imageIndex < 0) || (imageIndex >= m_cameraImages.childCount()))
-				return false;
+		if( (imageIndex < 0) || (imageIndex >= m_cameraImages.childCount()))
+			return false;
 
-			StructureNode image(m_cameraImages.get(imageIndex));
+		StructureNode image(m_cameraImages.get(imageIndex));
 
-			cameraImageHeader.guid = StringNode(image.get("guid")).value();
+		cameraImageHeader.guid = StringNode(image.get("guid")).value();
+
+		if(image.isDefined("name"))
 			cameraImageHeader.name = StringNode(image.get("name")).value();
+
+		if(image.isDefined("description"))
 			cameraImageHeader.description = StringNode(image.get("description")).value();
 
+		if(image.isDefined("sensorVendor"))
 			cameraImageHeader.sensorVendor = StringNode(image.get("sensorVendor")).value();
+		if(image.isDefined("sensorModel"))
 			cameraImageHeader.sensorModel = StringNode(image.get("sensorModel")).value();
+		if(image.isDefined("sensorSerialNumber"))
 			cameraImageHeader.sensorSerialNumber = StringNode(image.get("sensorSerialNumber")).value();
 
+		if(image.isDefined("associatedData3DGuid"))
 			cameraImageHeader.associatedData3DGuid = StringNode(image.get("associatedData3DGuid")).value();
 
+		if(image.isDefined("acquisitionDateTime"))
+		{
 			StructureNode acquisitionDateTime(image.get("acquisitionDateTime"));
 			cameraImageHeader.acquisitionDateTime.dateTimeValue = 
 				FloatNode(acquisitionDateTime.get("dateTimeValue")).value();
 			cameraImageHeader.acquisitionDateTime.isGpsReferenced = 
 				IntegerNode(acquisitionDateTime.get("isAtomicClockReferenced")).value();
+		}
+// Get pose structure for scan.
 
-	// Get pose structure for scan.
-
+		if(image.isDefined("pose"))
+		{
 			StructureNode pose(image.get("pose"));
 			StructureNode rotation(pose.get("rotation"));
 			StructureNode translation(pose.get("translation"));
 
 			cameraImageHeader.pose.rotation.w = FloatNode(rotation.get("w")).value();
 			cameraImageHeader.pose.rotation.x = FloatNode(rotation.get("x")).value();
- 			cameraImageHeader.pose.rotation.y = FloatNode(rotation.get("y")).value();
- 			cameraImageHeader.pose.rotation.z = FloatNode(rotation.get("z")).value();
-	  
+			cameraImageHeader.pose.rotation.y = FloatNode(rotation.get("y")).value();
+			cameraImageHeader.pose.rotation.z = FloatNode(rotation.get("z")).value();
+  
 			cameraImageHeader.pose.translation.x = FloatNode(translation.get("x")).value();
- 			cameraImageHeader.pose.translation.y = FloatNode(translation.get("y")).value();
- 			cameraImageHeader.pose.translation.z = FloatNode(translation.get("z")).value();
-
-			if(image.isDefined("visualReferenceRepresentation"))
-			{
-				StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
-
-				cameraImageHeader.visualReferenceRepresentation.jpegImage = 
-					BlobNode(visualReferenceRepresentation.get("jpegImage")).byteCount();
-				cameraImageHeader.visualReferenceRepresentation.pngImage = 
-					BlobNode(visualReferenceRepresentation.get("pngImage")).byteCount();
-				cameraImageHeader.visualReferenceRepresentation.imageMask = 
-					BlobNode(visualReferenceRepresentation.get("imageMask")).byteCount();
-			}
-			else if(image.isDefined("pinholeRepresentation"))
-			{
-				StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
-
-				cameraImageHeader.pinholeRepresentation.jpegImage = 
-					BlobNode(pinholeRepresentation.get("jpegImage")).byteCount();
-				cameraImageHeader.pinholeRepresentation.pngImage = 
-					BlobNode(pinholeRepresentation.get("pngImage")).byteCount();
-				cameraImageHeader.pinholeRepresentation.imageMask = 
-					BlobNode(pinholeRepresentation.get("imageMask")).byteCount();
-
-				cameraImageHeader.pinholeRepresentation.focalLength = 
-					FloatNode(pinholeRepresentation.get("focalLength")).value();
-				cameraImageHeader.pinholeRepresentation.imageHeight = 
-					IntegerNode(pinholeRepresentation.get("imageHeight")).value();
-				cameraImageHeader.pinholeRepresentation.imageWidth = 
-					IntegerNode(pinholeRepresentation.get("imageWidth")).value();
-				cameraImageHeader.pinholeRepresentation.pixelHeight = 
-					FloatNode(pinholeRepresentation.get("pixelHeight")).value();
-				cameraImageHeader.pinholeRepresentation.pixelWidth = 
-					FloatNode(pinholeRepresentation.get("pixelWidth")).value();
-				cameraImageHeader.pinholeRepresentation.principalPointX = 
-					FloatNode(pinholeRepresentation.get("principalPointX")).value();
-				cameraImageHeader.pinholeRepresentation.principalPointY = 
-					FloatNode(pinholeRepresentation.get("principalPointY")).value();
-			}
-			else if(image.isDefined("sphericalRepresentation"))
-			{
-				StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
-
-				cameraImageHeader.sphericalRepresentation.jpegImage = 
-					BlobNode(sphericalRepresentation.get("jpegImage")).byteCount();
-				cameraImageHeader.sphericalRepresentation.pngImage = 
-					BlobNode(sphericalRepresentation.get("pngImage")).byteCount();
-				cameraImageHeader.sphericalRepresentation.imageMask = 
-					BlobNode(sphericalRepresentation.get("imageMask")).byteCount();
-
-				cameraImageHeader.sphericalRepresentation.azimuthStart = 
-					FloatNode(sphericalRepresentation.get("azimuthStart")).value();
-				cameraImageHeader.sphericalRepresentation.elevationStart = 
-					FloatNode(sphericalRepresentation.get("elevationStart")).value();
-				cameraImageHeader.sphericalRepresentation.imageHeight = 
-					IntegerNode(sphericalRepresentation.get("imageHeight")).value();
-				cameraImageHeader.sphericalRepresentation.imageWidth = 
-					IntegerNode(sphericalRepresentation.get("imageWidth")).value();
-				cameraImageHeader.sphericalRepresentation.pixelHeight = 
-					FloatNode(sphericalRepresentation.get("pixelHeight")).value();
-				cameraImageHeader.sphericalRepresentation.pixelWidth = 
-					FloatNode(sphericalRepresentation.get("pixelWidth")).value();
-			}
-			else if(image.isDefined("cylindricalRepresentation"))
-			{
-				StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
-
-				cameraImageHeader.cylindricalRepresentation.jpegImage = 
-					BlobNode(cylindricalRepresentation.get("jpegImage")).byteCount();
-				cameraImageHeader.cylindricalRepresentation.pngImage = 
-					BlobNode(cylindricalRepresentation.get("pngImage")).byteCount();
-				cameraImageHeader.cylindricalRepresentation.imageMask = 
-					BlobNode(cylindricalRepresentation.get("imageMask")).byteCount();
-
-				cameraImageHeader.cylindricalRepresentation.azimuthStart = 
-					FloatNode(cylindricalRepresentation.get("azimuthStart")).value();
-				cameraImageHeader.cylindricalRepresentation.imageHeight = 
-					IntegerNode(cylindricalRepresentation.get("imageHeight")).value();
-				cameraImageHeader.cylindricalRepresentation.imageWidth = 
-					IntegerNode(cylindricalRepresentation.get("imageWidth")).value();
-				cameraImageHeader.cylindricalRepresentation.pixelHeight = 
-					FloatNode(cylindricalRepresentation.get("pixelHeight")).value();
-				cameraImageHeader.cylindricalRepresentation.pixelWidth = 
-					FloatNode(cylindricalRepresentation.get("pixelWidth")).value();
-				cameraImageHeader.cylindricalRepresentation.principalPointY = 
-					FloatNode(cylindricalRepresentation.get("principalPointY")).value();
-				cameraImageHeader.cylindricalRepresentation.radius = 
-					FloatNode(cylindricalRepresentation.get("radius")).value();
-			}
-			return true;
-
-		} catch(E57Exception& ex) {
-			ex.report(__FILE__, __LINE__, __FUNCTION__);
-		} catch (std::exception& ex) {
-			cerr << "Got an std::exception, what=" << ex.what() << endl;
-		} catch (...) {
-			cerr << "Got an unknown exception" << endl;
+			cameraImageHeader.pose.translation.y = FloatNode(translation.get("y")).value();
+			cameraImageHeader.pose.translation.z = FloatNode(translation.get("z")).value();
 		}
+
+		if(image.isDefined("visualReferenceRepresentation"))
+		{
+			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
+
+			cameraImageHeader.visualReferenceRepresentation.jpegImage = 
+				BlobNode(visualReferenceRepresentation.get("jpegImage")).byteCount();
+			cameraImageHeader.visualReferenceRepresentation.pngImage = 
+				BlobNode(visualReferenceRepresentation.get("pngImage")).byteCount();
+			cameraImageHeader.visualReferenceRepresentation.imageMask = 
+				BlobNode(visualReferenceRepresentation.get("imageMask")).byteCount();
+		}
+		else if(image.isDefined("pinholeRepresentation"))
+		{
+			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
+
+			cameraImageHeader.pinholeRepresentation.jpegImage = 
+				BlobNode(pinholeRepresentation.get("jpegImage")).byteCount();
+			cameraImageHeader.pinholeRepresentation.pngImage = 
+				BlobNode(pinholeRepresentation.get("pngImage")).byteCount();
+			cameraImageHeader.pinholeRepresentation.imageMask = 
+				BlobNode(pinholeRepresentation.get("imageMask")).byteCount();
+
+			cameraImageHeader.pinholeRepresentation.focalLength = 
+				FloatNode(pinholeRepresentation.get("focalLength")).value();
+			cameraImageHeader.pinholeRepresentation.imageHeight = 
+				IntegerNode(pinholeRepresentation.get("imageHeight")).value();
+			cameraImageHeader.pinholeRepresentation.imageWidth = 
+				IntegerNode(pinholeRepresentation.get("imageWidth")).value();
+			cameraImageHeader.pinholeRepresentation.pixelHeight = 
+				FloatNode(pinholeRepresentation.get("pixelHeight")).value();
+			cameraImageHeader.pinholeRepresentation.pixelWidth = 
+				FloatNode(pinholeRepresentation.get("pixelWidth")).value();
+			cameraImageHeader.pinholeRepresentation.principalPointX = 
+				FloatNode(pinholeRepresentation.get("principalPointX")).value();
+			cameraImageHeader.pinholeRepresentation.principalPointY = 
+				FloatNode(pinholeRepresentation.get("principalPointY")).value();
+		}
+		else if(image.isDefined("sphericalRepresentation"))
+		{
+			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
+
+			cameraImageHeader.sphericalRepresentation.jpegImage = 
+				BlobNode(sphericalRepresentation.get("jpegImage")).byteCount();
+			cameraImageHeader.sphericalRepresentation.pngImage = 
+				BlobNode(sphericalRepresentation.get("pngImage")).byteCount();
+			cameraImageHeader.sphericalRepresentation.imageMask = 
+				BlobNode(sphericalRepresentation.get("imageMask")).byteCount();
+
+			cameraImageHeader.sphericalRepresentation.azimuthStart = 
+				FloatNode(sphericalRepresentation.get("azimuthStart")).value();
+			cameraImageHeader.sphericalRepresentation.elevationStart = 
+				FloatNode(sphericalRepresentation.get("elevationStart")).value();
+			cameraImageHeader.sphericalRepresentation.imageHeight = 
+				IntegerNode(sphericalRepresentation.get("imageHeight")).value();
+			cameraImageHeader.sphericalRepresentation.imageWidth = 
+				IntegerNode(sphericalRepresentation.get("imageWidth")).value();
+			cameraImageHeader.sphericalRepresentation.pixelHeight = 
+				FloatNode(sphericalRepresentation.get("pixelHeight")).value();
+			cameraImageHeader.sphericalRepresentation.pixelWidth = 
+				FloatNode(sphericalRepresentation.get("pixelWidth")).value();
+		}
+		else if(image.isDefined("cylindricalRepresentation"))
+		{
+			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
+
+			cameraImageHeader.cylindricalRepresentation.jpegImage = 
+				BlobNode(cylindricalRepresentation.get("jpegImage")).byteCount();
+			cameraImageHeader.cylindricalRepresentation.pngImage = 
+				BlobNode(cylindricalRepresentation.get("pngImage")).byteCount();
+			cameraImageHeader.cylindricalRepresentation.imageMask = 
+				BlobNode(cylindricalRepresentation.get("imageMask")).byteCount();
+
+			cameraImageHeader.cylindricalRepresentation.azimuthStart = 
+				FloatNode(cylindricalRepresentation.get("azimuthStart")).value();
+			cameraImageHeader.cylindricalRepresentation.imageHeight = 
+				IntegerNode(cylindricalRepresentation.get("imageHeight")).value();
+			cameraImageHeader.cylindricalRepresentation.imageWidth = 
+				IntegerNode(cylindricalRepresentation.get("imageWidth")).value();
+			cameraImageHeader.cylindricalRepresentation.pixelHeight = 
+				FloatNode(cylindricalRepresentation.get("pixelHeight")).value();
+			cameraImageHeader.cylindricalRepresentation.pixelWidth = 
+				FloatNode(cylindricalRepresentation.get("pixelWidth")).value();
+			cameraImageHeader.cylindricalRepresentation.principalPointY = 
+				FloatNode(cylindricalRepresentation.get("principalPointY")).value();
+			cameraImageHeader.cylindricalRepresentation.radius = 
+				FloatNode(cylindricalRepresentation.get("radius")).value();
+		}
+		return true;
 	}
 	return false;
 };
@@ -531,96 +528,86 @@ int64_t	Reader :: ReadCameraImageData(
 	int64_t		count		//!< size of desired chuck or buffer size
 	)						//!< /return Returns the number of bytes transferred.
 {
-	try
-	{
-		if( (imageIndex < 0) || (imageIndex >= m_cameraImages.childCount()))
-			return 0;
+	if( (imageIndex < 0) || (imageIndex >= m_cameraImages.childCount()))
+		return 0;
 
 ///////////  This is a problem because we have to do this for every call
-		StructureNode image(m_cameraImages.get(imageIndex));
+	StructureNode image(m_cameraImages.get(imageIndex));
 
-		if(image.isDefined("visualReferenceRepresentation"))
+	if(image.isDefined("visualReferenceRepresentation"))
+	{
+		StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
+		if(visualReferenceRepresentation.isDefined("jpegImage"))
 		{
-			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
-			if(visualReferenceRepresentation.isDefined("jpegImage"))
-			{
-				BlobNode jpegImage(visualReferenceRepresentation.get("jpegImage"));
-				jpegImage.read((uint8_t*) pBuffer, start, count);
-			}
-			else if(visualReferenceRepresentation.isDefined("pngImage"))
-			{
-				BlobNode pngImage(visualReferenceRepresentation.get("pngImage"));
-				pngImage.read((uint8_t*) pBuffer, start, count);
-			}
+			BlobNode jpegImage(visualReferenceRepresentation.get("jpegImage"));
+			jpegImage.read((uint8_t*) pBuffer, start, count);
+		}
+		else if(visualReferenceRepresentation.isDefined("pngImage"))
+		{
+			BlobNode pngImage(visualReferenceRepresentation.get("pngImage"));
+			pngImage.read((uint8_t*) pBuffer, start, count);
+		}
 //			if(visualReferenceRepresentation.isDefined("imageMask"))
 //			{
 //				BlobNode imageMask(visualReferenceRepresentation.get("imageMask"));
 //			}
-		}
-		else if(image.isDefined("pinholeRepresentation"))
+	}
+	else if(image.isDefined("pinholeRepresentation"))
+	{
+		StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
+		if(pinholeRepresentation.isDefined("jpegImage"))
 		{
-			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
-			if(pinholeRepresentation.isDefined("jpegImage"))
-			{
-				BlobNode jpegImage(pinholeRepresentation.get("jpegImage"));
-				jpegImage.read((uint8_t*) pBuffer, start, count);
-			}
-			else if(pinholeRepresentation.isDefined("pngImage"))
-			{
-				BlobNode pngImage(pinholeRepresentation.get("pngImage"));
-				pngImage.read((uint8_t*) pBuffer, start, count);
-			}
+			BlobNode jpegImage(pinholeRepresentation.get("jpegImage"));
+			jpegImage.read((uint8_t*) pBuffer, start, count);
+		}
+		else if(pinholeRepresentation.isDefined("pngImage"))
+		{
+			BlobNode pngImage(pinholeRepresentation.get("pngImage"));
+			pngImage.read((uint8_t*) pBuffer, start, count);
+		}
 //			if(pinholeRepresentation.isDefined("imageMask"))
 //			{
 //				BlobNode imageMask(pinholeRepresentation.get("imageMask"));
 //			}
-		}
-		else if(image.isDefined("sphericalRepresentation"))
+	}
+	else if(image.isDefined("sphericalRepresentation"))
+	{
+		StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
+		if(sphericalRepresentation.isDefined("jpegImage"))
 		{
-			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
-			if(sphericalRepresentation.isDefined("jpegImage"))
-			{
-				BlobNode jpegImage(sphericalRepresentation.get("jpegImage"));
-				jpegImage.read((uint8_t*) pBuffer, start, count);
-			}
-			else if(sphericalRepresentation.isDefined("pngImage"))
-			{
-				BlobNode pngImage(sphericalRepresentation.get("pngImage"));
-				pngImage.read((uint8_t*) pBuffer, start, count);
-			}
+			BlobNode jpegImage(sphericalRepresentation.get("jpegImage"));
+			jpegImage.read((uint8_t*) pBuffer, start, count);
+		}
+		else if(sphericalRepresentation.isDefined("pngImage"))
+		{
+			BlobNode pngImage(sphericalRepresentation.get("pngImage"));
+			pngImage.read((uint8_t*) pBuffer, start, count);
+		}
 //			if(sphericalRepresentation.isDefined("imageMask"))
 //			{
 //				BlobNode imageMask(sphericalRepresentation.get("imageMask"));
 //			}
-		}
-		else if(image.isDefined("cylindricalRepresentation"))
+	}
+	else if(image.isDefined("cylindricalRepresentation"))
+	{
+		StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
+		if(cylindricalRepresentation.isDefined("jpegImage"))
 		{
-			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
-			if(cylindricalRepresentation.isDefined("jpegImage"))
-			{
-				BlobNode jpegImage(cylindricalRepresentation.get("jpegImage"));
-				jpegImage.read((uint8_t*) pBuffer, start, count);
-			}
-			else if(cylindricalRepresentation.isDefined("pngImage"))
-			{
-				BlobNode pngImage(cylindricalRepresentation.get("pngImage"));
-				pngImage.read((uint8_t*) pBuffer, start, count);
-			}
+			BlobNode jpegImage(cylindricalRepresentation.get("jpegImage"));
+			jpegImage.read((uint8_t*) pBuffer, start, count);
+		}
+		else if(cylindricalRepresentation.isDefined("pngImage"))
+		{
+			BlobNode pngImage(cylindricalRepresentation.get("pngImage"));
+			pngImage.read((uint8_t*) pBuffer, start, count);
+		}
 //			if(cylindricalRepresentation.isDefined("imageMask"))
 //			{
 //				BlobNode imageMask(cylindricalRepresentation.get("imageMask"));
 //			}
-		}
-		return count;
+	}
+	return count;
 
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
-	return 0;
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -641,54 +628,69 @@ bool	Reader :: GetData3D(
 {
 	if(IsOpen())
 	{
-		try
+		if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
+			return false;
+
+		StructureNode scan(m_data3D.get(dataIndex));
+		CompressedVectorNode points(scan.get("points"));
+
+		data3DHeader.pointsSize = points.childCount();
+		StructureNode proto(points.prototype());
+
+		data3DHeader.guid = StringNode(scan.get("guid")).value();
+
+		if(scan.isDefined("name"))
+			data3DHeader.name = StringNode(scan.get("name")).value();
+		if(scan.isDefined("description"))
+			data3DHeader.description = StringNode(scan.get("description")).value();
+
+		if(scan.isDefined("pointGroupingSchemes"))
 		{
-			if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
-				return false;
-
-			StructureNode scan(m_data3D.get(dataIndex));
-			CompressedVectorNode points(scan.get("points"));
-
-			data3DHeader.pointsSize = points.childCount();
-			StructureNode proto(points.prototype());
-
 			StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
 			StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
 			CompressedVectorNode groups(groupingByLine.get("groups"));
 
-			int groupCount = groups.childCount();	//just to look
+			data3DHeader.pointGroupingSchemes.groupingByLine.groupsSize = groups.childCount();
 			StructureNode lineProto(groups.prototype());
 
 			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName =
 				StringNode(groupingByLine.get("idElementName")).value();
 
-			data3DHeader.pointGroupingSchemes.groupingByLine.groupsSize =
-				IntegerNode(groupingByLine.get("groupsSize")).value();
+			data3DHeader.pointGroupingSchemes.groupingByLine.idElementValueMaximum =
+				IntegerNode(groupingByLine.get("idElementValueMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
 
-			data3DHeader.pointGroupingSchemes.groupingByLine.pointSizeMaximum =
-				IntegerNode(groupingByLine.get("pointSizeMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
+			data3DHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum =
+				IntegerNode(groupingByLine.get("pointCountMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
+		}
 
-			data3DHeader.guid = StringNode(scan.get("guid")).value();
-			data3DHeader.name = StringNode(scan.get("name")).value();
-			data3DHeader.description = StringNode(scan.get("description")).value();
+// Get various sensor and version strings to scan.
 
-	// Get various sensor and version strings to scan.
-
+		if(scan.isDefined("sensorVendor"))
 			data3DHeader.sensorVendor = StringNode(scan.get("sensorVendor")).value();
+		if(scan.isDefined("sensorModel"))
 			data3DHeader.sensorModel = StringNode(scan.get("sensorModel")).value();
+		if(scan.isDefined("sensorSerialNumber"))
 			data3DHeader.sensorSerialNumber = StringNode(scan.get("sensorSerialNumber")).value();
+		if(scan.isDefined("sensorHardwareVersion"))
 			data3DHeader.sensorHardwareVersion = StringNode(scan.get("sensorHardwareVersion")).value();
+		if(scan.isDefined("sensorSoftwareVersion"))
 			data3DHeader.sensorSoftwareVersion = StringNode(scan.get("sensorSoftwareVersion")).value();
+		if(scan.isDefined("sensorFirmwareVersion"))
 			data3DHeader.sensorFirmwareVersion = StringNode(scan.get("sensorFirmwareVersion")).value();
 
-	// Get temp/humidity to scan.
+// Get temp/humidity to scan.
 
+		if(scan.isDefined("temperature"))
 			data3DHeader.temperature = FloatNode(scan.get("temperature")).value();
+		if(scan.isDefined("relativeHumidity"))
 			data3DHeader.relativeHumidity = FloatNode(scan.get("relativeHumidity")).value();
+		if(scan.isDefined("atmosphericPressure"))
 			data3DHeader.atmosphericPressure = FloatNode(scan.get("atmosphericPressure")).value();
 
-	// Get Cartesian bounding box to scan.
-	 
+// Get Cartesian bounding box to scan.
+ 
+		if(scan.isDefined("cartesianBounds"))
+		{
 			StructureNode bbox(scan.get("cartesianBounds"));
 			data3DHeader.cartesianBounds.xMinimum = FloatNode(bbox.get("xMinimum")).value();
 			data3DHeader.cartesianBounds.xMaximum = FloatNode(bbox.get("xMaximum")).value();
@@ -696,258 +698,207 @@ bool	Reader :: GetData3D(
 			data3DHeader.cartesianBounds.yMaximum = FloatNode(bbox.get("yMaximum")).value();
 			data3DHeader.cartesianBounds.zMinimum = FloatNode(bbox.get("zMinimum")).value();
 			data3DHeader.cartesianBounds.zMaximum = FloatNode(bbox.get("zMaximum")).value();
+		}
 
-	// Get pose structure for scan.
+		if(scan.isDefined("sphericalBounds"))
+		{
+			StructureNode sbox(scan.get("sphericalBounds"));
+			data3DHeader.sphericalBounds.rangeMinimum = FloatNode(sbox.get("rangeMinimum")).value();
+			data3DHeader.sphericalBounds.rangeMaximum = FloatNode(sbox.get("rangeMaximum")).value();
+			data3DHeader.sphericalBounds.elevationMinimum = FloatNode(sbox.get("elevationMinimum")).value();
+			data3DHeader.sphericalBounds.elevationMaximum = FloatNode(sbox.get("elevationMaximum")).value();
+			data3DHeader.sphericalBounds.azimuthStart = FloatNode(sbox.get("azimuthStart")).value();
+			data3DHeader.sphericalBounds.azimuthEnd = FloatNode(sbox.get("azimuthEnd")).value();
+		}
 
+// Get pose structure for scan.
+
+		if(scan.isDefined("pose"))
+		{
 			StructureNode pose(scan.get("pose"));
 			StructureNode rotation(pose.get("rotation"));
 			StructureNode translation(pose.get("translation"));
 
 			data3DHeader.pose.rotation.w = FloatNode(rotation.get("w")).value();
 			data3DHeader.pose.rotation.x = FloatNode(rotation.get("x")).value();
- 			data3DHeader.pose.rotation.y = FloatNode(rotation.get("y")).value();
- 			data3DHeader.pose.rotation.z = FloatNode(rotation.get("z")).value();
+			data3DHeader.pose.rotation.y = FloatNode(rotation.get("y")).value();
+			data3DHeader.pose.rotation.z = FloatNode(rotation.get("z")).value();
 	  
 			data3DHeader.pose.translation.x = FloatNode(translation.get("x")).value();
- 			data3DHeader.pose.translation.y = FloatNode(translation.get("y")).value();
- 			data3DHeader.pose.translation.z = FloatNode(translation.get("z")).value();
-	 
-	// Get start/stop acquisition times to scan.
+			data3DHeader.pose.translation.y = FloatNode(translation.get("y")).value();
+			data3DHeader.pose.translation.z = FloatNode(translation.get("z")).value();
+		}
+ 
+// Get start/stop acquisition times to scan.
 
+		if(scan.isDefined("acquisitionStart"))
+		{
 			StructureNode acquisitionStart(scan.get("acquisitionStart"));
 			data3DHeader.acquisitionStart.dateTimeValue = 
 				FloatNode(acquisitionStart.get("dateTimeValue")).value();
 			data3DHeader.acquisitionStart.isGpsReferenced = 
 				IntegerNode(acquisitionStart.get("isAtomicClockReferenced")).value();
+		}
 
+		if(scan.isDefined("acquisitionEnd"))
+		{
 			StructureNode acquisitionEnd(scan.get("acquisitionEnd"));
 			data3DHeader.acquisitionEnd.dateTimeValue = 
 				FloatNode(acquisitionEnd.get("dateTimeValue")).value();
 			data3DHeader.acquisitionEnd.isGpsReferenced = 
 				IntegerNode(acquisitionEnd.get("isAtomicClockReferenced")).value();
-
-	// Get a prototype of datatypes that will be stored in points record.
-
-			data3DHeader.pointFields.valid = proto.isDefined("valid");
-			data3DHeader.pointFields.x = proto.isDefined("cartesianX");
-			data3DHeader.pointFields.y = proto.isDefined("cartesianY");
-			data3DHeader.pointFields.z = proto.isDefined("cartesianZ");
-			data3DHeader.pointFields.range = proto.isDefined("sphericalRange");
-			data3DHeader.pointFields.azimuth = proto.isDefined("spherialAzimuth");
-			data3DHeader.pointFields.elevation = proto.isDefined("sphericalElevation");
-			data3DHeader.pointFields.rowIndex = proto.isDefined("rowIndex");
-			data3DHeader.pointFields.columnIndex = proto.isDefined("columnIndex");
-			data3DHeader.pointFields.returnIndex = proto.isDefined("returnIndex");
-			data3DHeader.pointFields.returnCount = proto.isDefined("returnCount");
-			data3DHeader.pointFields.intensity = proto.isDefined("intensity");
-			data3DHeader.pointFields.colorRed = proto.isDefined("colorRed");
-			data3DHeader.pointFields.colorGreen = proto.isDefined("colorGreen");
-			data3DHeader.pointFields.colorBlue = proto.isDefined("colorBlue");
-
-			return true;
-
-		} catch(E57Exception& ex) {
-			ex.report(__FILE__, __LINE__, __FUNCTION__);
-		} catch (std::exception& ex) {
-			cerr << "Got an std::exception, what=" << ex.what() << endl;
-		} catch (...) {
-			cerr << "Got an unknown exception" << endl;
 		}
+
+// Get a prototype of datatypes that will be stored in points record.
+
+		data3DHeader.pointFields.valid = proto.isDefined("valid");
+		data3DHeader.pointFields.x = proto.isDefined("cartesianX");
+		data3DHeader.pointFields.y = proto.isDefined("cartesianY");
+		data3DHeader.pointFields.z = proto.isDefined("cartesianZ");
+		data3DHeader.pointFields.range = proto.isDefined("sphericalRange");
+		data3DHeader.pointFields.azimuth = proto.isDefined("spherialAzimuth");
+		data3DHeader.pointFields.elevation = proto.isDefined("sphericalElevation");
+		data3DHeader.pointFields.rowIndex = proto.isDefined("rowIndex");
+		data3DHeader.pointFields.columnIndex = proto.isDefined("columnIndex");
+		data3DHeader.pointFields.returnIndex = proto.isDefined("returnIndex");
+		data3DHeader.pointFields.returnCount = proto.isDefined("returnCount");
+		data3DHeader.pointFields.intensity = proto.isDefined("intensity");
+		data3DHeader.pointFields.colorRed = proto.isDefined("colorRed");
+		data3DHeader.pointFields.colorGreen = proto.isDefined("colorGreen");
+		data3DHeader.pointFields.colorBlue = proto.isDefined("colorBlue");
+
+		return true;
 	}
 	return false;
 };
 
 //! This function returns the size of the point data
-bool	Reader :: GetData3DPointSize(
+bool	Reader :: GetData3DSizes(
 	int32_t		dataIndex,	//!< image block index
-	int32_t &	row,		//!< image row size
-	int32_t &	column,		//!< image column size
-	int64_t &	pointsSize	//!<
+	int64_t &	row,		//!< image row size
+	int64_t &	column,		//!< image column size
+	int64_t &	pointsSize,	//!< image total point count
+	int64_t &	groupsSize	//!< image total number of groups
 	)
 {
 	if(IsOpen())
 	{
-		try
-		{
-			if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
-				return false;
-
-			StructureNode scan(m_data3D.get(dataIndex));
-			CompressedVectorNode points(scan.get("points"));
-			pointsSize = points.childCount();
-
-			StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
-			StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
-
-			column = IntegerNode(groupingByLine.get("groupsSize")).value();
-			row = IntegerNode(groupingByLine.get("pointSizeMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
-			return true;
-
-		} catch(E57Exception& ex) {
-			ex.report(__FILE__, __LINE__, __FUNCTION__);
-		} catch (std::exception& ex) {
-			cerr << "Got an std::exception, what=" << ex.what() << endl;
-		} catch (...) {
-			cerr << "Got an unknown exception" << endl;
-		}
-	}
-	return false;
-};
-
-//! This function returns the number of point groups
-int32_t	Reader :: GetData3DGroupSize(
-	int32_t		dataIndex		//!< image block index
-	)
-{
-	if(IsOpen())
-	{
-		try
-		{
-			if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
-				return 0;
-
-			StructureNode scan(m_data3D.get(dataIndex));
-			StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
-			StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
-			return IntegerNode(groupingByLine.get("groupsSize")).value();
-
-		} catch(E57Exception& ex) {
-			ex.report(__FILE__, __LINE__, __FUNCTION__);
-		} catch (std::exception& ex) {
-			cerr << "Got an std::exception, what=" << ex.what() << endl;
-		} catch (...) {
-			cerr << "Got an unknown exception" << endl;
-		}
-	}
-	return 0;
-};
-
-//! This funtion writes out the group data
-bool	Reader :: GetData3DGroup(
-						int32_t		dataIndex,			//!< data block index given by the NewData3D
-						int64_t*	idElementValue,		//!< index for this group
-						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
-						int64_t*	pointCount,			//!< size of the groups given
-						int32_t		count				//!< size of each of the buffers given
-						)								//!< \return Return true if sucessful, false otherwise
-{
-	try	{
-
 		if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
 			return false;
 
 		StructureNode scan(m_data3D.get(dataIndex));
+		CompressedVectorNode points(scan.get("points"));
+		pointsSize = points.childCount();
+
 		StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
 		StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+
 		CompressedVectorNode groups(groupingByLine.get("groups"));
+		groupsSize = groups.childCount();
 
-		vector<SourceDestBuffer> groupSDBuffers;
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "idElementValue",  idElementValue,   count, true));
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "startPointIndex", startPointIndex,  count, true));
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "pointCount",      pointCount,       count, true));
-
-		CompressedVectorReader reader = groups.reader(groupSDBuffers);
-        reader.read();
-        reader.close();
- 
+		column = IntegerNode(groupingByLine.get("idElementValueMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
+		row = IntegerNode(groupingByLine.get("pointCountMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
 		return true;
-	
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
-
+	}
 	return false;
+};
+
+//! This funtion writes out the group data
+bool	Reader :: ReadData3DGroups(
+						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int64_t		groupCount,			//!< size of each of the buffers given
+						int64_t*	idElementValue,		//!< index for this group
+						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
+						int64_t*	pointCount			//!< size of the groups given
+						)								//!< \return Return true if sucessful, false otherwise
+{
+	if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
+		return false;
+
+	StructureNode scan(m_data3D.get(dataIndex));
+	StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
+	StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+	CompressedVectorNode groups(groupingByLine.get("groups"));
+
+	vector<SourceDestBuffer> groupSDBuffers;
+    groupSDBuffers.push_back(SourceDestBuffer(m_imf, "idElementValue",  idElementValue,   groupCount, true));
+    groupSDBuffers.push_back(SourceDestBuffer(m_imf, "startPointIndex", startPointIndex,  groupCount, true));
+    groupSDBuffers.push_back(SourceDestBuffer(m_imf, "pointCount",      pointCount,       groupCount, true));
+
+	CompressedVectorReader reader = groups.reader(groupSDBuffers);
+    reader.read();
+    reader.close();
+
+	return true;
 };
 
 //! This function returns the point data fields fetched in single call
 //* All the non-NULL buffers in the call below have number of elements = count */
 
-int64_t	Reader :: GetData3DStandardPoints(
+CompressedVectorReader	Reader :: SetUpData3DStandardPoints(
 	int32_t		dataIndex,
-	int64_t		startPointIndex,
 	int64_t		count,
-	bool*		valid,
-	int32_t*	rowIndex,
-	int32_t*	columnIndex,
-	int32_t*	returnIndex,
-	int32_t*	returnCount,
+	int32_t*	valid,
 	double*		x,
 	double*		y,
 	double*		z,
-	double*		range,
-	double*		azimuth,
-	double*		elevation,
 	double*		intensity,
 	double*		colorRed,
 	double*		colorGreen,
 	double*		colorBlue,
+	double*		range,
+	double*		azimuth,
+	double*		elevation,
+	int64_t*	rowIndex,
+	int64_t*	columnIndex,
+	int64_t*	returnIndex,
+	int64_t*	returnCount,
 	double*		timeStamp
 	)
 {
 	int64_t		readCount = 0;
-	try
-	{
-		if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
-			return 0;
 
-		StructureNode scan(m_data3D.get(dataIndex));
-		CompressedVectorNode points(scan.get("points"));
-		StructureNode proto(points.prototype());
+	StructureNode scan(m_data3D.get(dataIndex));
+	CompressedVectorNode points(scan.get("points"));
+	StructureNode proto(points.prototype());
 
-		vector<SourceDestBuffer> destBuffers;
-		if(proto.isDefined("cartesianX") && (x != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianX",  x,  count, true, true));
-		if(proto.isDefined("cartesianY") && (y != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianY",  y,  count, true, true));
-		if(proto.isDefined("cartesianZ") && (z != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianZ",  z,  count, true, true));
-		if(proto.isDefined("sphericalRange") && (range != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "sphericalRange",  range,  count, true, true));
-		if(proto.isDefined("spherialAzimuth") && (azimuth != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "spherialAzimuth",  azimuth,  count, true, true));
-		if(proto.isDefined("sphericalElevation") && (elevation != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "sphericalElevation",  elevation,  count, true, true));
-		if(proto.isDefined("valid") && (valid != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "valid",       valid,       count, true));
-		if(proto.isDefined("rowIndex") && (rowIndex != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "rowIndex",    rowIndex,    count, true));
-		if(proto.isDefined("columnIndex") && (columnIndex != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "columnIndex", columnIndex, count, true));
-		if(proto.isDefined("returnIndex") && (returnIndex != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "returnIndex", returnIndex, count, true));
-		if(proto.isDefined("returnCount") && (returnCount != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "returnCount", returnCount, count, true));
-		if(proto.isDefined("timeStamp") && (timeStamp != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "timeStamp",   timeStamp,   count, true));
-		if(proto.isDefined("intensity") && (intensity != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "intensity",   intensity,   count, true));
-		if(proto.isDefined("colorRed") && (colorRed != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "colorRed",    colorRed,    count, true));
-		if(proto.isDefined("colorGreen") && (colorGreen != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "colorGreen",  colorGreen,  count, true));
-		if(proto.isDefined("colorBlue") && (colorBlue != NULL))
-			destBuffers.push_back(SourceDestBuffer(m_imf, "colorBlue",   colorBlue,   count, true));
+	vector<SourceDestBuffer> destBuffers;
+	if(proto.isDefined("cartesianX") && (x != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianX",  x,  count, true, true));
+	if(proto.isDefined("cartesianY") && (y != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianY",  y,  count, true, true));
+	if(proto.isDefined("cartesianZ") && (z != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "cartesianZ",  z,  count, true, true));
+	if(proto.isDefined("sphericalRange") && (range != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "sphericalRange",  range,  count, true, true));
+	if(proto.isDefined("spherialAzimuth") && (azimuth != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "spherialAzimuth",  azimuth,  count, true, true));
+	if(proto.isDefined("sphericalElevation") && (elevation != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "sphericalElevation",  elevation,  count, true, true));
+	if(proto.isDefined("valid") && (valid != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "valid",       valid,       count, true));
+	if(proto.isDefined("rowIndex") && (rowIndex != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "rowIndex",    rowIndex,    count, true));
+	if(proto.isDefined("columnIndex") && (columnIndex != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "columnIndex", columnIndex, count, true));
+	if(proto.isDefined("returnIndex") && (returnIndex != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "returnIndex", returnIndex, count, true));
+	if(proto.isDefined("returnCount") && (returnCount != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "returnCount", returnCount, count, true));
+	if(proto.isDefined("timeStamp") && (timeStamp != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "timeStamp",   timeStamp,   count, true));
+	if(proto.isDefined("intensity") && (intensity != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "intensity",   intensity,   count, true));
+	if(proto.isDefined("colorRed") && (colorRed != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "colorRed",    colorRed,    count, true));
+	if(proto.isDefined("colorGreen") && (colorGreen != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "colorGreen",  colorGreen,  count, true));
+	if(proto.isDefined("colorBlue") && (colorBlue != NULL))
+		destBuffers.push_back(SourceDestBuffer(m_imf, "colorBlue",   colorBlue,   count, true));
 
-		CompressedVectorReader reader = points.reader(destBuffers);
+	CompressedVectorReader reader = points.reader(destBuffers);
 
-		reader.seek(startPointIndex);
-
-		readCount = reader.read();
-
-		return readCount;
-
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
-	return 0;
+	return reader;
 };
 
 //! This function interrogate what fields (standardized and extensions) are available
@@ -983,56 +934,49 @@ int64_t	Reader :: GetData3DGeneralPoints(
 	, m_data3D(m_imf,true)
 	, m_cameraImages(m_imf,true)
 {
-	try
-	{
+
 // Set per-file properties.
 /// Path names: "/formatName", "/majorVersion", "/minorVersion", "/coordinateMetadata"
-		m_root.set("formatName", StringNode(m_imf, "ASTM E57 3D Imaging Data File"));
+	m_root.set("formatName", StringNode(m_imf, "ASTM E57 3D Imaging Data File"));
 
 #if defined(_MSC_VER)
-		GUID		guid;
-		CoCreateGuid((GUID*)&guid);
+	GUID		guid;
+	CoCreateGuid((GUID*)&guid);
 
-		OLECHAR wbuffer[64];
-		StringFromGUID2(guid,&wbuffer[0],64);
+	OLECHAR wbuffer[64];
+	StringFromGUID2(guid,&wbuffer[0],64);
 
-		char	fileGuid[64];
-		wcstombs(fileGuid,wbuffer,64);
+	char	fileGuid[64];
+	wcstombs(fileGuid,wbuffer,64);
 #else
-		char	fileGuid[] = "{4179C162-49A8-4fba-ADC6-527543D26D86}";
+	char	fileGuid[] = "{4179C162-49A8-4fba-ADC6-527543D26D86}";
 #endif
-		m_root.set("guid", StringNode(m_imf, fileGuid));
+	m_root.set("guid", StringNode(m_imf, fileGuid));
 
 // Get ASTM version number supported by library, so can write it into file
-		int astmMajor;
-		int astmMinor;
-		ustring libraryId;
-		E57Utilities().getVersions(astmMajor, astmMinor, libraryId);
+	int astmMajor;
+	int astmMinor;
+	ustring libraryId;
+	E57Utilities().getVersions(astmMajor, astmMinor, libraryId);
 
-		m_root.set("versionMajor", IntegerNode(m_imf, astmMajor));
-		m_root.set("versionMinor", IntegerNode(m_imf, astmMinor));
+	m_root.set("versionMajor", IntegerNode(m_imf, astmMajor));
+	m_root.set("versionMinor", IntegerNode(m_imf, astmMinor));
 
 // Save a dummy string for coordinate system.
 /// Really should be a valid WKT string identifying the coordinate reference system (CRS).
-        m_root.set("coordinateMetadata", StringNode(m_imf, coordinateMetadata));
+    m_root.set("coordinateMetadata", StringNode(m_imf, coordinateMetadata));
 
 // Create creationDateTime structure
 /// Path name: "/creationDateTime
-        StructureNode creationDateTime = StructureNode(m_imf);
-		creationDateTime.set("dateTimeValue", FloatNode(m_imf, 1234567890.)); //!!! convert time() to GPStime
-		creationDateTime.set("isGpsReferenced", IntegerNode(m_imf,0));
-        m_root.set("creationDateTime", creationDateTime);
+    StructureNode creationDateTime = StructureNode(m_imf);
+	creationDateTime.set("dateTimeValue", FloatNode(m_imf, 1234567890.)); //!!! convert time() to GPStime
+	creationDateTime.set("isGpsReferenced", IntegerNode(m_imf,0));
+    m_root.set("creationDateTime", creationDateTime);
 
-		m_root.set("data3D", m_data3D);
-		m_root.set("cameraImages", m_cameraImages);
+	m_root.set("data3D", m_data3D);
+	m_root.set("cameraImages", m_cameraImages);
 
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
+
 };
 //! This function is the destructor for the writer class
 	Writer::~Writer(void)
@@ -1090,165 +1034,155 @@ int32_t	Writer :: NewCameraImage(
 	)						//!< /return Returns the cameraImage index
 {
 	int32_t pos = -1;
-	try
-	{
-		StructureNode image = StructureNode(m_imf);
-		m_cameraImages.append(image);
-		pos = m_cameraImages.childCount() - 1;
 
-		image.set("guid", StringNode(m_imf, cameraImageHeader.guid));
-		image.set("name", StringNode(m_imf, cameraImageHeader.name));
-		image.set("description", StringNode(m_imf, cameraImageHeader.description));
+	StructureNode image = StructureNode(m_imf);
+	m_cameraImages.append(image);
+	pos = m_cameraImages.childCount() - 1;
+
+	image.set("guid", StringNode(m_imf, cameraImageHeader.guid));
+	image.set("name", StringNode(m_imf, cameraImageHeader.name));
+	image.set("description", StringNode(m_imf, cameraImageHeader.description));
 
 // Add various sensor and version strings to image.
 
-		image.set("sensorVendor",           StringNode(m_imf, cameraImageHeader.sensorVendor));
-		image.set("sensorModel",            StringNode(m_imf, cameraImageHeader.sensorModel));
-		image.set("sensorSerialNumber",     StringNode(m_imf, cameraImageHeader.sensorSerialNumber));
+	image.set("sensorVendor",           StringNode(m_imf, cameraImageHeader.sensorVendor));
+	image.set("sensorModel",            StringNode(m_imf, cameraImageHeader.sensorModel));
+	image.set("sensorSerialNumber",     StringNode(m_imf, cameraImageHeader.sensorSerialNumber));
 
-		image.set("associatedData3DGuid", StringNode(m_imf, cameraImageHeader.associatedData3DGuid));
+	image.set("associatedData3DGuid", StringNode(m_imf, cameraImageHeader.associatedData3DGuid));
 
-		StructureNode acquisitionDateTime = StructureNode(m_imf);
-        image.set("acquisitionDateTime", acquisitionDateTime);
-		acquisitionDateTime.set("dateTimeValue",
-			FloatNode(m_imf, cameraImageHeader.acquisitionDateTime.dateTimeValue));
-		acquisitionDateTime.set("isAtomicClockReferenced",
-			IntegerNode(m_imf, cameraImageHeader.acquisitionDateTime.isGpsReferenced));
+	StructureNode acquisitionDateTime = StructureNode(m_imf);
+    image.set("acquisitionDateTime", acquisitionDateTime);
+	acquisitionDateTime.set("dateTimeValue",
+		FloatNode(m_imf, cameraImageHeader.acquisitionDateTime.dateTimeValue));
+	acquisitionDateTime.set("isAtomicClockReferenced",
+		IntegerNode(m_imf, cameraImageHeader.acquisitionDateTime.isGpsReferenced));
 
 // Create pose structure for image.
 
-        StructureNode pose = StructureNode(m_imf);
-        image.set("pose", pose);
+    StructureNode pose = StructureNode(m_imf);
+    image.set("pose", pose);
 
-        StructureNode rotation = StructureNode(m_imf);
-        pose.set("rotation", rotation);
-		rotation.set("w", FloatNode(m_imf, cameraImageHeader.pose.rotation.w));
-        rotation.set("x", FloatNode(m_imf, cameraImageHeader.pose.rotation.x));
-        rotation.set("y", FloatNode(m_imf, cameraImageHeader.pose.rotation.y));
-        rotation.set("z", FloatNode(m_imf, cameraImageHeader.pose.rotation.z));
-        StructureNode translation = StructureNode(m_imf);
-        pose.set("translation", translation);
-		translation.set("x", FloatNode(m_imf, cameraImageHeader.pose.translation.x));
-        translation.set("y", FloatNode(m_imf, cameraImageHeader.pose.translation.y));
-        translation.set("z", FloatNode(m_imf, cameraImageHeader.pose.translation.z));
+    StructureNode rotation = StructureNode(m_imf);
+    pose.set("rotation", rotation);
+	rotation.set("w", FloatNode(m_imf, cameraImageHeader.pose.rotation.w));
+    rotation.set("x", FloatNode(m_imf, cameraImageHeader.pose.rotation.x));
+    rotation.set("y", FloatNode(m_imf, cameraImageHeader.pose.rotation.y));
+    rotation.set("z", FloatNode(m_imf, cameraImageHeader.pose.rotation.z));
+    StructureNode translation = StructureNode(m_imf);
+    pose.set("translation", translation);
+	translation.set("x", FloatNode(m_imf, cameraImageHeader.pose.translation.x));
+    translation.set("y", FloatNode(m_imf, cameraImageHeader.pose.translation.y));
+    translation.set("z", FloatNode(m_imf, cameraImageHeader.pose.translation.z));
 
-		if( cameraImageHeader.visualReferenceRepresentation.jpegImage ||
-			cameraImageHeader.visualReferenceRepresentation.pngImage)
-		{
-			StructureNode visualReferenceRepresentation = StructureNode(m_imf);
-			image.set("visualReferenceRepresentation", visualReferenceRepresentation);
+	if( cameraImageHeader.visualReferenceRepresentation.jpegImage ||
+		cameraImageHeader.visualReferenceRepresentation.pngImage)
+	{
+		StructureNode visualReferenceRepresentation = StructureNode(m_imf);
+		image.set("visualReferenceRepresentation", visualReferenceRepresentation);
 
-			if( cameraImageHeader.visualReferenceRepresentation.jpegImage)
-				visualReferenceRepresentation.set("jpegImage",
-					BlobNode(m_imf,cameraImageHeader.visualReferenceRepresentation.jpegImage));
-			else if( cameraImageHeader.visualReferenceRepresentation.pngImage)
-				visualReferenceRepresentation.set("pngImage",
-					BlobNode(m_imf,cameraImageHeader.visualReferenceRepresentation.pngImage));
-			if( cameraImageHeader.visualReferenceRepresentation.imageMask)
-				visualReferenceRepresentation.set("imageMask",
-					BlobNode(m_imf,cameraImageHeader.visualReferenceRepresentation.imageMask));
-		}
-		else if( cameraImageHeader.pinholeRepresentation.jpegImage ||
-			cameraImageHeader.pinholeRepresentation.pngImage)
-		{
-			StructureNode pinholeRepresentation = StructureNode(m_imf);
-			image.set("pinholeRepresentation", pinholeRepresentation);
+		if( cameraImageHeader.visualReferenceRepresentation.jpegImage)
+			visualReferenceRepresentation.set("jpegImage",
+				BlobNode(m_imf,cameraImageHeader.visualReferenceRepresentation.jpegImage));
+		else if( cameraImageHeader.visualReferenceRepresentation.pngImage)
+			visualReferenceRepresentation.set("pngImage",
+				BlobNode(m_imf,cameraImageHeader.visualReferenceRepresentation.pngImage));
+		if( cameraImageHeader.visualReferenceRepresentation.imageMask)
+			visualReferenceRepresentation.set("imageMask",
+				BlobNode(m_imf,cameraImageHeader.visualReferenceRepresentation.imageMask));
+	}
+	else if( cameraImageHeader.pinholeRepresentation.jpegImage ||
+		cameraImageHeader.pinholeRepresentation.pngImage)
+	{
+		StructureNode pinholeRepresentation = StructureNode(m_imf);
+		image.set("pinholeRepresentation", pinholeRepresentation);
 
-			if( cameraImageHeader.pinholeRepresentation.jpegImage)
-				pinholeRepresentation.set("jpegImage",
-					BlobNode(m_imf,cameraImageHeader.pinholeRepresentation.jpegImage));
-			else if( cameraImageHeader.pinholeRepresentation.pngImage)
-				pinholeRepresentation.set("pngImage",
-					BlobNode(m_imf,cameraImageHeader.pinholeRepresentation.pngImage));
-			if( cameraImageHeader.pinholeRepresentation.imageMask)
-				pinholeRepresentation.set("imageMask",
-					BlobNode(m_imf,cameraImageHeader.pinholeRepresentation.imageMask));
+		if( cameraImageHeader.pinholeRepresentation.jpegImage)
+			pinholeRepresentation.set("jpegImage",
+				BlobNode(m_imf,cameraImageHeader.pinholeRepresentation.jpegImage));
+		else if( cameraImageHeader.pinholeRepresentation.pngImage)
+			pinholeRepresentation.set("pngImage",
+				BlobNode(m_imf,cameraImageHeader.pinholeRepresentation.pngImage));
+		if( cameraImageHeader.pinholeRepresentation.imageMask)
+			pinholeRepresentation.set("imageMask",
+				BlobNode(m_imf,cameraImageHeader.pinholeRepresentation.imageMask));
 
-			pinholeRepresentation.set("focalLength", 
-				FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.focalLength));
-			pinholeRepresentation.set("imageHeight", 
-				IntegerNode(m_imf, cameraImageHeader.pinholeRepresentation.imageHeight));
-			pinholeRepresentation.set("imageWidth", 
-				IntegerNode(m_imf, cameraImageHeader.pinholeRepresentation.imageWidth));
-			pinholeRepresentation.set("pixelHeight", 
-				FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.pixelHeight));
-			pinholeRepresentation.set("pixelWidth", 
-				FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.pixelWidth));
-			pinholeRepresentation.set("principalPointX", 
-				FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.principalPointX));
-			pinholeRepresentation.set("principalPointY", 
-				FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.principalPointY));
-		}
-		else if( cameraImageHeader.sphericalRepresentation.jpegImage ||
-			cameraImageHeader.sphericalRepresentation.pngImage)
-		{
-			StructureNode sphericalRepresentation = StructureNode(m_imf);
-			image.set("sphericalRepresentation", sphericalRepresentation);
+		pinholeRepresentation.set("focalLength", 
+			FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.focalLength));
+		pinholeRepresentation.set("imageHeight", 
+			IntegerNode(m_imf, cameraImageHeader.pinholeRepresentation.imageHeight));
+		pinholeRepresentation.set("imageWidth", 
+			IntegerNode(m_imf, cameraImageHeader.pinholeRepresentation.imageWidth));
+		pinholeRepresentation.set("pixelHeight", 
+			FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.pixelHeight));
+		pinholeRepresentation.set("pixelWidth", 
+			FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.pixelWidth));
+		pinholeRepresentation.set("principalPointX", 
+			FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.principalPointX));
+		pinholeRepresentation.set("principalPointY", 
+			FloatNode(m_imf, cameraImageHeader.pinholeRepresentation.principalPointY));
+	}
+	else if( cameraImageHeader.sphericalRepresentation.jpegImage ||
+		cameraImageHeader.sphericalRepresentation.pngImage)
+	{
+		StructureNode sphericalRepresentation = StructureNode(m_imf);
+		image.set("sphericalRepresentation", sphericalRepresentation);
 
-			if( cameraImageHeader.sphericalRepresentation.jpegImage)
-				sphericalRepresentation.set("jpegImage",
-					BlobNode(m_imf,cameraImageHeader.sphericalRepresentation.jpegImage));
-			else if( cameraImageHeader.sphericalRepresentation.pngImage)
-				sphericalRepresentation.set("pngImage",
-					BlobNode(m_imf,cameraImageHeader.sphericalRepresentation.pngImage));
-			if( cameraImageHeader.sphericalRepresentation.imageMask)
-				sphericalRepresentation.set("imageMask",
-					BlobNode(m_imf,cameraImageHeader.sphericalRepresentation.imageMask));
+		if( cameraImageHeader.sphericalRepresentation.jpegImage)
+			sphericalRepresentation.set("jpegImage",
+				BlobNode(m_imf,cameraImageHeader.sphericalRepresentation.jpegImage));
+		else if( cameraImageHeader.sphericalRepresentation.pngImage)
+			sphericalRepresentation.set("pngImage",
+				BlobNode(m_imf,cameraImageHeader.sphericalRepresentation.pngImage));
+		if( cameraImageHeader.sphericalRepresentation.imageMask)
+			sphericalRepresentation.set("imageMask",
+				BlobNode(m_imf,cameraImageHeader.sphericalRepresentation.imageMask));
 
-			sphericalRepresentation.set("imageHeight", 
-				IntegerNode(m_imf, cameraImageHeader.sphericalRepresentation.imageHeight));
-			sphericalRepresentation.set("imageWidth", 
-				IntegerNode(m_imf, cameraImageHeader.sphericalRepresentation.imageWidth));
-			sphericalRepresentation.set("pixelHeight", 
-				FloatNode(m_imf, cameraImageHeader.sphericalRepresentation.pixelHeight));
-			sphericalRepresentation.set("pixelWidth", 
-				FloatNode(m_imf, cameraImageHeader.sphericalRepresentation.pixelWidth));
-			sphericalRepresentation.set("azimuthStart", 
-				FloatNode(m_imf, cameraImageHeader.sphericalRepresentation.azimuthStart));
-			sphericalRepresentation.set("elevationStart", 
-				FloatNode(m_imf, cameraImageHeader.sphericalRepresentation.elevationStart));
-		}
-		else if( cameraImageHeader.cylindricalRepresentation.jpegImage ||
-			cameraImageHeader.cylindricalRepresentation.pngImage)
-		{
-			StructureNode cylindricalRepresentation = StructureNode(m_imf);
-			image.set("cylindricalRepresentation", cylindricalRepresentation);
+		sphericalRepresentation.set("imageHeight", 
+			IntegerNode(m_imf, cameraImageHeader.sphericalRepresentation.imageHeight));
+		sphericalRepresentation.set("imageWidth", 
+			IntegerNode(m_imf, cameraImageHeader.sphericalRepresentation.imageWidth));
+		sphericalRepresentation.set("pixelHeight", 
+			FloatNode(m_imf, cameraImageHeader.sphericalRepresentation.pixelHeight));
+		sphericalRepresentation.set("pixelWidth", 
+			FloatNode(m_imf, cameraImageHeader.sphericalRepresentation.pixelWidth));
+		sphericalRepresentation.set("azimuthStart", 
+			FloatNode(m_imf, cameraImageHeader.sphericalRepresentation.azimuthStart));
+		sphericalRepresentation.set("elevationStart", 
+			FloatNode(m_imf, cameraImageHeader.sphericalRepresentation.elevationStart));
+	}
+	else if( cameraImageHeader.cylindricalRepresentation.jpegImage ||
+		cameraImageHeader.cylindricalRepresentation.pngImage)
+	{
+		StructureNode cylindricalRepresentation = StructureNode(m_imf);
+		image.set("cylindricalRepresentation", cylindricalRepresentation);
 
-			if( cameraImageHeader.cylindricalRepresentation.jpegImage)
-				cylindricalRepresentation.set("jpegImage",
-					BlobNode(m_imf,cameraImageHeader.cylindricalRepresentation.jpegImage));
-			else if( cameraImageHeader.cylindricalRepresentation.pngImage)
-				cylindricalRepresentation.set("pngImage",
-					BlobNode(m_imf,cameraImageHeader.cylindricalRepresentation.pngImage));
-			if( cameraImageHeader.cylindricalRepresentation.imageMask)
-				cylindricalRepresentation.set("imageMask",
-					BlobNode(m_imf,cameraImageHeader.cylindricalRepresentation.imageMask));
+		if( cameraImageHeader.cylindricalRepresentation.jpegImage)
+			cylindricalRepresentation.set("jpegImage",
+				BlobNode(m_imf,cameraImageHeader.cylindricalRepresentation.jpegImage));
+		else if( cameraImageHeader.cylindricalRepresentation.pngImage)
+			cylindricalRepresentation.set("pngImage",
+				BlobNode(m_imf,cameraImageHeader.cylindricalRepresentation.pngImage));
+		if( cameraImageHeader.cylindricalRepresentation.imageMask)
+			cylindricalRepresentation.set("imageMask",
+				BlobNode(m_imf,cameraImageHeader.cylindricalRepresentation.imageMask));
 
-			cylindricalRepresentation.set("imageHeight", 
-				IntegerNode(m_imf, cameraImageHeader.cylindricalRepresentation.imageHeight));
-			cylindricalRepresentation.set("imageWidth", 
-				IntegerNode(m_imf, cameraImageHeader.cylindricalRepresentation.imageWidth));
-			cylindricalRepresentation.set("pixelHeight", 
-				FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.pixelHeight));
-			cylindricalRepresentation.set("pixelWidth", 
-				FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.pixelWidth));
-			cylindricalRepresentation.set("azimuthStart", 
-				FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.azimuthStart));
-			cylindricalRepresentation.set("principalPointY", 
-				FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.principalPointY));
-			cylindricalRepresentation.set("radius", 
-				FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.radius));
-		}
-		return pos;
-
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
-	return -1;
+		cylindricalRepresentation.set("imageHeight", 
+			IntegerNode(m_imf, cameraImageHeader.cylindricalRepresentation.imageHeight));
+		cylindricalRepresentation.set("imageWidth", 
+			IntegerNode(m_imf, cameraImageHeader.cylindricalRepresentation.imageWidth));
+		cylindricalRepresentation.set("pixelHeight", 
+			FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.pixelHeight));
+		cylindricalRepresentation.set("pixelWidth", 
+			FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.pixelWidth));
+		cylindricalRepresentation.set("azimuthStart", 
+			FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.azimuthStart));
+		cylindricalRepresentation.set("principalPointY", 
+			FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.principalPointY));
+		cylindricalRepresentation.set("radius", 
+			FloatNode(m_imf, cameraImageHeader.cylindricalRepresentation.radius));
+	}
+	return pos;
 };
 
 //! This function writes the block
@@ -1259,95 +1193,84 @@ int64_t	Writer :: WriteCameraImage(
 	int64_t		count		//!< size of desired chuck or buffer size
 	)						//!< /return Returns the number of bytes written
 {
-	try
+	if( (imageIndex < 0) || (imageIndex >= m_cameraImages.childCount()))
+		return 0;
+
+	StructureNode image(m_cameraImages.get(imageIndex));
+
+	if(image.isDefined("visualReferenceRepresentation"))
 	{
-		if( (imageIndex < 0) || (imageIndex >= m_cameraImages.childCount()))
-			return 0;
-
-///////////  This is a problem because we have to do this for every call
-		StructureNode image(m_cameraImages.get(imageIndex));
-
-		if(image.isDefined("visualReferenceRepresentation"))
+		StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
+		if(visualReferenceRepresentation.isDefined("jpegImage"))
 		{
-			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
-			if(visualReferenceRepresentation.isDefined("jpegImage"))
-			{
-				BlobNode jpegImage(visualReferenceRepresentation.get("jpegImage"));
-				jpegImage.write((uint8_t*) pBuffer, start, count);
-			}
-			else if(visualReferenceRepresentation.isDefined("pngImage"))
-			{
-				BlobNode pngImage(visualReferenceRepresentation.get("pngImage"));
-			}
+			BlobNode jpegImage(visualReferenceRepresentation.get("jpegImage"));
+			jpegImage.write((uint8_t*) pBuffer, start, count);
+		}
+		else if(visualReferenceRepresentation.isDefined("pngImage"))
+		{
+			BlobNode pngImage(visualReferenceRepresentation.get("pngImage"));
+			pngImage.write((uint8_t*) pBuffer, start, count);
+		}
 //			if(visualReferenceRepresentation.isDefined("imageMask"))
 //			{
 //				BlobNode imageMask(visualReferenceRepresentation.get("imageMask"));
 //			}
-		}
-		else if(image.isDefined("pinholeRepresentation"))
+	}
+	else if(image.isDefined("pinholeRepresentation"))
+	{
+		StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
+		if(pinholeRepresentation.isDefined("jpegImage"))
 		{
-			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
-			if(pinholeRepresentation.isDefined("jpegImage"))
-			{
-				BlobNode jpegImage(pinholeRepresentation.get("jpegImage"));
-				jpegImage.write((uint8_t*) pBuffer, start, count);
-			}
-			else if(pinholeRepresentation.isDefined("pngImage"))
-			{
-				BlobNode pngImage(pinholeRepresentation.get("pngImage"));
-				pngImage.write((uint8_t*) pBuffer, start, count);
-			}
+			BlobNode jpegImage(pinholeRepresentation.get("jpegImage"));
+			jpegImage.write((uint8_t*) pBuffer, start, count);
+		}
+		else if(pinholeRepresentation.isDefined("pngImage"))
+		{
+			BlobNode pngImage(pinholeRepresentation.get("pngImage"));
+			pngImage.write((uint8_t*) pBuffer, start, count);
+		}
 //			if(pinholeRepresentation.isDefined("imageMask"))
 //			{
 //				BlobNode imageMask(pinholeRepresentation.get("imageMask"));
 //			}
-		}
-		else if(image.isDefined("sphericalRepresentation"))
+	}
+	else if(image.isDefined("sphericalRepresentation"))
+	{
+		StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
+		if(sphericalRepresentation.isDefined("jpegImage"))
 		{
-			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
-			if(sphericalRepresentation.isDefined("jpegImage"))
-			{
-				BlobNode jpegImage(sphericalRepresentation.get("jpegImage"));
-				jpegImage.write((uint8_t*) pBuffer, start, count);
-			}
-			else if(sphericalRepresentation.isDefined("pngImage"))
-			{
-				BlobNode pngImage(sphericalRepresentation.get("pngImage"));
-				pngImage.write((uint8_t*) pBuffer, start, count);
-			}
+			BlobNode jpegImage(sphericalRepresentation.get("jpegImage"));
+			jpegImage.write((uint8_t*) pBuffer, start, count);
+		}
+		else if(sphericalRepresentation.isDefined("pngImage"))
+		{
+			BlobNode pngImage(sphericalRepresentation.get("pngImage"));
+			pngImage.write((uint8_t*) pBuffer, start, count);
+		}
 //			if(sphericalRepresentation.isDefined("imageMask"))
 //			{
 //				BlobNode imageMask(sphericalRepresentation.get("imageMask"));
 //			}
-		}
-		else if(image.isDefined("cylindricalRepresentation"))
+	}
+	else if(image.isDefined("cylindricalRepresentation"))
+	{
+		StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
+		if(cylindricalRepresentation.isDefined("jpegImage"))
 		{
-			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
-			if(cylindricalRepresentation.isDefined("jpegImage"))
-			{
-				BlobNode jpegImage(cylindricalRepresentation.get("jpegImage"));
-				jpegImage.write((uint8_t*) pBuffer, start, count);
-			}
-			else if(cylindricalRepresentation.isDefined("pngImage"))
-			{
-				BlobNode pngImage(cylindricalRepresentation.get("pngImage"));
-				pngImage.write((uint8_t*) pBuffer, start, count);
-			}
+			BlobNode jpegImage(cylindricalRepresentation.get("jpegImage"));
+			jpegImage.write((uint8_t*) pBuffer, start, count);
+		}
+		else if(cylindricalRepresentation.isDefined("pngImage"))
+		{
+			BlobNode pngImage(cylindricalRepresentation.get("pngImage"));
+			pngImage.write((uint8_t*) pBuffer, start, count);
+		}
 //			if(cylindricalRepresentation.isDefined("imageMask"))
 //			{
 //				BlobNode imageMask(cylindricalRepresentation.get("imageMask"));
 //			}
-		}
-		return count;
-
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
-	return 0;
+	}
+	return count;
 };
 //! This function closes the CameraImage block
 bool	Writer :: CloseCameraImage(
@@ -1364,277 +1287,257 @@ int32_t	Writer :: NewData3D(
 	)	//!< /return Returns the index of the new scan.
 {
 	int32_t pos = -1;
-	try
-	{
-		int row = data3DHeader.pointGroupingSchemes.groupingByLine.pointSizeMaximum;
-		int col = data3DHeader.pointGroupingSchemes.groupingByLine.groupsSize;
 
-		StructureNode scan = StructureNode(m_imf);
-		m_data3D.append(scan);
-		pos = m_data3D.childCount() - 1;
+	int row = data3DHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum;
+	int col = data3DHeader.pointGroupingSchemes.groupingByLine.idElementValueMaximum;
 
-		scan.set("guid", StringNode(m_imf, data3DHeader.guid));
-		scan.set("name", StringNode(m_imf, data3DHeader.name));
-		scan.set("description", StringNode(m_imf, data3DHeader.description));
+	StructureNode scan = StructureNode(m_imf);
+	m_data3D.append(scan);
+	pos = m_data3D.childCount() - 1;
+
+	scan.set("guid", StringNode(m_imf, data3DHeader.guid));
+	scan.set("name", StringNode(m_imf, data3DHeader.name));
+	scan.set("description", StringNode(m_imf, data3DHeader.description));
 
 // Add various sensor and version strings to scan.
 /// Path names: "/data3D/0/sensorVendor", etc...
-		scan.set("sensorVendor",           StringNode(m_imf, data3DHeader.sensorVendor));
-		scan.set("sensorModel",            StringNode(m_imf, data3DHeader.sensorModel));
-		scan.set("sensorSerialNumber",     StringNode(m_imf, data3DHeader.sensorSerialNumber));
-		scan.set("sensorHardwareVersion",  StringNode(m_imf, data3DHeader.sensorHardwareVersion));
-		scan.set("sensorSoftwareVersion",  StringNode(m_imf, data3DHeader.sensorSoftwareVersion));
-		scan.set("sensorFirmwareVersion",  StringNode(m_imf, data3DHeader.sensorFirmwareVersion));
+	scan.set("sensorVendor",           StringNode(m_imf, data3DHeader.sensorVendor));
+	scan.set("sensorModel",            StringNode(m_imf, data3DHeader.sensorModel));
+	scan.set("sensorSerialNumber",     StringNode(m_imf, data3DHeader.sensorSerialNumber));
+	scan.set("sensorHardwareVersion",  StringNode(m_imf, data3DHeader.sensorHardwareVersion));
+	scan.set("sensorSoftwareVersion",  StringNode(m_imf, data3DHeader.sensorSoftwareVersion));
+	scan.set("sensorFirmwareVersion",  StringNode(m_imf, data3DHeader.sensorFirmwareVersion));
 
 // Add temp/humidity to scan.
 /// Path names: "/data3D/0/temperature", etc...
-		scan.set("temperature",      FloatNode(m_imf, data3DHeader.temperature));
-		scan.set("relativeHumidity", FloatNode(m_imf, data3DHeader.relativeHumidity));
-		scan.set("atmosphericPressure", FloatNode(m_imf, data3DHeader.atmosphericPressure));
+	scan.set("temperature",      FloatNode(m_imf, data3DHeader.temperature));
+	scan.set("relativeHumidity", FloatNode(m_imf, data3DHeader.relativeHumidity));
+	scan.set("atmosphericPressure", FloatNode(m_imf, data3DHeader.atmosphericPressure));
 
 // Add Cartesian bounding box to scan.
 /// Path names: "/data3D/0/cartesianBounds/xMinimum", etc...
-        StructureNode bbox = StructureNode(m_imf);
-		bbox.set("xMinimum", FloatNode(m_imf, data3DHeader.cartesianBounds.xMinimum));
-		bbox.set("xMaximum", FloatNode(m_imf, data3DHeader.cartesianBounds.xMaximum));
-		bbox.set("yMinimum", FloatNode(m_imf, data3DHeader.cartesianBounds.yMinimum));
-		bbox.set("yMaximum", FloatNode(m_imf, data3DHeader.cartesianBounds.yMaximum));
-		bbox.set("zMinimum", FloatNode(m_imf, data3DHeader.cartesianBounds.zMinimum));
-		bbox.set("zMaximum", FloatNode(m_imf, data3DHeader.cartesianBounds.zMaximum));
-        scan.set("cartesianBounds", bbox);
+    StructureNode bbox = StructureNode(m_imf);
+	bbox.set("xMinimum", FloatNode(m_imf, data3DHeader.cartesianBounds.xMinimum));
+	bbox.set("xMaximum", FloatNode(m_imf, data3DHeader.cartesianBounds.xMaximum));
+	bbox.set("yMinimum", FloatNode(m_imf, data3DHeader.cartesianBounds.yMinimum));
+	bbox.set("yMaximum", FloatNode(m_imf, data3DHeader.cartesianBounds.yMaximum));
+	bbox.set("zMinimum", FloatNode(m_imf, data3DHeader.cartesianBounds.zMinimum));
+	bbox.set("zMaximum", FloatNode(m_imf, data3DHeader.cartesianBounds.zMaximum));
+    scan.set("cartesianBounds", bbox);
 
+	StructureNode sbox = StructureNode(m_imf);
+	sbox.set("rangeMinimum", FloatNode(m_imf, data3DHeader.sphericalBounds.rangeMinimum));
+	sbox.set("rangeMaximum", FloatNode(m_imf, data3DHeader.sphericalBounds.rangeMaximum));
+	sbox.set("elevationMinimum", FloatNode(m_imf, data3DHeader.sphericalBounds.elevationMinimum));
+	sbox.set("elevationMaximum", FloatNode(m_imf, data3DHeader.sphericalBounds.elevationMaximum));
+	sbox.set("azimuthStart", FloatNode(m_imf, data3DHeader.sphericalBounds.azimuthStart));
+	sbox.set("azimuthEnd", FloatNode(m_imf, data3DHeader.sphericalBounds.azimuthEnd));
+	scan.set("sphericalBounds", sbox);
 // Create pose structure for scan.
 /// Path names: "/data3D/0/pose/rotation/w", etc...
 ///             "/data3D/0/pose/translation/x", etc...
-        StructureNode pose = StructureNode(m_imf);
-        scan.set("pose", pose);
-        StructureNode rotation = StructureNode(m_imf);
-        pose.set("rotation", rotation);
-		rotation.set("w", FloatNode(m_imf, data3DHeader.pose.rotation.w));
-        rotation.set("x", FloatNode(m_imf, data3DHeader.pose.rotation.x));
-        rotation.set("y", FloatNode(m_imf, data3DHeader.pose.rotation.y));
-        rotation.set("z", FloatNode(m_imf, data3DHeader.pose.rotation.z));
-        StructureNode translation = StructureNode(m_imf);
-        pose.set("translation", translation);
-		translation.set("x", FloatNode(m_imf, data3DHeader.pose.translation.x));
-        translation.set("y", FloatNode(m_imf, data3DHeader.pose.translation.y));
-        translation.set("z", FloatNode(m_imf, data3DHeader.pose.translation.z));
+    StructureNode pose = StructureNode(m_imf);
+    scan.set("pose", pose);
+    StructureNode rotation = StructureNode(m_imf);
+    pose.set("rotation", rotation);
+	rotation.set("w", FloatNode(m_imf, data3DHeader.pose.rotation.w));
+    rotation.set("x", FloatNode(m_imf, data3DHeader.pose.rotation.x));
+    rotation.set("y", FloatNode(m_imf, data3DHeader.pose.rotation.y));
+    rotation.set("z", FloatNode(m_imf, data3DHeader.pose.rotation.z));
+    StructureNode translation = StructureNode(m_imf);
+    pose.set("translation", translation);
+	translation.set("x", FloatNode(m_imf, data3DHeader.pose.translation.x));
+    translation.set("y", FloatNode(m_imf, data3DHeader.pose.translation.y));
+    translation.set("z", FloatNode(m_imf, data3DHeader.pose.translation.z));
 
 // Add start/stop acquisition times to scan.
 /// Path names: "/data3D/0/acquisitionStart/dateTimeValue",
 ///             "/data3D/0/acquisitionEnd/dateTimeValue"
-        StructureNode acquisitionStart = StructureNode(m_imf);
-        scan.set("acquisitionStart", acquisitionStart);
-		acquisitionStart.set("dateTimeValue",
-			FloatNode(m_imf, data3DHeader.acquisitionStart.dateTimeValue));
-		acquisitionStart.set("isAtomicClockReferenced",
-			IntegerNode(m_imf, data3DHeader.acquisitionStart.isGpsReferenced));
+    StructureNode acquisitionStart = StructureNode(m_imf);
+    scan.set("acquisitionStart", acquisitionStart);
+	acquisitionStart.set("dateTimeValue",
+		FloatNode(m_imf, data3DHeader.acquisitionStart.dateTimeValue));
+	acquisitionStart.set("isAtomicClockReferenced",
+		IntegerNode(m_imf, data3DHeader.acquisitionStart.isGpsReferenced));
 
-        StructureNode acquisitionEnd = StructureNode(m_imf);
-        scan.set("acquisitionEnd", acquisitionEnd);
-		acquisitionEnd.set("dateTimeValue",
-			FloatNode(m_imf, data3DHeader.acquisitionEnd.dateTimeValue));
-		acquisitionEnd.set("isAtomicClockReferenced",
-			IntegerNode(m_imf, data3DHeader.acquisitionEnd.isGpsReferenced));
+    StructureNode acquisitionEnd = StructureNode(m_imf);
+    scan.set("acquisitionEnd", acquisitionEnd);
+	acquisitionEnd.set("dateTimeValue",
+		FloatNode(m_imf, data3DHeader.acquisitionEnd.dateTimeValue));
+	acquisitionEnd.set("isAtomicClockReferenced",
+		IntegerNode(m_imf, data3DHeader.acquisitionEnd.isGpsReferenced));
 
 // Add grouping scheme area
-        /// Path name: "/data3D/0/pointGroupingSchemes"
-        StructureNode pointGroupingSchemes = StructureNode(m_imf);
-        scan.set("pointGroupingSchemes", pointGroupingSchemes);
+    /// Path name: "/data3D/0/pointGroupingSchemes"
+    StructureNode pointGroupingSchemes = StructureNode(m_imf);
+    scan.set("pointGroupingSchemes", pointGroupingSchemes);
 
-        /// Add a line grouping scheme
-        /// Path name: "/data3D/0/pointGroupingSchemes/groupingByLine"
-        StructureNode groupingByLine = StructureNode(m_imf);
-        pointGroupingSchemes.set("groupingByLine", groupingByLine);
+    /// Add a line grouping scheme
+    /// Path name: "/data3D/0/pointGroupingSchemes/groupingByLine"
+    StructureNode groupingByLine = StructureNode(m_imf);
+    pointGroupingSchemes.set("groupingByLine", groupingByLine);
 
-        /// Add idElementName to groupingByLine, specify a line is column oriented
-        /// Path name: "/data3D/0/pointGroupingSchemes/groupingByLine/idElementName"
-		groupingByLine.set("idElementName", StringNode(m_imf,
-			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName));
-		groupingByLine.set("groupsSize", IntegerNode(m_imf,
-			data3DHeader.pointGroupingSchemes.groupingByLine.groupsSize));
-		groupingByLine.set("pointSizeMaximum", IntegerNode(m_imf,
-			data3DHeader.pointGroupingSchemes.groupingByLine.pointSizeMaximum));		//THIS IS NOT PART OF THE STANDARD YET
+    /// Add idElementName to groupingByLine, specify a line is column oriented
+    /// Path name: "/data3D/0/pointGroupingSchemes/groupingByLine/idElementName"
+	groupingByLine.set("idElementName", StringNode(m_imf,
+		data3DHeader.pointGroupingSchemes.groupingByLine.idElementName));
+	groupingByLine.set("idElementValueMaximum", IntegerNode(m_imf,
+		data3DHeader.pointGroupingSchemes.groupingByLine.idElementValueMaximum));
+	groupingByLine.set("pointCountMaximum", IntegerNode(m_imf,
+		data3DHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum));		//THIS IS NOT PART OF THE STANDARD YET
 
-		///			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName));
+	///			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName));
 
 // Make a prototype of datatypes that will be stored in LineGroupRecord.
-        /// This prototype will be used in creating the groups CompressedVector.
-        /// Will define path names like:
-        ///     "/data3D/0/pointGroupingSchemes/groupingByLine/groups/0/idElementValue"
-        StructureNode lineGroupProto = StructureNode(m_imf);
-        lineGroupProto.set("idElementValue",    IntegerNode(m_imf, 0, 0, col));
-        lineGroupProto.set("startPointIndex",   IntegerNode(m_imf, 0, 0, row*col));
-        lineGroupProto.set("pointCount",        IntegerNode(m_imf, 0, 0, row));
+    /// This prototype will be used in creating the groups CompressedVector.
+    /// Will define path names like:
+    ///     "/data3D/0/pointGroupingSchemes/groupingByLine/groups/0/idElementValue"
+    StructureNode lineGroupProto = StructureNode(m_imf);
+    lineGroupProto.set("idElementValue",    IntegerNode(m_imf, 0, 0, col));
+    lineGroupProto.set("startPointIndex",   IntegerNode(m_imf, 0, 0, row*col));
+    lineGroupProto.set("pointCount",        IntegerNode(m_imf, 0, 0, row));
 
-       /// Make empty codecs vector for use in creating groups CompressedVector.
-        /// If this vector is empty, it is assumed that all fields will use the BitPack codec.
-        VectorNode lineGroupCodecs = VectorNode(m_imf, true);
+   /// Make empty codecs vector for use in creating groups CompressedVector.
+    /// If this vector is empty, it is assumed that all fields will use the BitPack codec.
+    VectorNode lineGroupCodecs = VectorNode(m_imf, true);
 
-        /// Create CompressedVector for storing groups.  
-        /// Path Name: "/data3D/0/pointGroupingSchemes/groupingByLine/groups".
-        /// We use the prototype and empty codecs tree from above.
-        /// The CompressedVector will be filled by code below.
-        CompressedVectorNode groups = CompressedVectorNode(m_imf, lineGroupProto, lineGroupCodecs);
-        groupingByLine.set("groups", groups);
+    /// Create CompressedVector for storing groups.  
+    /// Path Name: "/data3D/0/pointGroupingSchemes/groupingByLine/groups".
+    /// We use the prototype and empty codecs tree from above.
+    /// The CompressedVector will be filled by code below.
+    CompressedVectorNode groups = CompressedVectorNode(m_imf, lineGroupProto, lineGroupCodecs);
+    groupingByLine.set("groups", groups);
 
 // Make a prototype of datatypes that will be stored in points record.
-        /// This prototype will be used in creating the points CompressedVector.
-        /// Using this proto in a CompressedVector will define path names like:
-        ///      "/data3D/0/points/0/cartesianX"
-        StructureNode proto = StructureNode(m_imf);
+    /// This prototype will be used in creating the points CompressedVector.
+    /// Using this proto in a CompressedVector will define path names like:
+    ///      "/data3D/0/points/0/cartesianX"
+    StructureNode proto = StructureNode(m_imf);
 
-		if(data3DHeader.pointFields.valid)
-			proto.set("valid",       IntegerNode(m_imf, 0, 0, 1));
+	if(data3DHeader.pointFields.valid)
+		proto.set("valid",       IntegerNode(m_imf, 0, 0, 1));
 
-		if(data3DHeader.pointFields.x)
-			proto.set("cartesianX",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
+	if(data3DHeader.pointFields.x)
+		proto.set("cartesianX",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 //			proto.set("cartesianX",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
-		if(data3DHeader.pointFields.y)
-			proto.set("cartesianY",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
+	if(data3DHeader.pointFields.y)
+		proto.set("cartesianY",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 //			proto.set("cartesianY",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
-		if(data3DHeader.pointFields.z)
-			proto.set("cartesianZ",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
+	if(data3DHeader.pointFields.z)
+		proto.set("cartesianZ",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 //			proto.set("cartesianZ",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 
-		if(data3DHeader.pointFields.range)
-			proto.set("sphericalRange",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
+	if(data3DHeader.pointFields.range)
+		proto.set("sphericalRange",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 //			proto.set("sphericalRange",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
-		if(data3DHeader.pointFields.azimuth)
-			proto.set("spherialAzimuth",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
+	if(data3DHeader.pointFields.azimuth)
+		proto.set("spherialAzimuth",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 //			proto.set("spherialAzimuth",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
-		if(data3DHeader.pointFields.elevation)
-			proto.set("sphericalElevation",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
+	if(data3DHeader.pointFields.elevation)
+		proto.set("sphericalElevation",  ScaledIntegerNode(m_imf, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 //			proto.set("sphericalElevation",  FloatNode(m_imf, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 
-		if(data3DHeader.pointFields.rowIndex)
-			proto.set("rowIndex",    IntegerNode(m_imf, 0, 0, row));
-		if(data3DHeader.pointFields.columnIndex)
-			proto.set("columnIndex", IntegerNode(m_imf, 0, 0, col));
+	if(data3DHeader.pointFields.rowIndex)
+		proto.set("rowIndex",    IntegerNode(m_imf, 0, 0, row));
+	if(data3DHeader.pointFields.columnIndex)
+		proto.set("columnIndex", IntegerNode(m_imf, 0, 0, col));
 
-		if(data3DHeader.pointFields.returnIndex)
-			proto.set("returnIndex", IntegerNode(m_imf, 0, 0, 0));
-	    if(data3DHeader.pointFields.returnCount)
-			proto.set("returnCount", IntegerNode(m_imf, 1, 1, 1));
-		if(data3DHeader.pointFields.timeStamp)
-			proto.set("timeStamp",   FloatNode(m_imf, 0.0, E57_DOUBLE));
+	if(data3DHeader.pointFields.returnIndex)
+		proto.set("returnIndex", IntegerNode(m_imf, 0, 0, 0));
+    if(data3DHeader.pointFields.returnCount)
+		proto.set("returnCount", IntegerNode(m_imf, 1, 1, 1));
+	if(data3DHeader.pointFields.timeStamp)
+		proto.set("timeStamp",   FloatNode(m_imf, 0.0, E57_DOUBLE));
 
-		if(data3DHeader.pointFields.intensity)
-			proto.set("intensity",   FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
+	if(data3DHeader.pointFields.intensity)
+		proto.set("intensity",   FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
 //			proto.set("intensity",   IntegerNode(m_imf, 0, 0, 255));
-		if(data3DHeader.pointFields.colorRed)
-			proto.set("colorRed",    FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
+	if(data3DHeader.pointFields.colorRed)
+		proto.set("colorRed",    FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
 //			proto.set("colorRed",   IntegerNode(m_imf, 0, 0, 255));
-		if(data3DHeader.pointFields.colorGreen)
-			proto.set("colorGreen",  FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
+	if(data3DHeader.pointFields.colorGreen)
+		proto.set("colorGreen",  FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
 //			proto.set("colorGreen",   IntegerNode(m_imf, 0, 0, 255));
-		if(data3DHeader.pointFields.colorBlue)
-			proto.set("colorBlue",   FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
+	if(data3DHeader.pointFields.colorBlue)
+		proto.set("colorBlue",   FloatNode(m_imf, 0.0, E57_SINGLE, 0.0, 1.0));
 //			proto.set("colorBlue",   IntegerNode(m_imf, 0, 0, 255));
 
 //        proto.set("demo:extra2", StringNode(m_imf));
 
 // Make empty codecs vector for use in creating points CompressedVector.
-        /// If this vector is empty, it is assumed that all fields will use the BitPack codec.
-        VectorNode codecs = VectorNode(m_imf, true);
+    /// If this vector is empty, it is assumed that all fields will use the BitPack codec.
+    VectorNode codecs = VectorNode(m_imf, true);
 
 // Create CompressedVector for storing points.  Path Name: "/data3D/0/points".
-        /// We use the prototype and empty codecs tree from above.
-        /// The CompressedVector will be filled by code below.
-        CompressedVectorNode points = CompressedVectorNode(m_imf, proto, codecs);
-        scan.set("points", points);
-		return pos;
-
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
-	return -1;
+    /// We use the prototype and empty codecs tree from above.
+    /// The CompressedVector will be filled by code below.
+    CompressedVectorNode points = CompressedVectorNode(m_imf, proto, codecs);
+    scan.set("points", points);
+	return pos;
 };
 
-int64_t	Writer :: WriteData3DStandardPoints(
+CompressedVectorWriter	Writer :: SetUpData3DStandardPoints(
 	int32_t		dataIndex,
-	int64_t		idElementValue,
-	int64_t		startPointIndex,
 	int64_t		count,
-	bool*		valid,
-	int32_t*	rowIndex,
-	int32_t*	columnIndex,
-	int32_t*	returnIndex,
-	int32_t*	returnCount,
+	int32_t*	valid,
 	double*		x,
 	double*		y,
 	double*		z,
-	double*		range,
-	double*		azimuth,
-	double*		elevation,
 	double*		intensity,
 	double*		colorRed,
 	double*		colorGreen,
 	double*		colorBlue,
+	double*		range,
+	double*		azimuth,
+	double*		elevation,
+	int64_t*	rowIndex,
+	int64_t*	columnIndex,
+	int64_t*	returnIndex,
+	int64_t*	returnCount,
 	double*		timeStamp
 	)
 {
-	try
-	{
-		if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
-			return 0;
+	StructureNode scan(m_data3D.get(dataIndex));
+	CompressedVectorNode points(scan.get("points"));
+	StructureNode proto(points.prototype());
 
-///////////  This is a problem because we have to do this for every call
-		StructureNode scan(m_data3D.get(dataIndex));
-		CompressedVectorNode points(scan.get("points"));
-		StructureNode proto(points.prototype());
+	vector<SourceDestBuffer> sourceBuffers;
+	if(proto.isDefined("cartesianX") && (x != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianX",  x,  count, true, true));
+	if(proto.isDefined("cartesianY") && (y != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianY",  y,  count, true, true));
+	if(proto.isDefined("cartesianZ") && (z != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianZ",  z,  count, true, true));
+	if(proto.isDefined("sphericalRange") && (range != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "sphericalRange",  range,  count, true, true));
+	if(proto.isDefined("spherialAzimuth") && (azimuth != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "spherialAzimuth",  azimuth,  count, true, true));
+	if(proto.isDefined("sphericalElevation") && (elevation != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "sphericalElevation",  elevation,  count, true, true));
+	if(proto.isDefined("valid") && (valid != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "valid",       valid,       count, true));
+	if(proto.isDefined("rowIndex") && (rowIndex != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "rowIndex",    rowIndex,    count, true));
+	if(proto.isDefined("columnIndex") && (columnIndex != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "columnIndex", columnIndex, count, true));
+	if(proto.isDefined("returnIndex") && (returnIndex != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "returnIndex", returnIndex, count, true));
+	if(proto.isDefined("returnCount") && (returnCount != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "returnCount", returnCount, count, true));
+	if(proto.isDefined("timeStamp") && (timeStamp != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "timeStamp",   timeStamp,   count, true));
+	if(proto.isDefined("intensity") && (intensity != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "intensity",   intensity,   count, true));
+	if(proto.isDefined("colorRed") && (colorRed != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorRed",    colorRed,    count, true));
+	if(proto.isDefined("colorGreen") && (colorGreen != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorGreen",  colorGreen,  count, true));
+	if(proto.isDefined("colorBlue") && (colorBlue != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorBlue",   colorBlue,   count, true));
 
-		vector<SourceDestBuffer> sourceBuffers;
-		if(proto.isDefined("cartesianX") && (x != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianX",  x,  count, true, true));
-		if(proto.isDefined("cartesianY") && (y != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianY",  y,  count, true, true));
-		if(proto.isDefined("cartesianZ") && (z != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "cartesianZ",  z,  count, true, true));
-		if(proto.isDefined("sphericalRange") && (range != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "sphericalRange",  range,  count, true, true));
-		if(proto.isDefined("spherialAzimuth") && (azimuth != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "spherialAzimuth",  azimuth,  count, true, true));
-		if(proto.isDefined("sphericalElevation") && (elevation != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "sphericalElevation",  elevation,  count, true, true));
-		if(proto.isDefined("valid") && (valid != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "valid",       valid,       count, true));
-		if(proto.isDefined("rowIndex") && (rowIndex != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "rowIndex",    rowIndex,    count, true));
-		if(proto.isDefined("columnIndex") && (columnIndex != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "columnIndex", columnIndex, count, true));
-		if(proto.isDefined("returnIndex") && (returnIndex != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "returnIndex", returnIndex, count, true));
-		if(proto.isDefined("returnCount") && (returnCount != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "returnCount", returnCount, count, true));
-		if(proto.isDefined("timeStamp") && (timeStamp != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "timeStamp",   timeStamp,   count, true));
-		if(proto.isDefined("intensity") && (intensity != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "intensity",   intensity,   count, true));
-		if(proto.isDefined("colorRed") && (colorRed != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorRed",    colorRed,    count, true));
-		if(proto.isDefined("colorGreen") && (colorGreen != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorGreen",  colorGreen,  count, true));
-		if(proto.isDefined("colorBlue") && (colorBlue != NULL))
-			sourceBuffers.push_back(SourceDestBuffer(m_imf, "colorBlue",   colorBlue,   count, true));
+	CompressedVectorWriter writer = points.writer(sourceBuffers);
 
-		CompressedVectorWriter writer = points.writer(sourceBuffers);
-		writer.write(count);
-
-		return count;
-
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
-	return 0;
+	return writer;
 };
 //! This funtion writes out the group data
 bool	Writer :: WriteData3DGroup(
@@ -1645,66 +1548,25 @@ bool	Writer :: WriteData3DGroup(
 						int32_t		count				//!< size of each of the buffers given
 						)								//!< \return Return true if sucessful, false otherwise
 {
-	try	{
 
-		if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
-			return false;
+	if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
+		return false;
 
-		StructureNode scan(m_data3D.get(dataIndex));
-		StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
-		StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
-		CompressedVectorNode groups(groupingByLine.get("groups"));
+	StructureNode scan(m_data3D.get(dataIndex));
+	StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
+	StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+	CompressedVectorNode groups(groupingByLine.get("groups"));
 
-		vector<SourceDestBuffer> groupSDBuffers;
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "idElementValue",  idElementValue,   count, true));
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "startPointIndex", startPointIndex,  count, true));
-        groupSDBuffers.push_back(SourceDestBuffer(m_imf, "pointCount",      pointCount,       count, true));
+	vector<SourceDestBuffer> groupSDBuffers;
+    groupSDBuffers.push_back(SourceDestBuffer(m_imf, "idElementValue",  idElementValue,   count, true));
+    groupSDBuffers.push_back(SourceDestBuffer(m_imf, "startPointIndex", startPointIndex,  count, true));
+    groupSDBuffers.push_back(SourceDestBuffer(m_imf, "pointCount",      pointCount,       count, true));
 
-		CompressedVectorWriter writer = groups.writer(groupSDBuffers);
-        writer.write(count);
-        writer.close();
- 
-		return true;
-	
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
+	CompressedVectorWriter writer = groups.writer(groupSDBuffers);
+    writer.write(count);
+    writer.close();
 
-	return false;
-};
-//! This function closes the data3D block
-bool	Writer :: CloseData3D(
-	int32_t		dataIndex			//!< data block index given by the NewData3D
-	)								//!< /return Returns true if sucessful, false otherwise
-{
-	try	{
-
-		if( (dataIndex < 0) || (dataIndex >= m_data3D.childCount()))
-			return false;
-
-		StructureNode scan(m_data3D.get(dataIndex));
-		CompressedVectorNode points(scan.get("points"));
-
-		vector<SourceDestBuffer> sourceBuffers;
-		CompressedVectorWriter writer = points.writer(sourceBuffers);
-
-		writer.close();
- 
-		return true;
-	
-	} catch(E57Exception& ex) {
-        ex.report(__FILE__, __LINE__, __FUNCTION__);
-    } catch (std::exception& ex) {
-        cerr << "Got an std::exception, what=" << ex.what() << endl;
-    } catch (...) {
-        cerr << "Got an unknown exception" << endl;
-    }
-
-	return false;
+	return true;
 };
 
 //! This function sets the extensions field that will be available
