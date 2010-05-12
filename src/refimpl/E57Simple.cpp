@@ -65,7 +65,7 @@ An example of a typical use of this interface would be as follows:
 
 //Read the scan 0 header.
 		e57::Data3D		header;
-		eReader.GetData3D( scanIndex, header);
+		eReader.ReadData3D( scanIndex, header);
 
 // ...	access all the header information like
 		char* scanGuid = header.guid.c_str();
@@ -81,7 +81,7 @@ An example of a typical use of this interface would be as follows:
 		double* x = new double[nPoint];
 		double* y = new double[nPoint];
 		double* z = new double[nPoint];
-		CompressedVectorReader dataReader = eReader.SetUpData3DStandardPoints( scanIndex, nPoint, NULL, x, y, z);
+		CompressedVectorReader dataReader = eReader.SetUpData3DPointsData( scanIndex, nPoint, NULL, x, y, z);
 
 //Read the point data
 		dataReader.read();
@@ -372,7 +372,7 @@ int32_t	Reader :: GetCameraImageCount( void)
 };
 
 //! This function returns the cameraImages header and positions the cursor
-bool	Reader :: GetCameraImage( 
+bool	Reader :: ReadCameraImage( 
 	int32_t			imageIndex,		//!< This in the index into the cameraImages vector
 	CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
 	)						//!< /return Returns true if sucessful
@@ -621,7 +621,7 @@ int32_t	Reader :: GetData3DCount( void)
 };
 
 //! This function returns the Data3D header and positions the cursor
-bool	Reader :: GetData3D( 
+bool	Reader :: ReadData3D( 
 	int32_t		dataIndex,	//!< This in the index into the images3D vector
 	Data3D &	data3DHeader //!< pointer to the Data3D structure to receive the image information
 	)	//!< /return Returns true if sucessful
@@ -804,7 +804,7 @@ bool	Reader :: GetData3DSizes(
 };
 
 //! This funtion writes out the group data
-bool	Reader :: ReadData3DGroups(
+bool	Reader :: ReadData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
@@ -835,7 +835,7 @@ bool	Reader :: ReadData3DGroups(
 //! This function returns the point data fields fetched in single call
 //* All the non-NULL buffers in the call below have number of elements = count */
 
-CompressedVectorReader	Reader :: SetUpData3DStandardPoints(
+CompressedVectorReader	Reader :: SetUpData3DPointsData(
 	int32_t		dataIndex,
 	int64_t		count,
 	int32_t*	valid,
@@ -1186,7 +1186,7 @@ int32_t	Writer :: NewCameraImage(
 };
 
 //! This function writes the block
-int64_t	Writer :: WriteCameraImage(
+int64_t	Writer :: WriteCameraImageData(
 	int32_t		imageIndex,	//!< picture block index
 	void *		pBuffer,	//!< pointer the buffer
 	int64_t		start,		//!< position in the block to start writing
@@ -1476,7 +1476,7 @@ int32_t	Writer :: NewData3D(
 	return pos;
 };
 
-CompressedVectorWriter	Writer :: SetUpData3DStandardPoints(
+CompressedVectorWriter	Writer :: SetUpData3DPointsData(
 	int32_t		dataIndex,
 	int64_t		count,
 	int32_t*	valid,
@@ -1540,7 +1540,7 @@ CompressedVectorWriter	Writer :: SetUpData3DStandardPoints(
 	return writer;
 };
 //! This funtion writes out the group data
-bool	Writer :: WriteData3DGroup(
+bool	Writer :: WriteData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups

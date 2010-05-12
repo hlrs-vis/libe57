@@ -491,7 +491,7 @@ virtual bool		GetE57Root(
 virtual	int32_t		GetCameraImageCount( void);
 
 //! This function returns the cameraImages header and positions the cursor
-virtual bool		GetCameraImage( 
+virtual bool		ReadCameraImage( 
 						int32_t			imageIndex,		//!< This in the index into the cameraImages vector
 						CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
 						);						//!< /return Returns true if sucessful
@@ -512,7 +512,7 @@ virtual	int64_t		ReadCameraImageData(
 virtual	int32_t		GetData3DCount( void);
 
 //! This function returns the Data3D header and positions the cursor
-virtual bool		GetData3D( 
+virtual bool		ReadData3D( 
 						int32_t		dataIndex,	//!< This in the index into the images3D vector
 						Data3D &	data3DHeader //!< pointer to the Data3D structure to receive the image information
 						);	//!< /return Returns true if sucessful
@@ -527,7 +527,7 @@ virtual	bool		GetData3DSizes(
 						);
 
 //! This funtion writes out the group data
-virtual bool		ReadData3DGroups(
+virtual bool		ReadData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
@@ -540,7 +540,7 @@ virtual bool		ReadData3DGroups(
 Call the CompressedVectorReader::read() until all data is read.
 */
 
-virtual CompressedVectorReader	SetUpData3DStandardPoints(
+virtual CompressedVectorReader	SetUpData3DPointsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		pointCount,			//!< size of each element buffer.
 						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
@@ -631,7 +631,7 @@ virtual int32_t		NewCameraImage(
 						);						//!< /return Returns the cameraImage index
 
 //! This function writes the block
-virtual	int64_t		WriteCameraImage(
+virtual	int64_t		WriteCameraImageData(
 						int32_t		imageIndex,	//!< picture block index given by the NewCameraImage
 						void *		pBuffer,	//!< pointer the buffer
 						int64_t		start,		//!< position in the block to start writing
@@ -651,7 +651,7 @@ virtual int32_t		NewData3D(
 						);							//!< /return Returns the index of the new scan's data3D block.
 
 //! This function writes out blocks of point data
-virtual CompressedVectorWriter	SetUpData3DStandardPoints(
+virtual CompressedVectorWriter	SetUpData3DPointsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		pointCount,			//!< size of each of the buffers given
 						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
@@ -674,7 +674,7 @@ virtual CompressedVectorWriter	SetUpData3DStandardPoints(
 
 
 //! This funtion writes out the group data
-virtual bool		WriteData3DGroup(
+virtual bool		WriteData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
