@@ -1,6 +1,8 @@
 //////////////////////////////////////////////////////////////////////////
 //
-//	Copyright (c) 2010 ASTM E57.04 3D Imaging System File Format Committee
+//  E57Simple.h - public header of E57 Simple API for reading/writing .e57 files.
+//
+//	Copyright (c) 2010 Stan Coleby (scoleby@intelisum.com)
 //	All rights reserved.
 //
 //  Permission is hereby granted, free of charge, to any person or organization
@@ -41,7 +43,7 @@
 //  V4		Oct 29, 2008	Stan Coleby		scoleby@intelisum.com
 //
 //	New E57Simple.h
-//	V5		May 22, 2010	Stan Coleby		scoleby@intelisum.com
+//	V5		May 12, 2010	Stan Coleby		scoleby@intelisum.com
 //
 //////////////////////////////////////////////////////////////////////////
 
@@ -54,7 +56,17 @@
 #include "E57Foundation.h"
 #endif
 
+using namespace std;
+using namespace boost;
+
+#ifndef PI
+#define PI 3.1415926535897932384626433832795
+#endif
+
 namespace e57 {
+
+class ReaderImpl;
+class WriterImpl;
 
 ////////////////////////////////////////////////////////////////////
 //
@@ -297,7 +309,7 @@ public:
 
 	ustring			name;					//!< A user-defined name for the Data3D.
 	ustring			guid;					//!< A globally unique identification string for the current version of the Data3D object
-	vector<ustring>	originalGuids;			//!< A vector of globally unique identification Strings from which the points in this Data3D originated.
+	std::vector<ustring>	originalGuids;			//!< A vector of globally unique identification Strings from which the points in this Data3D originated.
 	ustring			description;			//!< A user-defined description of the Image
 
 	ustring			sensorVendor;			//!< The name of the manufacturer for the sensor used to collect the points in this Data3D.
@@ -435,6 +447,7 @@ public:
 	e57::CylindricalProjection			cylindricalRepresentation;		//!< Representation for an image using the cylindrical camera projection model
 };
 
+
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Reader
@@ -443,104 +456,86 @@ public:
 //! This is the E57 Reader class
 
 class	Reader {
-
-private:
-
-	ImageFile		m_imf;
-	StructureNode	m_root;
-
-	VectorNode		m_data3D;
-
-	VectorNode		m_cameraImages;
-
 public:
 
-//! This function returns an E57::Reader pointer and opens the file
-static e57::Reader* CreateReader(
-						const ustring & filePath	//!< file path string
-						);	//!< /return This returns a e57::Reader object which should be deleted when finish
-
 //! This function is the constructor for the reader class
-					Reader(
-						const ustring & filePath		//!< file path string
-						);
-
-//! This function is the destructor for the reader class
-virtual				~Reader(void);
+				Reader(
+					const ustring & filePath		//!< file path string
+					);
 
 //! This function returns true if the file is open
-virtual	bool		IsOpen(void);
+	bool		IsOpen(void) const;
 
 //! This function closes the file
-virtual	bool		Close(void);
+	bool		Close(void) const;
 
 ////////////////////////////////////////////////////////////////////
 //
 //	File information
 //
 //! This function returns the file header information
-virtual bool		GetE57Root(
+	bool		GetE57Root(
 						E57Root & fileHeader	//!< This is the main header information
-					    );	//!< /return Returns true if sucessful
+					    ) const;	//!< /return Returns true if sucessful
 
 ////////////////////////////////////////////////////////////////////
 //
 //	Camera Image picture data
 //
 //! This function returns the total number of Picture Blocks
-virtual	int32_t		GetCameraImageCount( void);
+	int32_t		GetCameraImageCount( void) const;
 
 //! This function returns the cameraImages header and positions the cursor
-virtual bool		ReadCameraImage( 
+	bool		ReadCameraImage( 
 						int32_t			imageIndex,		//!< This in the index into the cameraImages vector
 						CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
-						);						//!< /return Returns true if sucessful
+						) const;						//!< /return Returns true if sucessful
 
 //! This function reads the block
-virtual	int64_t		ReadCameraImageData(
+	int64_t		ReadCameraImageData(
 						int32_t		imageIndex,		//!< picture block index
 						void *		pBuffer,	//!< pointer the buffer
 						int64_t		start,		//!< position in the block to start reading
 						int64_t		count		//!< size of desired chuck or buffer size
-						);						//!< /return Returns the number of bytes transferred.
+						) const;						//!< /return Returns the number of bytes transferred.
 
 ////////////////////////////////////////////////////////////////////
 //
 //	Scanner Image 3d data
 //
 //! This function returns the total number of Image Blocks
-virtual	int32_t		GetData3DCount( void);
+	int32_t		GetData3DCount( void) const;
 
 //! This function returns the Data3D header and positions the cursor
-virtual bool		ReadData3D( 
+	bool		ReadData3D( 
 						int32_t		dataIndex,	//!< This in the index into the images3D vector
 						Data3D &	data3DHeader //!< pointer to the Data3D structure to receive the image information
-						);	//!< /return Returns true if sucessful
+						) const;	//!< /return Returns true if sucessful
 
 //! This function returns the size of the point data
-virtual	bool		GetData3DSizes(
+	bool		GetData3DSizes(
 						int32_t		dataIndex,	//!< This in the index into the images3D vector
 						int64_t &	rowMax,		//!< This is the maximum row size
 						int64_t &	columnMax,	//!< This is the maximum column size
 						int64_t &	pointsSize,	//!< This is the total number of point records
 						int64_t &	groupsSize	//!< This is the total number of group reocrds
-						);
+						) const;
 
 //! This funtion writes out the group data
-virtual bool		ReadData3DGroupsData(
+	bool		ReadData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
 						int64_t*	pointCount			//!< size of the groups given
-						);								//!< \return Return true if sucessful, false otherwise
+						) const;								//!< \return Return true if sucessful, false otherwise
 
 //! This function sets up the point data fields 
 /* All the non-NULL buffers in the call below have number of elements = pointCount.
 Call the CompressedVectorReader::read() until all data is read.
 */
 
-virtual CompressedVectorReader	SetUpData3DPointsData(
+	CompressedVectorReader	SetUpData3DPointsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		pointCount,			//!< size of each element buffer.
 						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
@@ -559,14 +554,14 @@ virtual CompressedVectorReader	SetUpData3DPointsData(
 						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
 						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
 						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
-						);
+						) const;
 
 //! This function interrogate what fields (standardized and extensions) are available
-virtual bool		GetData3DGeneralFieldsAvailable(
+	bool		GetData3DGeneralFieldsAvailable(
 						int32_t					dataIndex,
-						std::vector<ustring>&	fieldsAvailable);
+						std::vector<ustring>&	fieldsAvailable) const;
 
-virtual int64_t		GetData3DGeneralPoints(
+	int64_t		GetData3DGeneralPoints(
 						int32_t				dataIndex,
 						int64_t				startPointIndex,
 						int64_t				pointCount,
@@ -574,7 +569,14 @@ virtual int64_t		GetData3DGeneralPoints(
 						vector<ustring>&	numericFieldNames,
 						vector<double*>&	numericBuffers,
 						vector<ustring>&	stringFieldNames,
-						vector<ustring*>&	stringBuffers);
+						vector<ustring*>&	stringBuffers) const;
+
+private:   //=================
+					Reader();                 // No default constructor is defined for Node
+protected: //=================
+    friend class	ReaderImpl;
+
+    E57_OBJECT_IMPLEMENTATION(Reader)  // Internal implementation details, not part of API, must be last in object
 
 }; //end Reader class
 
@@ -586,38 +588,20 @@ virtual int64_t		GetData3DGeneralPoints(
 
 //! This is the E57 Writer class
 
-class	Writer{
-
-private:
-	ImageFile				m_imf;
-	StructureNode			m_root;
-
-	VectorNode				m_data3D;
-
-	VectorNode				m_cameraImages;
-
+class	Writer {
 public:
 
-//! This function returns an E57::Writer pointer and opens the file
-static e57::Writer* CreateWriter(
-						const ustring & filePath,	//!< file path string
-						const ustring & coordinateMetaData	//!< Information describing the Coordinate Reference System to be used for the file
-						);	//!< /return This returns a e57::Writer object which should be deleted when finish
-
 //! This function is the constructor for the writer class
-					Writer(
-						const ustring & filePath,		//!< file path string
-						const ustring & coordinateMetaData	//!< Information describing the Coordinate Reference System to be used for the file
-						);
-
-//! This function is the destructor for the writer class
-virtual				~Writer(void);
+				Writer(
+					const ustring & filePath,		//!< file path string
+					const ustring & coordinateMetaData	//!< Information describing the Coordinate Reference System to be used for the file
+					);
 
 //! This function returns true if the file is open
-virtual	bool		IsOpen(void);
+	bool		IsOpen(void) const;
 
 //! This function closes the file
-virtual	bool		Close(void);
+	bool		Close(void) const;
 
 ////////////////////////////////////////////////////////////////////
 //
@@ -626,32 +610,32 @@ virtual	bool		Close(void);
 
 //! This function sets up the cameraImages header and positions the cursor
 //* The user needs to config a CameraImage structure with all the camera information before making this call. */
-virtual int32_t		NewCameraImage( 
+	int32_t		NewCameraImage( 
 						CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
-						);						//!< /return Returns the cameraImage index
+						) const;						//!< /return Returns the cameraImage index
 
 //! This function writes the block
-virtual	int64_t		WriteCameraImageData(
+	int64_t		WriteCameraImageData(
 						int32_t		imageIndex,	//!< picture block index given by the NewCameraImage
 						void *		pBuffer,	//!< pointer the buffer
 						int64_t		start,		//!< position in the block to start writing
 						int64_t		count		//!< size of desired chuck or buffer size
-						);						//!< /return Returns the number of bytes written
+						) const;						//!< /return Returns the number of bytes written
 
 //! This function closes the CameraImage block
-virtual bool		CloseCameraImage(
-						int32_t		imageIndex		//!< picture block index given by the NewCameraImage
-)						;							//!< /return Returns true if successful, false otherwise
+	bool		CloseCameraImage(
+						int32_t		imageIndex	//!< picture block index given by the NewCameraImage
+						) const ;				//!< /return Returns true if successful, false otherwise
 
 //! This function sets up the Data3D header and positions the cursor for the binary data
 //* The user needs to config a Data3D structure with all the scanning information before making this call. */
 
-virtual int32_t		NewData3D( 
+	int32_t		NewData3D( 
 						Data3D &	data3DHeader	//!< pointer to the Data3D structure to receive the image information
-						);							//!< /return Returns the index of the new scan's data3D block.
+						) const;							//!< /return Returns the index of the new scan's data3D block.
 
 //! This function writes out blocks of point data
-virtual CompressedVectorWriter	SetUpData3DPointsData(
+	CompressedVectorWriter	SetUpData3DPointsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		pointCount,			//!< size of each of the buffers given
 						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
@@ -670,25 +654,26 @@ virtual CompressedVectorWriter	SetUpData3DPointsData(
 						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
 						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
 						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
-						);
+						) const ;
 
 
 //! This funtion writes out the group data
-virtual bool		WriteData3DGroupsData(
+	bool		WriteData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
 						int64_t*	pointCount,			//!< size of the groups given
 						int32_t		count				//!< size of each of the buffers given
-						);								//!< \return Return true if sucessful, false otherwise
+						) const;								//!< \return Return true if sucessful, false otherwise
 
 //! This function sets the extensions field that will be available
-virtual bool		SetData3DGeneralFieldsAvailable(
+	bool		SetData3DGeneralFieldsAvailable(
 						int32_t					dataIndex,	//!< data block index given by the NewData3D
-						std::vector<ustring>&	fieldsAvailable);
+						std::vector<ustring>&	fieldsAvailable
+						) const;
 
 //! This function writes the General data point information
-virtual int64_t		WriteData3DGeneralPoints(
+	int64_t		WriteData3DGeneralPoints(
 						int32_t				dataIndex,	//!< data block index given by the NewData3D
 						int64_t				startPointIndex,
 						int64_t				pointCount,
@@ -697,9 +682,17 @@ virtual int64_t		WriteData3DGeneralPoints(
 						vector<double*>&	numericBuffers,
 						vector<ustring>&	stringFieldNames,
 						vector<ustring*>&	stringBuffers
-						);
+						) const;
+
+private:   //=================
+					Writer();                 // No default constructor is defined for Node
+protected: //=================
+    friend class	WriterImpl;
+
+    E57_OBJECT_IMPLEMENTATION(Writer)  // Internal implementation details, not part of API, must be last in object
 
 }; //end Writer class
+
 
 }; //end namespace
 #endif
