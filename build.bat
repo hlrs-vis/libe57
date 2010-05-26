@@ -13,6 +13,7 @@
 :: try to find a xerces installation.
 @for /D %%f in (./xerces*) do set XERCES=%%f
 @if T_%XERCES% EQU T_ goto xerces_fail
+@set XERCES=%E57ROOT%\%XERCES%
 :xerces_done
 
 :: If an environment variable BOOST is set, use it.
@@ -37,7 +38,7 @@
 :: Set compiler/linker options
 @set CFLAGS=/O2 /EHsc /MTd /W3 /nologo /D _DEBUG /D _CONSOLE /D WIN32 /D _WINDOWS /D XERCES_STATIC_LIBRARY /D _VC80_UPGRADE=0x0710 -I%E57ROOT%\include -I%E57ROOT%\include\time_conversion -I%E57ROOT%\src\refimpl -I%XERCES%\include -I%BOOST% /D E57_REFIMPL_REVISION_ID=%RefImplRevisionId%
 @set LIBS=%E57ROOT%\lib\%RefImplLib% %E57ROOT%\lib\LASReader.obj %E57ROOT%\lib\time_conversion.obj
-@set LFLAGS=/link /DEBUG /nologo %XERCES%\lib\xerces-c_static_3.lib advapi32.lib /NODEFAULTLIB:libcmt.lib 
+@set LFLAGS=/link /DEBUG /nologo %XERCES%\lib\xerces-c_static_3.lib advapi32.lib /NODEFAULTLIB:libcmt.lib
 
 :: Build E57 Refrence Implementation library (static link)
 cd %E57ROOT%\src\refimpl
@@ -59,9 +60,9 @@ cl %CFLAGS% DemoRead01.cpp  %LIBS% %LFLAGS%
 
 :: Compile and link tools
 cd %E57ROOT%\src\tools
-cl %CFLAGS% las2e57.cpp     /Fe%E57ROOT%\bin\las2e57.exe    %LIBS% %LFLAGS% 
-cl %CFLAGS% e57fields.cpp   /Fe%E57ROOT%\bin\e57fields.exe  %LIBS% %LFLAGS% 
-cl %CFLAGS% e57xmldump.cpp  /Fe%E57ROOT%\bin\e57xmldump.exe %LIBS% %LFLAGS% 
+cl %CFLAGS% las2e57.cpp     /Fe%E57ROOT%\bin\las2e57.exe    %LIBS% %LFLAGS%
+cl %CFLAGS% e57fields.cpp   /Fe%E57ROOT%\bin\e57fields.exe  %LIBS% %LFLAGS%
+cl %CFLAGS% e57xmldump.cpp  /Fe%E57ROOT%\bin\e57xmldump.exe %LIBS% %LFLAGS%
 
 :: Return to where we started
 cd %E57ROOT%
