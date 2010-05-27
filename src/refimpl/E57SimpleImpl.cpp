@@ -445,12 +445,6 @@ bool	ReaderImpl :: ReadData3D(
 
 			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName =
 				StringNode(groupingByLine.get("idElementName")).value();
-
-			data3DHeader.pointGroupingSchemes.groupingByLine.idElementValueMaximum =
-				IntegerNode(groupingByLine.get("idElementValueMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
-
-			data3DHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum =
-				IntegerNode(groupingByLine.get("pointCountMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
 		}
 
 // Get various sensor and version strings to scan.
@@ -477,6 +471,17 @@ bool	ReaderImpl :: ReadData3D(
 		if(scan.isDefined("atmosphericPressure"))
 			data3DHeader.atmosphericPressure = (float) FloatNode(scan.get("atmosphericPressure")).value();
 
+		if(scan.isDefined("indexBounds"))
+		{
+			StructureNode ibox(scan.get("indexBounds"));
+			data3DHeader.indexBounds.rowMinimum = IntegerNode(ibox.get("rowMinimum")).value();
+			data3DHeader.indexBounds.rowMaximum = IntegerNode(ibox.get("rowMaximum")).value();
+			data3DHeader.indexBounds.columnMinimum = IntegerNode(ibox.get("columnMinimum")).value();
+			data3DHeader.indexBounds.columnMaximum = IntegerNode(ibox.get("columnMaximum")).value();
+			data3DHeader.indexBounds.returnMinimum = IntegerNode(ibox.get("returnMinimum")).value();
+			data3DHeader.indexBounds.returnMaximum = IntegerNode(ibox.get("returnMaximum")).value();
+
+		}
 // Get Cartesian bounding box to scan.
  
 		if(scan.isDefined("cartesianBounds"))
@@ -577,17 +582,39 @@ bool	ReaderImpl :: GetData3DSizes(
 			return false;
 
 		StructureNode scan(data3D_.get(dataIndex));
+
 		CompressedVectorNode points(scan.get("points"));
 		pointsSize = points.childCount();
 
-		StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
-		StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+		if(scan.isDefined("pointGroupingSchemes"))
+		{
+			StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
+			StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
 
-		CompressedVectorNode groups(groupingByLine.get("groups"));
-		groupsSize = groups.childCount();
+			CompressedVectorNode groups(groupingByLine.get("groups"));
+			groupsSize = groups.childCount();
+		}
+		else
+			groupsSize = 0;
 
-		column = IntegerNode(groupingByLine.get("idElementValueMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
-		row = IntegerNode(groupingByLine.get("pointCountMaximum")).value(); // THIS IS NOT PART OF THE STANDARD YET.
+		if(scan.isDefined("indexBounds"))
+		{
+			StructureNode indexBounds(scan.get("indexBounds"));
+			column = IntegerNode(indexBounds.get("columnMaximum")).value();
+			row = IntegerNode(indexBounds.get("rowMaximum")).value();
+		}
+		else
+		{
+			StructureNode proto(points.prototype());
+
+			if(proto.isDefined("columnIndex"))
+				column = IntegerNode(proto.get("columnIndex")).maximum();
+			else column = 0;
+
+			if(proto.isDefined("rowIndex"))
+				row = IntegerNode(proto.get("rowIndex")).maximum();
+			else row = 0;
+		}
 		return true;
 	}
 	return false;
@@ -1059,8 +1086,8 @@ int32_t	WriterImpl :: NewData3D(
 {
 	int32_t pos = -1;
 
-	int32_t row = (int32_t) data3DHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum;
-	int32_t col = (int32_t) data3DHeader.pointGroupingSchemes.groupingByLine.idElementValueMaximum;
+	int32_t row = (int32_t) data3DHeader.indexBounds.rowMaximum;
+	int32_t col = (int32_t) data3DHeader.indexBounds.columnMaximum;
 
 	StructureNode scan = StructureNode(imf_);
 	data3D_.append(scan);
@@ -1084,6 +1111,15 @@ int32_t	WriterImpl :: NewData3D(
 	scan.set("temperature",      FloatNode(imf_, data3DHeader.temperature));
 	scan.set("relativeHumidity", FloatNode(imf_, data3DHeader.relativeHumidity));
 	scan.set("atmosphericPressure", FloatNode(imf_, data3DHeader.atmosphericPressure));
+
+    StructureNode ibox = StructureNode(imf_);
+	ibox.set("rowMinimum", IntegerNode(imf_, data3DHeader.indexBounds.rowMinimum));
+	ibox.set("rowMaximum", IntegerNode(imf_, data3DHeader.indexBounds.rowMaximum));
+	ibox.set("columnMinimum", IntegerNode(imf_, data3DHeader.indexBounds.columnMinimum));
+	ibox.set("columnMaximum", IntegerNode(imf_, data3DHeader.indexBounds.columnMaximum));
+	ibox.set("returnMinimum", IntegerNode(imf_, data3DHeader.indexBounds.returnMinimum));
+	ibox.set("returnMaximum", IntegerNode(imf_, data3DHeader.indexBounds.returnMaximum));
+    scan.set("indexBounds", ibox);
 
 // Add Cartesian bounding box to scan.
 /// Path names: "/data3D/0/cartesianBounds/xMinimum", etc...
@@ -1152,10 +1188,6 @@ int32_t	WriterImpl :: NewData3D(
     /// Path name: "/data3D/0/pointGroupingSchemes/groupingByLine/idElementName"
 	groupingByLine.set("idElementName", StringNode(imf_,
 		data3DHeader.pointGroupingSchemes.groupingByLine.idElementName));
-	groupingByLine.set("idElementValueMaximum", IntegerNode(imf_,
-		data3DHeader.pointGroupingSchemes.groupingByLine.idElementValueMaximum));
-	groupingByLine.set("pointCountMaximum", IntegerNode(imf_,
-		data3DHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum));		//THIS IS NOT PART OF THE STANDARD YET
 
 	///			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName));
 

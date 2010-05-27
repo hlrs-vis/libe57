@@ -193,9 +193,14 @@ using namespace boost;
 	sphericalBounds.elevationMinimum = -PI/2.;
 	sphericalBounds.elevationMaximum = PI/2.;
 
+	indexBounds.rowMinimum = 0;
+	indexBounds.rowMaximum = 0;
+	indexBounds.columnMinimum = 0;
+	indexBounds.columnMaximum = 0;
+	indexBounds.returnMinimum = 0;
+	indexBounds.returnMaximum = 0;
+
 	pointGroupingSchemes.groupingByLine.groupsSize = 0;
-	pointGroupingSchemes.groupingByLine.pointCountMaximum = 0;
-	pointGroupingSchemes.groupingByLine.idElementValueMaximum = 0;
 	pointGroupingSchemes.groupingByLine.idElementName = "columnIndex";
 
 	pointFields.azimuth = false;

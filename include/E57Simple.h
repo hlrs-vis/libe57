@@ -151,7 +151,7 @@ public:
 //
 //	e57::SphericalBounds
 //
-//! e57::SphericalBounds structure stores teh bounds of some data in spherical coordinates.
+//! e57::SphericalBounds structure stores the bounds of some data in spherical coordinates.
 
 class SphericalBounds {
 public:
@@ -163,6 +163,21 @@ public:
 	double		azimuthEnd;			//!< The ending azimuth angle defining the extent of the bounding region around the z axix
 };
 
+////////////////////////////////////////////////////////////////////
+//
+//	e57::IndexBounds
+//
+//! e57::IndexBounds structure stores the bounds of rowIndex, columnIndex, and returnIndex
+
+class IndexBounds {
+public:
+	int64_t		rowMinimum;		//!< The minimum extent of the bounding region of the rowIndex in the PointRecord
+	int64_t		rowMaximum;		//!< The maximum extent of the bounding region of the rowIndex in the PointRecord
+	int64_t		columnMinimum;	//!< The minimum extent of the bounding region of the columnIndex in the PointRecord
+	int64_t		columnMaximum;	//!< The maximum extent of the bounding region of the columnIndex in the PointRecord
+	int64_t		returnMinimum;	//!< The minimum extent of the bounding region of the returnIndex in the PointRecord
+	int64_t		returnMaximum;	//!< The maximum extent of the bounding region of the returnIndex in the PointRecord
+};
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::DateTime
@@ -227,8 +242,6 @@ class GroupingByLine {
 public:
 	ustring		idElementName;		//!< The name of the PointRecord element that identifies which group the point is in. The value of this string must be “rowIndex” or “columnIndex”
 	int64_t		groupsSize;			//!< Size of the groups compressedVector of LineGroupRecord structures
-	int64_t		pointCountMaximum;	//!< Maximun size in the LineGroupRecord.pointCount;
-	int64_t		idElementValueMaximum;	//!< Maximun size in the LineGroupRecord.idElementValue;
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -327,6 +340,7 @@ public:
 	e57::DateTime	acquisitionEnd;			//!< The end date and time that the data was recorded
 
 	e57::RigidBodyTransform		pose;		//!< A rigid body transform that describes the coordinate frame of the 3D imaging system origin in the file-level coordinate system.
+	e57::IndexBounds			indexBounds;	//!< The bounding range for structure point clouds
 	e57::CartesianBounds		cartesianBounds; //!< The bounding box (in Cartesian coordinates) of all the points in this Data3D (in the local coordinate system of the points).
 	e57::SphericalBounds		sphericalBounds; //!< The bounding region (in spherical coordinates) of all the points in this Data3D (in the local coordinate system of the points)
 
