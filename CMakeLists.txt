@@ -1,4 +1,4 @@
-# $Id: $
+# $Id$
 # This is the CMake project file for the libe57 reference implementation
 #
 # Copyright 2010 Roland Schwarz, Riegl LMS GmbH
@@ -25,62 +25,159 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-# This is work in progress.
-# I have made a first attempt to create a cmake file to build the libe57.
-# So far this script will generate a solution file for MS visual C++,
-# to compile the DemoWriter01 example. We need to further investigate how
-# *) xerces and boost can be found in the CMake way
-# *) figure out how to generate Debug and Release variants
-# *) figure out how to correctly specify compiler switches in a platform
-#    agnostic manner
-# *) automate the svnversion numbering with cmake
-# *) figure out how the final library gets installed
-# *) figure out how the doc can be built (cmake seems to have some provisions)
-# *) figure out how regression testing can be done with cmake
-
 cmake_minimum_required(VERSION 2.8)
 
-# Some paths that need to be set by the user
-set(XERCES CACHE PATH "The location of the xerces library")
-set(BOOST CACHE PATH "The location of the boost library")
+# Private Xerces3 find module
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 project(libe57)
+
+if (MSVC)
+    # Compiler switches for C++
+    set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1")
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG")
+    # Compiler switches for C
+    set(CMAKE_C_FLAGS_DEBUG "/MTd /D_DEBUG /Zi  /Ob0 /Od /RTC1")
+    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG")
+    set(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG")
+endif (MSVC)
+
+# Find the Boost and Xerces libraries
+find_package(Boost QUIET)
+if (NOT Boost_FOUND)
+    set(BOOST_INCLUDEDIR CACHE PATH  "Location of the boost include directory" )
+    message(FATAL_ERROR
+"Unable to find boost library.
+Please set the BOOST_INCLUDEDIR to point to the boost header files."
+)
+endif(NOT Boost_FOUND)
+
+set(Xerces3_USE_STATIC_LIBS On)
+find_package(Xerces3 QUIET)
+if (NOT Xerces3_FOUND)
+    set(XERCES_ROOT CACHE PATH "Location of the xerces library")
+    message(FATAL_ERROR
+"Unable to find xerces library.
+Please set the the XERCES_ROOT to point to the root of the xerces directory."
+)
+endif (NOT Xerces3_FOUND)
 
 include_directories(
     include
     include/time_conversion
     src/refimpl
-    ${XERCES}/include
-    ${BOOST}
+    ${Xerces3_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIR}
 )
 
-find_library(xerces_LIBRARY xerces-c_static_3D.lib ${XERCES}/lib)
+#
+# The reference implementation
+#
 
-add_library(RefImpl STATIC
+add_library( RefImpl STATIC
     src/refimpl/E57Foundation.cpp
     src/refimpl/E57FoundationImpl.cpp
+    src/refimpl/E57Foundationimpl.h
+    include/E57Foundation.h
+)
+set_target_properties( RefImpl
+    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
 )
 
-add_library(las
+#
+# Files for LAS format support
+#
+
+add_library( LasReader STATIC
     src/LASReader/LasReader.cpp
+    include/LASReader.h
+)
+set_target_properties( LasReader
+    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
 )
 
-add_library(tconv
+#
+# Time conversion utilities
+#
+
+add_library( time_conversion STATIC
     src/time_conversion/time_conversion.c
+    include/time_conversion/time_conversion.h
+    include/time_conversion/basictypes.h
+    include/time_conversion/constants.h
+    include/time_conversion/gnss_error.h
 )
 
-add_executable(DemoWrite01
+#
+# Example programs
+#
+
+add_executable( DemoWrite01
     src/examples/DemoWrite01.cpp
 )
-
-set_target_properties(RefImpl DemoWrite01 PROPERTIES
-    COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-    COMPILE_FLAGS /MTd
+set_target_properties( DemoWrite01
+    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
 )
-
-target_link_libraries(
-    DemoWrite01
-    ${xerces_LIBRARY}
+target_link_libraries( DemoWrite01
     RefImpl
-    tconv
+    debug ${Xerces3_LIBRARY_DEBUG}
+    optimized ${Xerces3_LIBRARY_RELEASE}
 )
+
+add_executable( DemoRead01
+    src/examples/DemoRead01.cpp
+)
+set_target_properties( DemoRead01
+    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+)
+target_link_libraries( DemoRead01
+    RefImpl
+    debug ${Xerces3_LIBRARY_DEBUG}
+    optimized ${Xerces3_LIBRARY_RELEASE}
+)
+
+#
+# E57-4 Tools
+#
+
+add_executable( las2e57
+    src/tools/las2e57.cpp
+)
+set_target_properties( las2e57
+    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+)
+target_link_libraries( las2e57
+    RefImpl
+    LasReader
+    time_conversion
+    debug ${Xerces3_LIBRARY_DEBUG}
+    optimized ${Xerces3_LIBRARY_RELEASE}
+)
+
+add_executable( e57fields
+    src/tools/e57fields.cpp
+)
+set_target_properties( e57fields
+    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+)
+target_link_libraries( e57fields
+    RefImpl
+    debug ${Xerces3_LIBRARY_DEBUG}
+    optimized ${Xerces3_LIBRARY_RELEASE}
+)
+
+add_executable( e57xmldump
+    src/tools/e57xmldump.cpp
+)
+set_target_properties( e57xmldump
+    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+)
+target_link_libraries( e57xmldump
+    RefImpl
+    debug ${Xerces3_LIBRARY_DEBUG}
+    optimized ${Xerces3_LIBRARY_RELEASE}
+)
+
