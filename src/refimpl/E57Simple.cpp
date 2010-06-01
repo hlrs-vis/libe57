@@ -167,9 +167,9 @@ using namespace boost;
 	atmosphericPressure = 0.;
 
 	acquisitionStart.dateTimeValue = 0.;
-	acquisitionStart.isGpsReferenced = 0;
+	acquisitionStart.isAtomicClockReferenced = 0;
 	acquisitionEnd.dateTimeValue = 0.;
-	acquisitionEnd.isGpsReferenced = 0;
+	acquisitionEnd.isAtomicClockReferenced = 0;
 
 	pose.rotation.w = 1.;
 	pose.rotation.x = 0.;
@@ -233,7 +233,7 @@ using namespace boost;
 	CameraImage::CameraImage(void)
 {
 	acquisitionDateTime.dateTimeValue = 0.;
-	acquisitionDateTime.isGpsReferenced = 0;
+	acquisitionDateTime.isAtomicClockReferenced = 0;
 
 	pose.rotation.w = 1.;
 	pose.rotation.x = 0.;

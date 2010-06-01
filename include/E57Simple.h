@@ -190,7 +190,7 @@ public:
 class DateTime {
 public:
 	double		dateTimeValue;		//!< The time, in seconds, since GPS time was zero. This time specification may include fractions of a second
-	int32_t		isGpsReferenced;	//!< This element should be present, and its value set to 1 if, and only if, the time stored in the dateTimeValue element is truly referenced to GPS time
+	int32_t		isAtomicClockReferenced;	//!< This element should be present, and its value set to 1 if, and only if, the time stored in the dateTimeValue element is truly referenced to GPS time
 };
 
 ////////////////////////////////////////////////////////////////////

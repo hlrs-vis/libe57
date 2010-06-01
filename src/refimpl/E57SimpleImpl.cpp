@@ -140,7 +140,7 @@ bool	ReaderImpl :: GetE57Root(
 		{
 			StructureNode creationDateTime(root_.get("creationDateTime"));
 			fileHeader.creationDateTime.dateTimeValue = FloatNode(creationDateTime.get("dateTimeValue")).value();
-			fileHeader.creationDateTime.isGpsReferenced = (int32_t) IntegerNode(creationDateTime.get("isGpsReferenced")).value();
+			fileHeader.creationDateTime.isAtomicClockReferenced = (int32_t) IntegerNode(creationDateTime.get("isAtomicClockReferenced")).value();
 		}
 
 		fileHeader.data3DSize = (int32_t) data3D_.childCount();
@@ -197,7 +197,7 @@ bool	ReaderImpl :: ReadCameraImage(
 			StructureNode acquisitionDateTime(image.get("acquisitionDateTime"));
 			cameraImageHeader.acquisitionDateTime.dateTimeValue = 
 				FloatNode(acquisitionDateTime.get("dateTimeValue")).value();
-			cameraImageHeader.acquisitionDateTime.isGpsReferenced = (int32_t) 
+			cameraImageHeader.acquisitionDateTime.isAtomicClockReferenced = (int32_t) 
 				IntegerNode(acquisitionDateTime.get("isAtomicClockReferenced")).value();
 		}
 // Get pose structure for scan.
@@ -531,7 +531,7 @@ bool	ReaderImpl :: ReadData3D(
 			StructureNode acquisitionStart(scan.get("acquisitionStart"));
 			data3DHeader.acquisitionStart.dateTimeValue = 
 				FloatNode(acquisitionStart.get("dateTimeValue")).value();
-			data3DHeader.acquisitionStart.isGpsReferenced = (int32_t)
+			data3DHeader.acquisitionStart.isAtomicClockReferenced = (int32_t)
 				IntegerNode(acquisitionStart.get("isAtomicClockReferenced")).value();
 		}
 
@@ -540,7 +540,7 @@ bool	ReaderImpl :: ReadData3D(
 			StructureNode acquisitionEnd(scan.get("acquisitionEnd"));
 			data3DHeader.acquisitionEnd.dateTimeValue = 
 				FloatNode(acquisitionEnd.get("dateTimeValue")).value();
-			data3DHeader.acquisitionEnd.isGpsReferenced = (int32_t)
+			data3DHeader.acquisitionEnd.isAtomicClockReferenced = (int32_t)
 				IntegerNode(acquisitionEnd.get("isAtomicClockReferenced")).value();
 		}
 
@@ -787,7 +787,7 @@ int64_t	ReaderImpl :: GetData3DGeneralPoints(
 /// Path name: "/creationDateTime
     StructureNode creationDateTime = StructureNode(imf_);
 	creationDateTime.set("dateTimeValue", FloatNode(imf_, 1234567890.)); //!!! convert time() to GPStime
-	creationDateTime.set("isGpsReferenced", IntegerNode(imf_,0));
+	creationDateTime.set("isAtomicClockReferenced", IntegerNode(imf_,0));
     root_.set("creationDateTime", creationDateTime);
 
 	root_.set("data3D", data3D_);
@@ -854,7 +854,7 @@ int32_t	WriterImpl :: NewCameraImage(
 	acquisitionDateTime.set("dateTimeValue",
 		FloatNode(imf_, cameraImageHeader.acquisitionDateTime.dateTimeValue));
 	acquisitionDateTime.set("isAtomicClockReferenced",
-		IntegerNode(imf_, cameraImageHeader.acquisitionDateTime.isGpsReferenced));
+		IntegerNode(imf_, cameraImageHeader.acquisitionDateTime.isAtomicClockReferenced));
 
 // Create pose structure for image.
 
@@ -1165,14 +1165,14 @@ int32_t	WriterImpl :: NewData3D(
 	acquisitionStart.set("dateTimeValue",
 		FloatNode(imf_, data3DHeader.acquisitionStart.dateTimeValue));
 	acquisitionStart.set("isAtomicClockReferenced",
-		IntegerNode(imf_, data3DHeader.acquisitionStart.isGpsReferenced));
+		IntegerNode(imf_, data3DHeader.acquisitionStart.isAtomicClockReferenced));
 
     StructureNode acquisitionEnd = StructureNode(imf_);
     scan.set("acquisitionEnd", acquisitionEnd);
 	acquisitionEnd.set("dateTimeValue",
 		FloatNode(imf_, data3DHeader.acquisitionEnd.dateTimeValue));
 	acquisitionEnd.set("isAtomicClockReferenced",
-		IntegerNode(imf_, data3DHeader.acquisitionEnd.isGpsReferenced));
+		IntegerNode(imf_, data3DHeader.acquisitionEnd.isAtomicClockReferenced));
 
 // Add grouping scheme area
     /// Path name: "/data3D/0/pointGroupingSchemes"
