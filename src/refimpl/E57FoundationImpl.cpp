@@ -26,7 +26,7 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
- #define LINUX
+
 #if defined(WIN32)
 #  if defined(_MSC_VER)
 #    include <io.h>
