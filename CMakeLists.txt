@@ -80,7 +80,7 @@ include_directories(
 add_library( RefImpl STATIC
     src/refimpl/E57Foundation.cpp
     src/refimpl/E57FoundationImpl.cpp
-    src/refimpl/E57Foundationimpl.h
+    src/refimpl/E57FoundationImpl.h
     include/E57Foundation.h
 )
 set_target_properties( RefImpl
@@ -91,11 +91,11 @@ set_target_properties( RefImpl
 # Files for LAS format support
 #
 
-add_library( LasReader STATIC
-    src/LASReader/LasReader.cpp
+add_library( LASReader STATIC
+    src/LASReader/LASReader.cpp
     include/LASReader.h
 )
-set_target_properties( LasReader
+set_target_properties( LASReader
     PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
 )
 
@@ -151,7 +151,7 @@ set_target_properties( las2e57
 )
 target_link_libraries( las2e57
     RefImpl
-    LasReader
+    LASReader
     time_conversion
     debug ${Xerces3_LIBRARY_DEBUG}
     optimized ${Xerces3_LIBRARY_RELEASE}
