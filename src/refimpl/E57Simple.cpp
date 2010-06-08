@@ -37,14 +37,15 @@
 //////////////////////////////////////////////////////////////////////////
 //
 //	New E57Simple.cpp
-//	V1		May 18, 2010	Stan Coleby		scoleby@intelisum.com
+//	V5		May 18, 2010	Stan Coleby		scoleby@intelisum.com
+//	V6		June 8, 2010	Stan Coleby		scoleby@intelisum.com
 //
 //////////////////////////////////////////////////////////////////////////
 /*================*/ /*!
 @mainpage
 
 @section main_Introduction Introduction
-This browser-based document describes the E57 Simple API (Application Programmer Interface) version 0.51, which is a collection of functions that help a C++ programmer wrap the E57 Foundation API.
+This browser-based document describes the E57 Simple API (Application Programmer Interface) version 0.52, which is a collection of functions that help a C++ programmer wrap the E57 Foundation API.
 
 @section main_Read_example Reading using the E57 Simple API
 An example of a typical use of this interface would be as follows:
@@ -53,11 +54,21 @@ An example of a typical use of this interface would be as follows:
 	{
 // Create a ReaderImpl
 		_bstr_t bsFile = sFile;			//converts Unicode to UTF-8
-		e57::Reader		eReader( (char*) bsFile);
+		e57::Reader	eReader( (char*) bsFile);
+
+///////////////////////////////////////////////////////////////
+// ACCESSING ROOT DATA
 
 // Read the root
-		e57::E57Root	root;
-		eReader.GetE57Root( root);		
+		e57::E57Root	rootHeader;
+		eReader.GetE57Root( rootHeader);		
+
+//Access all the root information like
+		char* fileGuid = rootHeader.guid.c_str();
+		...
+
+///////////////////////////////////////////////////////////////
+// ACCESSING SCAN DATA3D
 
 //Get the number of scan images available
 		int data3DCount = eReader.GetData3DCount();
@@ -66,39 +77,89 @@ An example of a typical use of this interface would be as follows:
 		int scanIndex = 0;
 
 //Read the scan 0 header.
-		e57::Data3D		header;
-		eReader.ReadData3D( scanIndex, header);
+		e57::Data3D		scanHeader;
+		eReader.ReadData3D( scanIndex, scanHeader);
 
-// ...	access all the header information like
-		char* scanGuid = header.guid.c_str();
+//Access all the header information like
+		char* scanGuid = scanHeader.guid.c_str();
+		...
+
+/////////////////////////////////////////////////////////////////
+// ACCESSING SCAN DATA
 
 //Get the Size of the Scan
 		int64_t nColumn = 0;	
 		int64_t nRow = 0;
-		int64_t nPoint = 0;	//Number of points
-		int64_t nGroup = 0;	//Number of groups
-		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPoints, nGroups);
+		int64_t nPointsSize = 0;	//Number of points
+		int64_t nGroupsSize = 0;	//Number of groups
+		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize);
 
 //Set up buffers
-		double* x = new double[nPoint];
-		double* y = new double[nPoint];
-		double* z = new double[nPoint];
-		CompressedVectorReader dataReader = eReader.SetUpData3DPointsData( scanIndex, nPoint, NULL, x, y, z);
+		double* xBuffer = new double[nPointsSize];
+		double* yBuffer = new double[nPointsSize];
+		double* zBuffer = new double[nPointsSize];
+		CompressedVectorReader dataReader = eReader.SetUpData3DPointsData(
+			scanIndex, nPointsSize, NULL, xBuffer, yBuffer, zBuffer);
 
 //Read the point data
 		dataReader.read();
 
-// ... access the data
+// ... access the data ...
 
 //Close and clean up
 		dataReader.close();
+		delete xBuffer;
+		delete yBuffer;
+		delete zBuffer;
+
+///////////////////////////////////////////////////////////////////////
+// ACCESSING PICTURE IMAGE2D
+
+//Get the number of picture images available
+		int image2DCount = eReader.GetImage2DCount();
+
+//selecting the first picture
+		int pictureIndex = 0;
+
+//Read the picture 0 header.
+		e57::Image2D	pictureHeader;
+		eReader.ReadData3D( pictureIndex, pictureHeader);
+
+//Access all the header information like
+		char* pictureGuid = pictureHeader.guid.c_str();
+		...
+
+///////////////////////////////////////////////////////////////////////
+// ACCESSING PICTURE IMAGE
+
+//Get the Size of the Picture
+		e57::Image2DProjection	imageProjection;	//like E57_SPHERICAL
+		e57::Image2DType	imageType;		//like E57_JPEG_IMAGE
+		int64_t			nImageWidth = 0;	
+		int64_t			nImageHeight = 0;
+		int64_t			nImagesSize = 0;	//Number of bytes in the image
+		e57::Image2DType	imageMaskType;		//like E57_PNG_IMAGE_MASK if present
+		e57::Image2dType	imageVisualType;	//like E57_JPEG_IMAGE if present
+
+		eReader.GetImage2DSizes( pictureIndex, imageProjection, imageType,
+			nImageWidth, nImageHeight, nImagesSize, imageMaskType, imageVisualType);
+
+//Set up buffers
+		void* jpegBuffer = new char[nImagesSize];
+
+//Read the picture data
+		eReader.ReadImage2DData(pictureIndex, imageProjection, imageType, jpegBuffer, 0, nImagesSizw);
+
+// ... access the picture and decode ...
+
+//Close and clean up
+		delete jpegBuffer;
+
 		eReaer.Close();	
 
-		delete x;
-		delete y;
-		delete z;
+///////////////////////////////////////////////////////////////////////
+// CATCH THE ERRORS
 
-//Catch the errors
 	} catch(E57Exception& ex) {
 		ex.report(__FILE__, __LINE__, __FUNCTION__);
 	} catch (std::exception& ex) {
@@ -228,9 +289,9 @@ using namespace boost;
 };
 ////////////////////////////////////////////////////////////////////
 //
-//	e57::CameraImage
+//	e57::Image2D
 //
-	CameraImage::CameraImage(void)
+	Image2D::Image2D(void)
 {
 	acquisitionDateTime.dateTimeValue = 0.;
 	acquisitionDateTime.isAtomicClockReferenced = 0;
@@ -261,8 +322,6 @@ using namespace boost;
 	sphericalRepresentation.jpegImage = 0;
 	sphericalRepresentation.pngImage = 0;
 	sphericalRepresentation.imageMask = 0;
-	sphericalRepresentation.azimuthStart = 0;
-	sphericalRepresentation.elevationStart = 0;
 	sphericalRepresentation.imageHeight = 0;
 	sphericalRepresentation.imageWidth = 0;
 	sphericalRepresentation.pixelHeight = 0;
@@ -271,7 +330,6 @@ using namespace boost;
 	cylindricalRepresentation.jpegImage = 0;
 	cylindricalRepresentation.pngImage = 0;
 	cylindricalRepresentation.imageMask = 0;
-	cylindricalRepresentation.azimuthStart = 0;
 	cylindricalRepresentation.imageHeight = 0;
 	cylindricalRepresentation.imageWidth = 0;
 	cylindricalRepresentation.pixelHeight = 0;
@@ -280,7 +338,7 @@ using namespace boost;
 	cylindricalRepresentation.radius = 0;
 };
 
-	CameraImage::~CameraImage(void)
+	Image2D::~Image2D(void)
 {
 };
 ////////////////////////////////////////////////////////////////////
@@ -308,32 +366,67 @@ bool		Reader :: GetE57Root(
 	return impl_->GetE57Root(fileHeader);
 };
 
-int32_t		Reader :: GetCameraImageCount( void) const
+int32_t		Reader :: GetImage2DCount( void) const
 {
-	return impl_->GetCameraImageCount();
+	return impl_->GetImage2DCount();
 };
 
-bool		Reader :: ReadCameraImage( 
+bool		Reader :: ReadImage2D( 
 	int32_t			imageIndex,
-	CameraImage &	cameraImageHeader) const
+	Image2D &	image2DHeader) const
 {
-	return impl_->ReadCameraImage(imageIndex,cameraImageHeader);
+	return impl_->ReadImage2D(imageIndex,image2DHeader);
 };
 
-int64_t		Reader :: ReadCameraImageData(
-	int32_t		imageIndex,		//!< picture block index
-	void *		pBuffer,	//!< pointer the buffer
-	int64_t		start,		//!< position in the block to start reading
-	int64_t		count		//!< size of desired chuck or buffer size
+bool		Reader :: GetImage2DSizes(
+	int32_t					imageIndex,		//!< This in the index into the image2D vector
+	e57::Image2DProjection &imageProjection,//!< identifies the projection desired.
+	e57::Image2DType &		imageType,		//!< identifies the image format desired.
+	int64_t &				imageWidth,		//!< The image width (in pixels).
+	int64_t &				imageHeight,	//!< The image height (in pixels).
+	int64_t &				imageSize,		//!< This is the total number of bytes for the image blob.
+	e57::Image2DType &		imageMaskType,	//!< This is E57_PNG_IMAGE_MASK if "imageMask" is defined in the projection
+	e57::Image2DType &		imageVisualType	//!< This is image type of the VisualReferenceRepresentation if given.
 	) const
 {
-	return impl_->ReadCameraImageData(imageIndex, pBuffer, start, count);
+	return impl_->GetImage2DSizes(imageIndex, imageProjection, imageType,
+		imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType);
+};
+
+int64_t		Reader :: ReadImage2DData(
+	int32_t					imageIndex,		//!< picture block index
+	e57::Image2DProjection	imageProjection,//!< identifies the projection desired.
+	e57::Image2DType		imageType,		//!< identifies the image format desired.
+	void *					pBuffer,	//!< pointer the buffer
+	int64_t					start,		//!< position in the block to start reading
+	int64_t					count		//!< size of desired chuck or buffer size
+	) const
+{
+	return impl_->ReadImage2DData(imageIndex, imageProjection, imageType, pBuffer, start, count);
 };
 
 int32_t		Reader :: GetData3DCount( void) const
 {
 	return impl_->GetData3DCount();
 };
+
+//! This function returns the file raw E57Root Structure Node
+StructureNode	Reader :: GetRawE57Root(void)
+{
+	return impl_->GetRawE57Root();
+};	//!< /return Returns the E57Root StructureNode
+
+//! This function returns the raw Data3D Vector Node
+VectorNode		Reader :: GetRawData3D(void)
+{
+	return impl_->GetRawData3D();
+};//!< /return Returns the raw Data3D VectorNode
+
+//! This function returns the raw Image2D Vector Node
+VectorNode		Reader :: GetRawImage2D(void)
+{
+	return impl_->GetRawImage2D();
+};	//!< /return Returns the raw Image2D VectorNode
 
 bool		Reader :: ReadData3D( 
 	int32_t		dataIndex,	//!< This in the index into the images3D vector
@@ -392,26 +485,6 @@ CompressedVectorReader	Reader :: SetUpData3DPointsData(
 		returnIndex, returnCount, timeStamp);
 }
 
-bool		Reader :: GetData3DGeneralFieldsAvailable(
-	int32_t					dataIndex,
-	std::vector<ustring>&	fieldsAvailable) const
-{
-	return impl_->GetData3DGeneralFieldsAvailable(dataIndex, fieldsAvailable);
-};
-
-int64_t		Reader :: GetData3DGeneralPoints(
-	int32_t				dataIndex,
-	int64_t				startPointIndex,
-	int64_t				pointCount,
-	bool*				valid,
-	vector<ustring>&	numericFieldNames,
-	vector<double*>&	numericBuffers,
-	vector<ustring>&	stringFieldNames,
-	vector<ustring*>&	stringBuffers) const
-{
-	return impl_->GetData3DGeneralPoints( dataIndex, startPointIndex, pointCount,
-		valid, numericFieldNames, numericBuffers, stringFieldNames, stringBuffers);
-};
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Writer
@@ -432,30 +505,49 @@ bool		Writer :: Close(void) const
 {
 	return impl_->Close();
 };
-
-int32_t		Writer :: NewCameraImage( 
-	CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
-	) const							//!< /return Returns the cameraImage index
+//! This function returns the file raw E57Root Structure Node
+StructureNode	Writer :: GetRawE57Root(void)
 {
-	return impl_->NewCameraImage( cameraImageHeader);
+	return impl_->GetRawE57Root();
+};	//!< /return Returns the E57Root StructureNode
+
+//! This function returns the raw Data3D Vector Node
+VectorNode		Writer :: GetRawData3D(void)
+{
+	return impl_->GetRawData3D();
+};//!< /return Returns the raw Data3D VectorNode
+
+//! This function returns the raw Image2D Vector Node
+VectorNode		Writer :: GetRawImage2D(void)
+{
+	return impl_->GetRawImage2D();
+};	//!< /return Returns the raw Image2D VectorNode
+
+int32_t		Writer :: NewImage2D( 
+	Image2D &	image2DHeader	//!< pointer to the Image2D structure to receive the picture information
+	) const						//!< /return Returns the image2D index
+{
+	return impl_->NewImage2D( image2DHeader);
 };
 
 
-int64_t		Writer :: WriteCameraImageData(
-	int32_t		imageIndex,	//!< picture block index given by the NewCameraImage
-	void *		pBuffer,	//!< pointer the buffer
-	int64_t		start,		//!< position in the block to start writing
-	int64_t		count		//!< size of desired chuck or buffer size
-	) const						//!< /return Returns the number of bytes written
+int64_t		Writer :: WriteImage2DData(
+	int32_t					imageIndex,		//!< picture block index given by the NewImage2D
+	e57::Image2DType		imageType,		//!< identifies the image format desired.
+	e57::Image2DProjection	imageProjection,//!< identifies the projection desired.
+	void *					pBuffer,		//!< pointer the buffer
+	int64_t					start,			//!< position in the block to start writing
+	int64_t					count			//!< size of desired chuck or buffer size
+	) const									//!< /return Returns the number of bytes written
 {
-	return impl_->WriteCameraImageData( imageIndex, pBuffer, start, count);
+	return impl_->WriteImage2DData( imageIndex, imageType, imageProjection, pBuffer, start, count);
 };
 
-bool		Writer :: CloseCameraImage(
-	int32_t		imageIndex	//!< picture block index given by the NewCameraImage
+bool		Writer :: CloseImage2D(
+	int32_t		imageIndex	//!< picture block index given by the NewImage2D
 	) const 				//!< /return Returns true if successful, false otherwise
 {
-	return impl_->CloseCameraImage( imageIndex);
+	return impl_->CloseImage2D( imageIndex);
 };
 
 int32_t		Writer :: NewData3D( 
@@ -504,27 +596,3 @@ bool		Writer :: WriteData3DGroupsData(
 	return impl_->WriteData3DGroupsData( dataIndex, idElementValue, startPointIndex, pointCount, count);
 }
 
-//! This function sets the extensions field that will be available
-bool		Writer :: SetData3DGeneralFieldsAvailable(
-	int32_t					dataIndex,	//!< data block index given by the NewData3D
-	std::vector<ustring>&	fieldsAvailable
-	) const
-{
-	return impl_->SetData3DGeneralFieldsAvailable( dataIndex, fieldsAvailable);
-}
-
-//! This function writes the General data point information
-int64_t		Writer :: WriteData3DGeneralPoints(
-	int32_t				dataIndex,	//!< data block index given by the NewData3D
-	int64_t				startPointIndex,
-	int64_t				pointCount,
-	bool*				valid,
-	vector<ustring>&	numericFieldNames,
-	vector<double*>&	numericBuffers,
-	vector<ustring>&	stringFieldNames,
-	vector<ustring*>&	stringBuffers
-	) const
-{
-	return impl_->WriteData3DGeneralPoints( dataIndex, startPointIndex, pointCount,
-		valid, numericFieldNames, numericBuffers, stringFieldNames, stringBuffers);
-}

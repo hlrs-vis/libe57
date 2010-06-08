@@ -80,7 +80,7 @@ private:
 
 	VectorNode		data3D_;
 
-	VectorNode		cameraImages_;
+	VectorNode		image2D_;
 
 public:
 
@@ -112,21 +112,53 @@ virtual bool		GetE57Root(
 //	Camera Image picture data
 //
 //! This function returns the total number of Picture Blocks
-virtual	int32_t		GetCameraImageCount( void);
+virtual	int32_t		GetImage2DCount( void);
 
-//! This function returns the cameraImages header and positions the cursor
-virtual bool		ReadCameraImage( 
-						int32_t			imageIndex,		//!< This in the index into the cameraImages vector
-						CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
+//! This function returns the Image2Ds header and positions the cursor
+virtual bool		ReadImage2D( 
+						int32_t				imageIndex,		//!< This in the index into the Image2Ds vector
+						Image2D &			Image2DHeader	//!< pointer to the Image2D structure to receive the picture information
 						);						//!< /return Returns true if sucessful
 
+//! This function returns the size of the image data
+virtual bool		GetImage2DSizes(
+						int32_t					imageIndex,		//!< This in the index into the image2D vector
+						e57::Image2DProjection&	imageProjection,//!< identifies the projection desired.
+						e57::Image2DType &		imageType,		//!< identifies the image format desired.
+						int64_t &				imageWidth,		//!< The image width (in pixels).
+						int64_t &				imageHeight,	//!< The image height (in pixels).
+						int64_t &				imageSize,		//!< This is the total number of bytes for the image blob.
+						e57::Image2DType &		imageMaskType,	//!< This is E57_PNG_IMAGE_MASK if "imageMask" is defined in the projection
+						e57::Image2DType &		imageVisualType	//!< This is image type of the VisualReferenceRepresentation if given.
+						);										//!< /return Returns true if sucessful
+
 //! This function reads the block
-virtual	int64_t		ReadCameraImageData(
-						int32_t		imageIndex,		//!< picture block index
-						void *		pBuffer,	//!< pointer the buffer
-						int64_t		start,		//!< position in the block to start reading
-						int64_t		count		//!< size of desired chuck or buffer size
-						);						//!< /return Returns the number of bytes transferred.
+virtual	int64_t		ReadImage2DData(
+						int32_t					imageIndex,		//!< picture block index
+						e57::Image2DProjection	imageProjection,//!< identifies the projection desired.
+						e57::Image2DType		imageType,		//!< identifies the image format desired.
+						void *					pBuffer,		//!< pointer the buffer
+						int64_t					start,			//!< position in the block to start reading
+						int64_t					count			//!< size of desired chuck or buffer size
+						);										//!< /return Returns the number of bytes transferred.
+
+//! This function reads one of the image blobs
+virtual bool		GetImage2DNodeSizes(
+						e57::StructureNode		image,			//!< 1 of 3 projects or the visual
+						e57::Image2DType &		imageType,		//!< identifies the image format desired.
+						int64_t &				imageWidth,		//!< The image width (in pixels).
+						int64_t &				imageHeight,	//!< The image height (in pixels).
+						int64_t &				imageSize,		//!< This is the total number of bytes for the image blob.
+						e57::Image2DType &		imageMaskType	//!< This is E57_PNG_IMAGE_MASK if "imageMask" is defined in the projection
+						);										//!< /return Returns true if sucessful
+
+virtual int64_t		ReadImage2DNode(
+						e57::StructureNode		image,			//!< 1 of 3 projects or the visual
+						e57::Image2DType		imageType,		//!< identifies the image format desired.
+						void *					pBuffer,		//!< pointer the buffer
+						int64_t					start,			//!< position in the block to start reading
+						int64_t					count			//!< size of desired chuck or buffer size
+						);
 
 ////////////////////////////////////////////////////////////////////
 //
@@ -185,20 +217,12 @@ virtual CompressedVectorReader	SetUpData3DPointsData(
 						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
 						);
 
-//! This function interrogate what fields (standardized and extensions) are available
-virtual bool		GetData3DGeneralFieldsAvailable(
-						int32_t					dataIndex,
-						std::vector<ustring>&	fieldsAvailable);
-
-virtual int64_t		GetData3DGeneralPoints(
-						int32_t				dataIndex,
-						int64_t				startPointIndex,
-						int64_t				pointCount,
-						bool*				valid,
-						vector<ustring>&	numericFieldNames,
-						vector<double*>&	numericBuffers,
-						vector<ustring>&	stringFieldNames,
-						vector<ustring*>&	stringBuffers);
+//! This function returns the file raw E57Root Structure Node
+virtual	StructureNode		GetRawE57Root(void);	//!< /return Returns the E57Root StructureNode
+//! This function returns the raw Data3D Vector Node
+virtual VectorNode			GetRawData3D(void);		//!< /return Returns the raw Data3D VectorNode
+//! This function returns the raw Image2D Vector Node
+virtual VectorNode			GetRawImage2D(void);	//!< /return Returns the raw Image2D VectorNode
 
 }; //end Reader class
 
@@ -218,7 +242,7 @@ private:
 
 	VectorNode				data3D_;
 
-	VectorNode				cameraImages_;
+	VectorNode				image2D_;
 
 public:
 
@@ -242,23 +266,34 @@ virtual	bool		Close(void);
 //	Camera Image picture data
 //
 
-//! This function sets up the cameraImages header and positions the cursor
-//* The user needs to config a CameraImage structure with all the camera information before making this call. */
-virtual int32_t		NewCameraImage( 
-						CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
-						);						//!< /return Returns the cameraImage index
+//! This function sets up the Image2Ds header and positions the cursor
+//* The user needs to config a Image2D structure with all the camera information before making this call. */
+virtual int32_t		NewImage2D( 
+						Image2D &	image2DHeader	//!< pointer to the Image2D structure to receive the picture information
+						);						//!< /return Returns the Image2D index
 
 //! This function writes the block
-virtual	int64_t		WriteCameraImageData(
-						int32_t		imageIndex,	//!< picture block index given by the NewCameraImage
-						void *		pBuffer,	//!< pointer the buffer
-						int64_t		start,		//!< position in the block to start writing
-						int64_t		count		//!< size of desired chuck or buffer size
-						);						//!< /return Returns the number of bytes written
+virtual	int64_t		WriteImage2DData(
+						int32_t					imageIndex,		//!< picture block index given by the NewImage2D
+						e57::Image2DType		imageType,		//!< identifies the image format desired.
+						e57::Image2DProjection	imageProjection,//!< identifies the projection desired.
+						void *					pBuffer,		//!< pointer the buffer
+						int64_t					start,			//!< position in the block to start writing
+						int64_t					count			//!< size of desired chuck or buffer size
+						);										//!< /return Returns the number of bytes written
 
-//! This function closes the CameraImage block
-virtual bool		CloseCameraImage(
-						int32_t		imageIndex		//!< picture block index given by the NewCameraImage
+//! This function writes the projection image
+virtual int64_t		WriteImage2DNode(
+						e57::StructureNode		image,			//!< 1 of 3 projects or the visual
+						e57::Image2DType		imageType,		//!< identifies the image format desired.
+						void *					pBuffer,		//!< pointer the buffer
+						int64_t					start,			//!< position in the block to start reading
+						int64_t					count			//!< size of desired chuck or buffer size
+						);
+
+//! This function closes the Image2D block
+virtual bool		CloseImage2D(
+						int32_t		imageIndex		//!< picture block index given by the NewImage2D
 )						;							//!< /return Returns true if successful, false otherwise
 
 //! This function sets up the Data3D header and positions the cursor for the binary data
@@ -300,22 +335,12 @@ virtual bool		WriteData3DGroupsData(
 						int32_t		count				//!< size of each of the buffers given
 						);								//!< \return Return true if sucessful, false otherwise
 
-//! This function sets the extensions field that will be available
-virtual bool		SetData3DGeneralFieldsAvailable(
-						int32_t					dataIndex,	//!< data block index given by the NewData3D
-						std::vector<ustring>&	fieldsAvailable);
-
-//! This function writes the General data point information
-virtual int64_t		WriteData3DGeneralPoints(
-						int32_t				dataIndex,	//!< data block index given by the NewData3D
-						int64_t				startPointIndex,
-						int64_t				pointCount,
-						bool*				valid,
-						vector<ustring>&	numericFieldNames,
-						vector<double*>&	numericBuffers,
-						vector<ustring>&	stringFieldNames,
-						vector<ustring*>&	stringBuffers
-						);
+//! This function returns the file raw E57Root Structure Node
+virtual	StructureNode		GetRawE57Root(void);	//!< /return Returns the E57Root StructureNode
+//! This function returns the raw Data3D Vector Node
+virtual VectorNode			GetRawData3D(void);		//!< /return Returns the raw Data3D VectorNode
+//! This function returns the raw Image2D Vector Node
+virtual VectorNode			GetRawImage2D(void);	//!< /return Returns the raw Image2D VectorNode
 
 }; //end Writer class
 

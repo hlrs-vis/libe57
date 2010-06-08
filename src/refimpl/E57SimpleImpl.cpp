@@ -88,7 +88,7 @@ using namespace boost;
 	: imf_(filePath,"r")
 	, root_(imf_.root())
 	, data3D_(root_.get("/data3D"))
-	, cameraImages_(root_.get("/cameraImages"))
+	, image2D_(root_.get("/image2D"))
 {
 };
 
@@ -132,6 +132,7 @@ bool	ReaderImpl :: GetE57Root(
 		fileHeader.versionMajor = (int32_t) IntegerNode(root_.get("versionMajor")).value();
 		fileHeader.versionMinor = (int32_t) IntegerNode(root_.get("versionMinor")).value();
 		fileHeader.guid = StringNode(root_.get("guid")).value();
+		fileHeader.e57libraryVersion = StringNode(root_.get("e57libraryVersion")).value();
 
 		if(root_.isDefined("coordinateMetadata"))
 			fileHeader.coordinateMetadata = StringNode(root_.get("coordinateMetadata")).value();
@@ -144,7 +145,7 @@ bool	ReaderImpl :: GetE57Root(
 		}
 
 		fileHeader.data3DSize = (int32_t) data3D_.childCount();
-		fileHeader.cameraImagesSize = (int32_t) cameraImages_.childCount();
+		fileHeader.image2DSize = (int32_t) image2D_.childCount();
 
 		return true;
 	}
@@ -156,48 +157,48 @@ bool	ReaderImpl :: GetE57Root(
 //	Camera Image picture data
 //
 //! This function returns the total number of Picture Blocks
-int32_t	ReaderImpl :: GetCameraImageCount( void)
+int32_t	ReaderImpl :: GetImage2DCount( void)
 {
-	return (int32_t) cameraImages_.childCount();
+	return (int32_t) image2D_.childCount();
 };
 
-//! This function returns the cameraImages header and positions the cursor
-bool	ReaderImpl :: ReadCameraImage( 
-	int32_t			imageIndex,		//!< This in the index into the cameraImages vector
-	CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
-	)						//!< /return Returns true if sucessful
+//! This function returns the Image2Ds header and positions the cursor
+bool	ReaderImpl :: ReadImage2D( 
+	int32_t		imageIndex,		//!< This in the index into the Image2Ds vector
+	Image2D &	image2DHeader	//!< pointer to the Image2D structure to receive the picture information
+	)							//!< /return Returns true if sucessful
 {
 	if(IsOpen())
 	{
-		if( (imageIndex < 0) || (imageIndex >= cameraImages_.childCount()))
+		if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
 			return false;
 
-		StructureNode image(cameraImages_.get(imageIndex));
+		StructureNode image(image2D_.get(imageIndex));
 
-		cameraImageHeader.guid = StringNode(image.get("guid")).value();
+		image2DHeader.guid = StringNode(image.get("guid")).value();
 
 		if(image.isDefined("name"))
-			cameraImageHeader.name = StringNode(image.get("name")).value();
+			image2DHeader.name = StringNode(image.get("name")).value();
 
 		if(image.isDefined("description"))
-			cameraImageHeader.description = StringNode(image.get("description")).value();
+			image2DHeader.description = StringNode(image.get("description")).value();
 
 		if(image.isDefined("sensorVendor"))
-			cameraImageHeader.sensorVendor = StringNode(image.get("sensorVendor")).value();
+			image2DHeader.sensorVendor = StringNode(image.get("sensorVendor")).value();
 		if(image.isDefined("sensorModel"))
-			cameraImageHeader.sensorModel = StringNode(image.get("sensorModel")).value();
+			image2DHeader.sensorModel = StringNode(image.get("sensorModel")).value();
 		if(image.isDefined("sensorSerialNumber"))
-			cameraImageHeader.sensorSerialNumber = StringNode(image.get("sensorSerialNumber")).value();
+			image2DHeader.sensorSerialNumber = StringNode(image.get("sensorSerialNumber")).value();
 
 		if(image.isDefined("associatedData3DGuid"))
-			cameraImageHeader.associatedData3DGuid = StringNode(image.get("associatedData3DGuid")).value();
+			image2DHeader.associatedData3DGuid = StringNode(image.get("associatedData3DGuid")).value();
 
 		if(image.isDefined("acquisitionDateTime"))
 		{
 			StructureNode acquisitionDateTime(image.get("acquisitionDateTime"));
-			cameraImageHeader.acquisitionDateTime.dateTimeValue = 
+			image2DHeader.acquisitionDateTime.dateTimeValue = 
 				FloatNode(acquisitionDateTime.get("dateTimeValue")).value();
-			cameraImageHeader.acquisitionDateTime.isAtomicClockReferenced = (int32_t) 
+			image2DHeader.acquisitionDateTime.isAtomicClockReferenced = (int32_t) 
 				IntegerNode(acquisitionDateTime.get("isAtomicClockReferenced")).value();
 		}
 // Get pose structure for scan.
@@ -208,196 +209,306 @@ bool	ReaderImpl :: ReadCameraImage(
 			StructureNode rotation(pose.get("rotation"));
 			StructureNode translation(pose.get("translation"));
 
-			cameraImageHeader.pose.rotation.w = FloatNode(rotation.get("w")).value();
-			cameraImageHeader.pose.rotation.x = FloatNode(rotation.get("x")).value();
-			cameraImageHeader.pose.rotation.y = FloatNode(rotation.get("y")).value();
-			cameraImageHeader.pose.rotation.z = FloatNode(rotation.get("z")).value();
+			image2DHeader.pose.rotation.w = FloatNode(rotation.get("w")).value();
+			image2DHeader.pose.rotation.x = FloatNode(rotation.get("x")).value();
+			image2DHeader.pose.rotation.y = FloatNode(rotation.get("y")).value();
+			image2DHeader.pose.rotation.z = FloatNode(rotation.get("z")).value();
   
-			cameraImageHeader.pose.translation.x = FloatNode(translation.get("x")).value();
-			cameraImageHeader.pose.translation.y = FloatNode(translation.get("y")).value();
-			cameraImageHeader.pose.translation.z = FloatNode(translation.get("z")).value();
+			image2DHeader.pose.translation.x = FloatNode(translation.get("x")).value();
+			image2DHeader.pose.translation.y = FloatNode(translation.get("y")).value();
+			image2DHeader.pose.translation.z = FloatNode(translation.get("z")).value();
 		}
 
 		if(image.isDefined("visualReferenceRepresentation"))
 		{
 			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
 
-			cameraImageHeader.visualReferenceRepresentation.jpegImage = 
-				BlobNode(visualReferenceRepresentation.get("jpegImage")).byteCount();
-			cameraImageHeader.visualReferenceRepresentation.pngImage = 
-				BlobNode(visualReferenceRepresentation.get("pngImage")).byteCount();
-			cameraImageHeader.visualReferenceRepresentation.imageMask = 
-				BlobNode(visualReferenceRepresentation.get("imageMask")).byteCount();
+			if(visualReferenceRepresentation.isDefined("jpegImage"))
+				image2DHeader.visualReferenceRepresentation.jpegImage = 
+					BlobNode(visualReferenceRepresentation.get("jpegImage")).byteCount();
+			if(visualReferenceRepresentation.isDefined("pngImage"))
+				image2DHeader.visualReferenceRepresentation.pngImage = 
+					BlobNode(visualReferenceRepresentation.get("pngImage")).byteCount();
+			if(visualReferenceRepresentation.isDefined("imageMask"))
+				image2DHeader.visualReferenceRepresentation.imageMask = 
+					BlobNode(visualReferenceRepresentation.get("imageMask")).byteCount();
+
+			image2DHeader.visualReferenceRepresentation.imageHeight = (int32_t)
+				IntegerNode(visualReferenceRepresentation.get("imageHeight")).value();
+			image2DHeader.visualReferenceRepresentation.imageWidth = (int32_t)
+				IntegerNode(visualReferenceRepresentation.get("imageWidth")).value();
 		}
-		else if(image.isDefined("pinholeRepresentation"))
+
+		if(image.isDefined("pinholeRepresentation"))
 		{
 			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
 
-			cameraImageHeader.pinholeRepresentation.jpegImage = 
-				BlobNode(pinholeRepresentation.get("jpegImage")).byteCount();
-			cameraImageHeader.pinholeRepresentation.pngImage = 
-				BlobNode(pinholeRepresentation.get("pngImage")).byteCount();
-			cameraImageHeader.pinholeRepresentation.imageMask = 
-				BlobNode(pinholeRepresentation.get("imageMask")).byteCount();
+			if(pinholeRepresentation.isDefined("jpegImage"))
+				image2DHeader.pinholeRepresentation.jpegImage = 
+					BlobNode(pinholeRepresentation.get("jpegImage")).byteCount();
+			if(pinholeRepresentation.isDefined("pngImage"))
+				image2DHeader.pinholeRepresentation.pngImage = 
+					BlobNode(pinholeRepresentation.get("pngImage")).byteCount();
+			if(pinholeRepresentation.isDefined("imageMask"))
+				image2DHeader.pinholeRepresentation.imageMask = 
+					BlobNode(pinholeRepresentation.get("imageMask")).byteCount();
 
-			cameraImageHeader.pinholeRepresentation.focalLength = 
+			image2DHeader.pinholeRepresentation.focalLength = 
 				FloatNode(pinholeRepresentation.get("focalLength")).value();
-			cameraImageHeader.pinholeRepresentation.imageHeight = (int32_t)
+			image2DHeader.pinholeRepresentation.imageHeight = (int32_t)
 				IntegerNode(pinholeRepresentation.get("imageHeight")).value();
-			cameraImageHeader.pinholeRepresentation.imageWidth = (int32_t)
+			image2DHeader.pinholeRepresentation.imageWidth = (int32_t)
 				IntegerNode(pinholeRepresentation.get("imageWidth")).value();
-			cameraImageHeader.pinholeRepresentation.pixelHeight = 
+
+			image2DHeader.pinholeRepresentation.pixelHeight = 
 				FloatNode(pinholeRepresentation.get("pixelHeight")).value();
-			cameraImageHeader.pinholeRepresentation.pixelWidth = 
+			image2DHeader.pinholeRepresentation.pixelWidth = 
 				FloatNode(pinholeRepresentation.get("pixelWidth")).value();
-			cameraImageHeader.pinholeRepresentation.principalPointX = 
+			image2DHeader.pinholeRepresentation.principalPointX = 
 				FloatNode(pinholeRepresentation.get("principalPointX")).value();
-			cameraImageHeader.pinholeRepresentation.principalPointY = 
+			image2DHeader.pinholeRepresentation.principalPointY = 
 				FloatNode(pinholeRepresentation.get("principalPointY")).value();
 		}
 		else if(image.isDefined("sphericalRepresentation"))
 		{
 			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
 
-			cameraImageHeader.sphericalRepresentation.jpegImage = 
-				BlobNode(sphericalRepresentation.get("jpegImage")).byteCount();
-			cameraImageHeader.sphericalRepresentation.pngImage = 
-				BlobNode(sphericalRepresentation.get("pngImage")).byteCount();
-			cameraImageHeader.sphericalRepresentation.imageMask = 
-				BlobNode(sphericalRepresentation.get("imageMask")).byteCount();
+			if(sphericalRepresentation.isDefined("jpegImage"))
+				image2DHeader.sphericalRepresentation.jpegImage = 
+					BlobNode(sphericalRepresentation.get("jpegImage")).byteCount();
+			if(sphericalRepresentation.isDefined("pngImage"))
+				image2DHeader.sphericalRepresentation.pngImage = 
+					BlobNode(sphericalRepresentation.get("pngImage")).byteCount();
+			if(sphericalRepresentation.isDefined("imageMask"))
+				image2DHeader.sphericalRepresentation.imageMask = 
+					BlobNode(sphericalRepresentation.get("imageMask")).byteCount();
 
-			cameraImageHeader.sphericalRepresentation.azimuthStart = 
-				FloatNode(sphericalRepresentation.get("azimuthStart")).value();
-			cameraImageHeader.sphericalRepresentation.elevationStart = 
-				FloatNode(sphericalRepresentation.get("elevationStart")).value();
-			cameraImageHeader.sphericalRepresentation.imageHeight = (int32_t)
+			image2DHeader.sphericalRepresentation.imageHeight = (int32_t)
 				IntegerNode(sphericalRepresentation.get("imageHeight")).value();
-			cameraImageHeader.sphericalRepresentation.imageWidth = (int32_t)
+			image2DHeader.sphericalRepresentation.imageWidth = (int32_t)
 				IntegerNode(sphericalRepresentation.get("imageWidth")).value();
-			cameraImageHeader.sphericalRepresentation.pixelHeight = 
+
+			image2DHeader.sphericalRepresentation.pixelHeight = 
 				FloatNode(sphericalRepresentation.get("pixelHeight")).value();
-			cameraImageHeader.sphericalRepresentation.pixelWidth = 
+			image2DHeader.sphericalRepresentation.pixelWidth = 
 				FloatNode(sphericalRepresentation.get("pixelWidth")).value();
 		}
 		else if(image.isDefined("cylindricalRepresentation"))
 		{
 			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
 
-			cameraImageHeader.cylindricalRepresentation.jpegImage = 
-				BlobNode(cylindricalRepresentation.get("jpegImage")).byteCount();
-			cameraImageHeader.cylindricalRepresentation.pngImage = 
-				BlobNode(cylindricalRepresentation.get("pngImage")).byteCount();
-			cameraImageHeader.cylindricalRepresentation.imageMask = 
-				BlobNode(cylindricalRepresentation.get("imageMask")).byteCount();
+			if(cylindricalRepresentation.isDefined("jpegImage"))
+				image2DHeader.cylindricalRepresentation.jpegImage = 
+					BlobNode(cylindricalRepresentation.get("jpegImage")).byteCount();
+			if(cylindricalRepresentation.isDefined("pngImage"))
+				image2DHeader.cylindricalRepresentation.pngImage = 
+					BlobNode(cylindricalRepresentation.get("pngImage")).byteCount();
+			if(cylindricalRepresentation.isDefined("imageMask"))
+				image2DHeader.cylindricalRepresentation.imageMask = 
+					BlobNode(cylindricalRepresentation.get("imageMask")).byteCount();
 
-			cameraImageHeader.cylindricalRepresentation.azimuthStart = 
-				FloatNode(cylindricalRepresentation.get("azimuthStart")).value();
-			cameraImageHeader.cylindricalRepresentation.imageHeight = (int32_t)
+			image2DHeader.cylindricalRepresentation.imageHeight = (int32_t)
 				IntegerNode(cylindricalRepresentation.get("imageHeight")).value();
-			cameraImageHeader.cylindricalRepresentation.imageWidth = (int32_t)
+			image2DHeader.cylindricalRepresentation.imageWidth = (int32_t)
 				IntegerNode(cylindricalRepresentation.get("imageWidth")).value();
-			cameraImageHeader.cylindricalRepresentation.pixelHeight = 
+
+			image2DHeader.cylindricalRepresentation.pixelHeight = 
 				FloatNode(cylindricalRepresentation.get("pixelHeight")).value();
-			cameraImageHeader.cylindricalRepresentation.pixelWidth = 
+			image2DHeader.cylindricalRepresentation.pixelWidth = 
 				FloatNode(cylindricalRepresentation.get("pixelWidth")).value();
-			cameraImageHeader.cylindricalRepresentation.principalPointY = 
+			image2DHeader.cylindricalRepresentation.principalPointY = 
 				FloatNode(cylindricalRepresentation.get("principalPointY")).value();
-			cameraImageHeader.cylindricalRepresentation.radius = 
+			image2DHeader.cylindricalRepresentation.radius = 
 				FloatNode(cylindricalRepresentation.get("radius")).value();
 		}
 		return true;
 	}
 	return false;
 };
-
-//! This function reads the block
-int64_t	ReaderImpl :: ReadCameraImageData(
-	int32_t		imageIndex,		//!< picture block index
-	void *		pBuffer,	//!< pointer the buffer
-	int64_t		start,		//!< position in the block to start reading
-	int64_t		count		//!< size of desired chuck or buffer size
-	)						//!< /return Returns the number of bytes transferred.
+//! This function reads one of the image blobs
+int64_t ReaderImpl :: ReadImage2DNode(
+	e57::StructureNode		image,			//!< 1 of 3 projects or the visual
+	e57::Image2DType		imageType,		//!< identifies the image format desired.
+	void *					pBuffer,		//!< pointer the buffer
+	int64_t					start,			//!< position in the block to start reading
+	int64_t					count			//!< size of desired chuck or buffer size
+	)										//!< /return Returns the number of bytes transferred.
 {
-	if( (imageIndex < 0) || (imageIndex >= cameraImages_.childCount()))
+	int64_t transferred = 0;
+	switch(imageType)
+	{
+	case	E57_JPEG_IMAGE:
+		{
+			if(image.isDefined("jpegImage"))
+			{
+				BlobNode jpegImage(image.get("jpegImage"));
+				jpegImage.read((uint8_t*) pBuffer, start, (size_t) count);
+				transferred = count;
+			}
+		}
+	case	E57_PNG_IMAGE:
+		{
+			if(	image.isDefined("pngImage"))
+			{
+				BlobNode pngImage(image.get("pngImage"));
+				pngImage.read((uint8_t*) pBuffer, start, (size_t) count);
+				transferred = count;
+			}
+		}
+	case	E57_PNG_IMAGE_MASK:
+		{
+			if(	image.isDefined("imageMask"))
+			{
+				BlobNode imageMask(image.get("imageMask"));
+				imageMask.read((uint8_t*) pBuffer, start, (size_t) count);
+				transferred = count;
+			}
+		}
+	};
+	return transferred;
+};
+//! This function reads one of the image blobs
+bool ReaderImpl :: GetImage2DNodeSizes(
+	e57::StructureNode		image,			//!< 1 of 3 projects or the visual
+	e57::Image2DType &		imageType,		//!< identifies the image format desired.
+	int64_t &				imageWidth,		//!< The image width (in pixels).
+	int64_t &				imageHeight,	//!< The image height (in pixels).
+	int64_t &				imageSize,		//!< This is the total number of bytes for the image blob.
+	e57::Image2DType &		imageMaskType	//!< This is E57_PNG_IMAGE_MASK if "imageMask" is defined in the projection
+	)										//!< /return Returns the number of bytes transferred.
+{
+	imageWidth = 0;
+	imageHeight = 0;
+	imageSize = 0;
+	imageType = E57_NO_IMAGE;
+	imageMaskType = E57_NO_IMAGE;
+
+	if(image.isDefined("imageWidth"))
+		imageWidth = IntegerNode(image.get("imageWidth")).value();
+	else return false;
+	
+	if(image.isDefined("imageHeight"))
+		imageHeight = IntegerNode(image.get("imageHeight")).value();
+	else return false;
+
+	if(image.isDefined("jpegImage"))
+	{
+		imageSize = BlobNode(image.get("jpegImage")).byteCount();
+		imageType = E57_JPEG_IMAGE;
+	}
+	else if( image.isDefined("pngImage"))
+	{
+		imageSize = BlobNode(image.get("pngImage")).byteCount();
+		imageType = E57_PNG_IMAGE;
+	}
+
+	if(	image.isDefined("imageMask"))
+	{
+		if(imageType == E57_NO_IMAGE)
+		{
+			imageSize = BlobNode(image.get("imageMask")).byteCount();
+			imageType = E57_PNG_IMAGE_MASK;
+		}
+		imageMaskType = E57_PNG_IMAGE_MASK;
+	}
+	return true;
+};
+
+// This function returns the image sizes
+bool		ReaderImpl :: GetImage2DSizes(
+	int32_t					imageIndex,		//!< This in the index into the image2D vector
+	e57::Image2DProjection &imageProjection,//!< identifies the projection desired.
+	e57::Image2DType &		imageType,		//!< identifies the image format desired.
+	int64_t &				imageWidth,		//!< The image width (in pixels).
+	int64_t &				imageHeight,	//!< The image height (in pixels).
+	int64_t &				imageSize,		//!< This is the total number of bytes for the image blob.
+	e57::Image2DType &		imageMaskType,	//!< This is E57_PNG_IMAGE_MASK if "imageMask" is defined in the projection
+	e57::Image2DType &		imageVisualType	//!< This is image type of the VisualReferenceRepresentation if given.
+	)
+{
+	if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
 		return 0;
 
-///////////  This is a problem because we have to do this for every call
-	StructureNode image(cameraImages_.get(imageIndex));
+	imageProjection = E57_NO_PROJECTION;
+	imageType = E57_NO_IMAGE;
+	imageMaskType = E57_NO_IMAGE;
+	imageVisualType = E57_NO_IMAGE;
+
+	bool ret = false;
+	StructureNode image(image2D_.get(imageIndex));
 
 	if(image.isDefined("visualReferenceRepresentation"))
 	{
+		imageProjection = E57_VISUAL;
 		StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
-		if(visualReferenceRepresentation.isDefined("jpegImage"))
-		{
-			BlobNode jpegImage(visualReferenceRepresentation.get("jpegImage"));
-			jpegImage.read((uint8_t*) pBuffer, start, (size_t) count);
-		}
-		else if(visualReferenceRepresentation.isDefined("pngImage"))
-		{
-			BlobNode pngImage(visualReferenceRepresentation.get("pngImage"));
-			pngImage.read((uint8_t*) pBuffer, start, (size_t) count);
-		}
-//			if(visualReferenceRepresentation.isDefined("imageMask"))
-//			{
-//				BlobNode imageMask(visualReferenceRepresentation.get("imageMask"));
-//			}
+		ret = GetImage2DNodeSizes(visualReferenceRepresentation, imageType, imageWidth, imageHeight, imageSize, imageMaskType);
+		imageVisualType = imageType;
 	}
-	else if(image.isDefined("pinholeRepresentation"))
+
+	if(image.isDefined("pinholeRepresentation"))
 	{
+		imageProjection = E57_PINHOLE;
 		StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
-		if(pinholeRepresentation.isDefined("jpegImage"))
-		{
-			BlobNode jpegImage(pinholeRepresentation.get("jpegImage"));
-			jpegImage.read((uint8_t*) pBuffer, start, (size_t) count);
-		}
-		else if(pinholeRepresentation.isDefined("pngImage"))
-		{
-			BlobNode pngImage(pinholeRepresentation.get("pngImage"));
-			pngImage.read((uint8_t*) pBuffer, start, (size_t) count);
-		}
-//			if(pinholeRepresentation.isDefined("imageMask"))
-//			{
-//				BlobNode imageMask(pinholeRepresentation.get("imageMask"));
-//			}
+		ret = GetImage2DNodeSizes(pinholeRepresentation, imageType, imageWidth, imageHeight, imageSize, imageMaskType);
 	}
 	else if(image.isDefined("sphericalRepresentation"))
 	{
+		imageProjection = E57_SPHERICAL;
 		StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
-		if(sphericalRepresentation.isDefined("jpegImage"))
-		{
-			BlobNode jpegImage(sphericalRepresentation.get("jpegImage"));
-			jpegImage.read((uint8_t*) pBuffer, start, (size_t) count);
-		}
-		else if(sphericalRepresentation.isDefined("pngImage"))
-		{
-			BlobNode pngImage(sphericalRepresentation.get("pngImage"));
-			pngImage.read((uint8_t*) pBuffer, start, (size_t) count);
-		}
-//			if(sphericalRepresentation.isDefined("imageMask"))
-//			{
-//				BlobNode imageMask(sphericalRepresentation.get("imageMask"));
-//			}
+		ret = GetImage2DNodeSizes(sphericalRepresentation, imageType, imageWidth, imageHeight, imageSize, imageMaskType);
 	}
 	else if(image.isDefined("cylindricalRepresentation"))
 	{
+		imageProjection = E57_CYLINDRICAL;
 		StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
-		if(cylindricalRepresentation.isDefined("jpegImage"))
-		{
-			BlobNode jpegImage(cylindricalRepresentation.get("jpegImage"));
-			jpegImage.read((uint8_t*) pBuffer, start, (size_t) count);
-		}
-		else if(cylindricalRepresentation.isDefined("pngImage"))
-		{
-			BlobNode pngImage(cylindricalRepresentation.get("pngImage"));
-			pngImage.read((uint8_t*) pBuffer, start, (size_t) count);
-		}
-//			if(cylindricalRepresentation.isDefined("imageMask"))
-//			{
-//				BlobNode imageMask(cylindricalRepresentation.get("imageMask"));
-//			}
-	}
-	return count;
+		ret = GetImage2DNodeSizes(cylindricalRepresentation, imageType, imageWidth, imageHeight, imageSize, imageMaskType);
+	};
+	return ret;
+};
+//! This function reads the block
+int64_t	ReaderImpl :: ReadImage2DData(
+	int32_t					imageIndex,		//!< picture block index
+	e57::Image2DProjection	imageProjection,//!< identifies the projection desired.
+	e57::Image2DType		imageType,		//!< identifies the image format desired.
+	void *					pBuffer,		//!< pointer the buffer
+	int64_t					start,			//!< position in the block to start reading
+	int64_t					count			//!< size of desired chuck or buffer size
+	)										//!< /return Returns the number of bytes transferred.
+{
+	if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
+		return 0;
 
+	int64_t transferred = 0;
+	StructureNode image(image2D_.get(imageIndex));
+
+	switch(imageProjection)
+	{
+	case	E57_VISUAL:
+		if(image.isDefined("visualReferenceRepresentation"))
+		{
+			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
+			transferred = ReadImage2DNode(visualReferenceRepresentation, imageType, pBuffer, start, count);
+		}
+	case	E57_PINHOLE:
+		if(image.isDefined("pinholeRepresentation"))
+		{
+			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
+			transferred = ReadImage2DNode(pinholeRepresentation, imageType, pBuffer, start, count);
+		}
+	case	E57_SPHERICAL:
+		if(image.isDefined("sphericalRepresentation"))
+		{
+			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
+			transferred = ReadImage2DNode(sphericalRepresentation, imageType, pBuffer, start, count);
+		}
+	case	E57_CYLINDRICAL:
+		if(image.isDefined("cylindricalRepresentation"))
+		{
+			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
+			transferred = ReadImage2DNode(cylindricalRepresentation, imageType, pBuffer, start, count);
+		}
+	};
+	return transferred;
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -409,6 +520,24 @@ int32_t	ReaderImpl :: GetData3DCount( void)
 {
 	return (int32_t) data3D_.childCount();
 };
+
+//! This function returns the file raw E57Root Structure Node
+StructureNode	ReaderImpl :: GetRawE57Root(void)
+{
+	return root_;
+};	//!< /return Returns the E57Root StructureNode
+
+//! This function returns the raw Data3D Vector Node
+VectorNode		ReaderImpl :: GetRawData3D(void)
+{
+	return data3D_;
+};//!< /return Returns the raw Data3D VectorNode
+
+//! This function returns the raw Image2D Vector Node
+VectorNode		ReaderImpl :: GetRawImage2D(void)
+{
+	return image2D_;
+};	//!< /return Returns the raw Image2D VectorNode
 
 //! This function returns the Data3D header and positions the cursor
 bool	ReaderImpl :: ReadData3D( 
@@ -718,26 +847,6 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 	return reader;
 };
 
-//! This function interrogate what fields (standardized and extensions) are available
-bool	ReaderImpl :: GetData3DGeneralFieldsAvailable(
-	int32_t					dataIndex,
-	std::vector<ustring>&	fieldsAvailable)
-{
-	return false;
-};
-
-int64_t	ReaderImpl :: GetData3DGeneralPoints(
-	int32_t				dataIndex,
-	int64_t				startPointIndex,
-	int64_t				pointCount,
-	bool*				valid,
-	vector<ustring>&	numericFieldNames,
-	vector<double*>&	numericBuffers,
-	vector<ustring>&	stringFieldNames,
-	vector<ustring*>&	stringBuffers)
-{
-	return 0;
-};
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Writer
@@ -749,7 +858,7 @@ int64_t	ReaderImpl :: GetData3DGeneralPoints(
 	: imf_(filePath,"w")
 	, root_(imf_.root())
 	, data3D_(imf_,true)
-	, cameraImages_(imf_,true)
+	, image2D_(imf_,true)
 {
 
 // Set per-file properties.
@@ -764,8 +873,9 @@ int64_t	ReaderImpl :: GetData3DGeneralPoints(
 	StringFromGUID2(guid,&wbuffer[0],64);
 
 	char	fileGuid[64];
-	wcstombs(fileGuid,wbuffer,64);
-#else
+	size_t	converted = 0;
+	wcstombs_s(&converted, fileGuid,wbuffer,64);
+#else	//TODO need a way to gen a guid for linux
 	char	fileGuid[] = "{4179C162-49A8-4fba-ADC6-527543D26D86}";
 #endif
 	root_.set("guid", StringNode(imf_, fileGuid));
@@ -778,6 +888,7 @@ int64_t	ReaderImpl :: GetData3DGeneralPoints(
 
 	root_.set("versionMajor", IntegerNode(imf_, astmMajor));
 	root_.set("versionMinor", IntegerNode(imf_, astmMinor));
+	root_.set("e57libraryVersion", StringNode(imf_,libraryId));
 
 // Save a dummy string for coordinate system.
 /// Really should be a valid WKT string identifying the coordinate reference system (CRS).
@@ -791,9 +902,7 @@ int64_t	ReaderImpl :: GetData3DGeneralPoints(
     root_.set("creationDateTime", creationDateTime);
 
 	root_.set("data3D", data3D_);
-	root_.set("cameraImages", cameraImages_);
-
-
+	root_.set("image2D", image2D_);
 };
 //! This function is the destructor for the writer class
 	WriterImpl::~WriterImpl(void)
@@ -819,42 +928,58 @@ bool	WriterImpl :: Close(void)
 	}
 	return false;
 };
+//! This function returns the file raw E57Root Structure Node
+StructureNode	WriterImpl :: GetRawE57Root(void)
+{
+	return root_;
+};	//!< /return Returns the E57Root StructureNode
 
+//! This function returns the raw Data3D Vector Node
+VectorNode		WriterImpl :: GetRawData3D(void)
+{
+	return data3D_;
+};//!< /return Returns the raw Data3D VectorNode
+
+//! This function returns the raw Image2D Vector Node
+VectorNode		WriterImpl :: GetRawImage2D(void)
+{
+	return image2D_;
+};	//!< /return Returns the raw Image2D VectorNode
 ////////////////////////////////////////////////////////////////////
 //
 //	Camera Image picture data
 //
 
-//! This function sets up the cameraImages header and positions the cursor
-//* The user needs to config a CameraImage structure with all the camera information before making this call. */
-int32_t	WriterImpl :: NewCameraImage( 
-	CameraImage &	cameraImageHeader	//!< pointer to the CameraImage structure to receive the picture information
-	)						//!< /return Returns the cameraImage index
+//! This function sets up the image2D header and positions the cursor
+//* The user needs to config a Image2D structure with all the camera information before making this call. */
+int32_t	WriterImpl :: NewImage2D( 
+	Image2D &	image2DHeader	//!< pointer to the Image2D structure to receive the picture information
+	)						//!< /return Returns the image2D index
 {
 	int32_t pos = -1;
 
 	StructureNode image = StructureNode(imf_);
-	cameraImages_.append(image);
-	pos = (int32_t) cameraImages_.childCount() - 1;
+	image2D_.append(image);
+	pos = (int32_t) image2D_.childCount() - 1;
 
-	image.set("guid", StringNode(imf_, cameraImageHeader.guid));
-	image.set("name", StringNode(imf_, cameraImageHeader.name));
-	image.set("description", StringNode(imf_, cameraImageHeader.description));
+	image.set("guid", StringNode(imf_, image2DHeader.guid));
+	image.set("name", StringNode(imf_, image2DHeader.name));
+	image.set("description", StringNode(imf_, image2DHeader.description));
 
 // Add various sensor and version strings to image.
 
-	image.set("sensorVendor",           StringNode(imf_, cameraImageHeader.sensorVendor));
-	image.set("sensorModel",            StringNode(imf_, cameraImageHeader.sensorModel));
-	image.set("sensorSerialNumber",     StringNode(imf_, cameraImageHeader.sensorSerialNumber));
+	image.set("sensorVendor",           StringNode(imf_, image2DHeader.sensorVendor));
+	image.set("sensorModel",            StringNode(imf_, image2DHeader.sensorModel));
+	image.set("sensorSerialNumber",     StringNode(imf_, image2DHeader.sensorSerialNumber));
 
-	image.set("associatedData3DGuid", StringNode(imf_, cameraImageHeader.associatedData3DGuid));
+	image.set("associatedData3DGuid", StringNode(imf_, image2DHeader.associatedData3DGuid));
 
 	StructureNode acquisitionDateTime = StructureNode(imf_);
     image.set("acquisitionDateTime", acquisitionDateTime);
 	acquisitionDateTime.set("dateTimeValue",
-		FloatNode(imf_, cameraImageHeader.acquisitionDateTime.dateTimeValue));
+		FloatNode(imf_, image2DHeader.acquisitionDateTime.dateTimeValue));
 	acquisitionDateTime.set("isAtomicClockReferenced",
-		IntegerNode(imf_, cameraImageHeader.acquisitionDateTime.isAtomicClockReferenced));
+		IntegerNode(imf_, image2DHeader.acquisitionDateTime.isAtomicClockReferenced));
 
 // Create pose structure for image.
 
@@ -863,216 +988,210 @@ int32_t	WriterImpl :: NewCameraImage(
 
     StructureNode rotation = StructureNode(imf_);
     pose.set("rotation", rotation);
-	rotation.set("w", FloatNode(imf_, cameraImageHeader.pose.rotation.w));
-    rotation.set("x", FloatNode(imf_, cameraImageHeader.pose.rotation.x));
-    rotation.set("y", FloatNode(imf_, cameraImageHeader.pose.rotation.y));
-    rotation.set("z", FloatNode(imf_, cameraImageHeader.pose.rotation.z));
+	rotation.set("w", FloatNode(imf_, image2DHeader.pose.rotation.w));
+    rotation.set("x", FloatNode(imf_, image2DHeader.pose.rotation.x));
+    rotation.set("y", FloatNode(imf_, image2DHeader.pose.rotation.y));
+    rotation.set("z", FloatNode(imf_, image2DHeader.pose.rotation.z));
     StructureNode translation = StructureNode(imf_);
     pose.set("translation", translation);
-	translation.set("x", FloatNode(imf_, cameraImageHeader.pose.translation.x));
-    translation.set("y", FloatNode(imf_, cameraImageHeader.pose.translation.y));
-    translation.set("z", FloatNode(imf_, cameraImageHeader.pose.translation.z));
+	translation.set("x", FloatNode(imf_, image2DHeader.pose.translation.x));
+    translation.set("y", FloatNode(imf_, image2DHeader.pose.translation.y));
+    translation.set("z", FloatNode(imf_, image2DHeader.pose.translation.z));
 
-	if( cameraImageHeader.visualReferenceRepresentation.jpegImage ||
-		cameraImageHeader.visualReferenceRepresentation.pngImage)
+	if( image2DHeader.visualReferenceRepresentation.jpegImage ||
+		image2DHeader.visualReferenceRepresentation.pngImage)
 	{
 		StructureNode visualReferenceRepresentation = StructureNode(imf_);
 		image.set("visualReferenceRepresentation", visualReferenceRepresentation);
 
-		if( cameraImageHeader.visualReferenceRepresentation.jpegImage)
+		if( image2DHeader.visualReferenceRepresentation.jpegImage)
 			visualReferenceRepresentation.set("jpegImage",
-				BlobNode(imf_,cameraImageHeader.visualReferenceRepresentation.jpegImage));
-		else if( cameraImageHeader.visualReferenceRepresentation.pngImage)
+				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.jpegImage));
+		else if( image2DHeader.visualReferenceRepresentation.pngImage)
 			visualReferenceRepresentation.set("pngImage",
-				BlobNode(imf_,cameraImageHeader.visualReferenceRepresentation.pngImage));
-		if( cameraImageHeader.visualReferenceRepresentation.imageMask)
+				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.pngImage));
+		if( image2DHeader.visualReferenceRepresentation.imageMask)
 			visualReferenceRepresentation.set("imageMask",
-				BlobNode(imf_,cameraImageHeader.visualReferenceRepresentation.imageMask));
+				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.imageMask));
 	}
-	else if( cameraImageHeader.pinholeRepresentation.jpegImage ||
-		cameraImageHeader.pinholeRepresentation.pngImage)
+	else if( image2DHeader.pinholeRepresentation.jpegImage ||
+		image2DHeader.pinholeRepresentation.pngImage)
 	{
 		StructureNode pinholeRepresentation = StructureNode(imf_);
 		image.set("pinholeRepresentation", pinholeRepresentation);
 
-		if( cameraImageHeader.pinholeRepresentation.jpegImage)
+		if( image2DHeader.pinholeRepresentation.jpegImage)
 			pinholeRepresentation.set("jpegImage",
-				BlobNode(imf_,cameraImageHeader.pinholeRepresentation.jpegImage));
-		else if( cameraImageHeader.pinholeRepresentation.pngImage)
+				BlobNode(imf_,image2DHeader.pinholeRepresentation.jpegImage));
+		else if( image2DHeader.pinholeRepresentation.pngImage)
 			pinholeRepresentation.set("pngImage",
-				BlobNode(imf_,cameraImageHeader.pinholeRepresentation.pngImage));
-		if( cameraImageHeader.pinholeRepresentation.imageMask)
+				BlobNode(imf_,image2DHeader.pinholeRepresentation.pngImage));
+		if( image2DHeader.pinholeRepresentation.imageMask)
 			pinholeRepresentation.set("imageMask",
-				BlobNode(imf_,cameraImageHeader.pinholeRepresentation.imageMask));
+				BlobNode(imf_,image2DHeader.pinholeRepresentation.imageMask));
 
 		pinholeRepresentation.set("focalLength", 
-			FloatNode(imf_, cameraImageHeader.pinholeRepresentation.focalLength));
+			FloatNode(imf_, image2DHeader.pinholeRepresentation.focalLength));
 		pinholeRepresentation.set("imageHeight", 
-			IntegerNode(imf_, cameraImageHeader.pinholeRepresentation.imageHeight));
+			IntegerNode(imf_, image2DHeader.pinholeRepresentation.imageHeight));
 		pinholeRepresentation.set("imageWidth", 
-			IntegerNode(imf_, cameraImageHeader.pinholeRepresentation.imageWidth));
+			IntegerNode(imf_, image2DHeader.pinholeRepresentation.imageWidth));
 		pinholeRepresentation.set("pixelHeight", 
-			FloatNode(imf_, cameraImageHeader.pinholeRepresentation.pixelHeight));
+			FloatNode(imf_, image2DHeader.pinholeRepresentation.pixelHeight));
 		pinholeRepresentation.set("pixelWidth", 
-			FloatNode(imf_, cameraImageHeader.pinholeRepresentation.pixelWidth));
+			FloatNode(imf_, image2DHeader.pinholeRepresentation.pixelWidth));
 		pinholeRepresentation.set("principalPointX", 
-			FloatNode(imf_, cameraImageHeader.pinholeRepresentation.principalPointX));
+			FloatNode(imf_, image2DHeader.pinholeRepresentation.principalPointX));
 		pinholeRepresentation.set("principalPointY", 
-			FloatNode(imf_, cameraImageHeader.pinholeRepresentation.principalPointY));
+			FloatNode(imf_, image2DHeader.pinholeRepresentation.principalPointY));
 	}
-	else if( cameraImageHeader.sphericalRepresentation.jpegImage ||
-		cameraImageHeader.sphericalRepresentation.pngImage)
+	else if( image2DHeader.sphericalRepresentation.jpegImage ||
+		image2DHeader.sphericalRepresentation.pngImage)
 	{
 		StructureNode sphericalRepresentation = StructureNode(imf_);
 		image.set("sphericalRepresentation", sphericalRepresentation);
 
-		if( cameraImageHeader.sphericalRepresentation.jpegImage)
+		if( image2DHeader.sphericalRepresentation.jpegImage)
 			sphericalRepresentation.set("jpegImage",
-				BlobNode(imf_,cameraImageHeader.sphericalRepresentation.jpegImage));
-		else if( cameraImageHeader.sphericalRepresentation.pngImage)
+				BlobNode(imf_,image2DHeader.sphericalRepresentation.jpegImage));
+		else if( image2DHeader.sphericalRepresentation.pngImage)
 			sphericalRepresentation.set("pngImage",
-				BlobNode(imf_,cameraImageHeader.sphericalRepresentation.pngImage));
-		if( cameraImageHeader.sphericalRepresentation.imageMask)
+				BlobNode(imf_,image2DHeader.sphericalRepresentation.pngImage));
+		if( image2DHeader.sphericalRepresentation.imageMask)
 			sphericalRepresentation.set("imageMask",
-				BlobNode(imf_,cameraImageHeader.sphericalRepresentation.imageMask));
+				BlobNode(imf_,image2DHeader.sphericalRepresentation.imageMask));
 
 		sphericalRepresentation.set("imageHeight", 
-			IntegerNode(imf_, cameraImageHeader.sphericalRepresentation.imageHeight));
+			IntegerNode(imf_, image2DHeader.sphericalRepresentation.imageHeight));
 		sphericalRepresentation.set("imageWidth", 
-			IntegerNode(imf_, cameraImageHeader.sphericalRepresentation.imageWidth));
+			IntegerNode(imf_, image2DHeader.sphericalRepresentation.imageWidth));
 		sphericalRepresentation.set("pixelHeight", 
-			FloatNode(imf_, cameraImageHeader.sphericalRepresentation.pixelHeight));
+			FloatNode(imf_, image2DHeader.sphericalRepresentation.pixelHeight));
 		sphericalRepresentation.set("pixelWidth", 
-			FloatNode(imf_, cameraImageHeader.sphericalRepresentation.pixelWidth));
-		sphericalRepresentation.set("azimuthStart", 
-			FloatNode(imf_, cameraImageHeader.sphericalRepresentation.azimuthStart));
-		sphericalRepresentation.set("elevationStart", 
-			FloatNode(imf_, cameraImageHeader.sphericalRepresentation.elevationStart));
+			FloatNode(imf_, image2DHeader.sphericalRepresentation.pixelWidth));
 	}
-	else if( cameraImageHeader.cylindricalRepresentation.jpegImage ||
-		cameraImageHeader.cylindricalRepresentation.pngImage)
+	else if( image2DHeader.cylindricalRepresentation.jpegImage ||
+		image2DHeader.cylindricalRepresentation.pngImage)
 	{
 		StructureNode cylindricalRepresentation = StructureNode(imf_);
 		image.set("cylindricalRepresentation", cylindricalRepresentation);
 
-		if( cameraImageHeader.cylindricalRepresentation.jpegImage)
+		if( image2DHeader.cylindricalRepresentation.jpegImage)
 			cylindricalRepresentation.set("jpegImage",
-				BlobNode(imf_,cameraImageHeader.cylindricalRepresentation.jpegImage));
-		else if( cameraImageHeader.cylindricalRepresentation.pngImage)
+				BlobNode(imf_,image2DHeader.cylindricalRepresentation.jpegImage));
+		else if( image2DHeader.cylindricalRepresentation.pngImage)
 			cylindricalRepresentation.set("pngImage",
-				BlobNode(imf_,cameraImageHeader.cylindricalRepresentation.pngImage));
-		if( cameraImageHeader.cylindricalRepresentation.imageMask)
+				BlobNode(imf_,image2DHeader.cylindricalRepresentation.pngImage));
+		if( image2DHeader.cylindricalRepresentation.imageMask)
 			cylindricalRepresentation.set("imageMask",
-				BlobNode(imf_,cameraImageHeader.cylindricalRepresentation.imageMask));
+				BlobNode(imf_,image2DHeader.cylindricalRepresentation.imageMask));
 
 		cylindricalRepresentation.set("imageHeight", 
-			IntegerNode(imf_, cameraImageHeader.cylindricalRepresentation.imageHeight));
+			IntegerNode(imf_, image2DHeader.cylindricalRepresentation.imageHeight));
 		cylindricalRepresentation.set("imageWidth", 
-			IntegerNode(imf_, cameraImageHeader.cylindricalRepresentation.imageWidth));
+			IntegerNode(imf_, image2DHeader.cylindricalRepresentation.imageWidth));
 		cylindricalRepresentation.set("pixelHeight", 
-			FloatNode(imf_, cameraImageHeader.cylindricalRepresentation.pixelHeight));
+			FloatNode(imf_, image2DHeader.cylindricalRepresentation.pixelHeight));
 		cylindricalRepresentation.set("pixelWidth", 
-			FloatNode(imf_, cameraImageHeader.cylindricalRepresentation.pixelWidth));
-		cylindricalRepresentation.set("azimuthStart", 
-			FloatNode(imf_, cameraImageHeader.cylindricalRepresentation.azimuthStart));
+			FloatNode(imf_, image2DHeader.cylindricalRepresentation.pixelWidth));
 		cylindricalRepresentation.set("principalPointY", 
-			FloatNode(imf_, cameraImageHeader.cylindricalRepresentation.principalPointY));
+			FloatNode(imf_, image2DHeader.cylindricalRepresentation.principalPointY));
 		cylindricalRepresentation.set("radius", 
-			FloatNode(imf_, cameraImageHeader.cylindricalRepresentation.radius));
+			FloatNode(imf_, image2DHeader.cylindricalRepresentation.radius));
 	}
 	return pos;
 };
-
-//! This function writes the block
-int64_t	WriterImpl :: WriteCameraImageData(
-	int32_t		imageIndex,	//!< picture block index
-	void *		pBuffer,	//!< pointer the buffer
-	int64_t		start,		//!< position in the block to start writing
-	int64_t		count		//!< size of desired chuck or buffer size
-	)						//!< /return Returns the number of bytes written
+//! This function reads one of the image blobs
+int64_t WriterImpl :: WriteImage2DNode(
+	e57::StructureNode		image,			//!< 1 of 3 projects or the visual
+	e57::Image2DType		imageType,		//!< identifies the image format desired.
+	void *					pBuffer,		//!< pointer the buffer
+	int64_t					start,			//!< position in the block to start reading
+	int64_t					count			//!< size of desired chuck or buffer size
+	)										//!< /return Returns the number of bytes transferred.
 {
-	if( (imageIndex < 0) || (imageIndex >= cameraImages_.childCount()))
+	int64_t transferred = 0;
+	switch(imageType)
+	{
+	case	E57_JPEG_IMAGE:
+		{
+			if(image.isDefined("jpegImage"))
+			{
+				BlobNode jpegImage(image.get("jpegImage"));
+				jpegImage.write((uint8_t*) pBuffer, start, (size_t) count);
+				transferred = count;
+			}
+		}
+	case	E57_PNG_IMAGE:
+		{
+			if(	image.isDefined("pngImage"))
+			{
+				BlobNode pngImage(image.get("pngImage"));
+				pngImage.write((uint8_t*) pBuffer, start, (size_t) count);
+				transferred = count;
+			}
+		}
+	case	E57_PNG_IMAGE_MASK:
+		{
+			if(	image.isDefined("imageMask"))
+			{
+				BlobNode imageMask(image.get("imageMask"));
+				imageMask.write((uint8_t*) pBuffer, start, (size_t) count);
+				transferred = count;
+			}
+		}
+	};
+	return transferred;
+};
+//! This function writes the block
+int64_t	WriterImpl :: WriteImage2DData(
+	int32_t					imageIndex,		//!< picture block index
+	e57::Image2DType		imageType,		//!< identifies the image format desired.
+	e57::Image2DProjection	imageProjection,//!< identifies the projection desired.
+	void *					pBuffer,		//!< pointer the buffer
+	int64_t					start,			//!< position in the block to start writing
+	int64_t					count			//!< size of desired chuck or buffer size
+	)										//!< /return Returns the number of bytes written
+{
+	if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
 		return 0;
 
-	StructureNode image(cameraImages_.get(imageIndex));
+	int64_t transferred = 0;
+	StructureNode image(image2D_.get(imageIndex));
 
-	if(image.isDefined("visualReferenceRepresentation"))
+	switch(imageProjection)
 	{
-		StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
-		if(visualReferenceRepresentation.isDefined("jpegImage"))
+	case	E57_VISUAL:
+		if(image.isDefined("visualReferenceRepresentation"))
 		{
-			BlobNode jpegImage(visualReferenceRepresentation.get("jpegImage"));
-			jpegImage.write((uint8_t*) pBuffer, start, (size_t) count);
+			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
+			transferred = WriteImage2DNode(visualReferenceRepresentation, imageType, pBuffer, start, count);
 		}
-		else if(visualReferenceRepresentation.isDefined("pngImage"))
+	case	E57_PINHOLE:
+		if(image.isDefined("pinholeRepresentation"))
 		{
-			BlobNode pngImage(visualReferenceRepresentation.get("pngImage"));
-			pngImage.write((uint8_t*) pBuffer, start, (size_t) count);
+			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
+			transferred = WriteImage2DNode(pinholeRepresentation, imageType, pBuffer, start, count);
 		}
-//			if(visualReferenceRepresentation.isDefined("imageMask"))
-//			{
-//				BlobNode imageMask(visualReferenceRepresentation.get("imageMask"));
-//			}
-	}
-	else if(image.isDefined("pinholeRepresentation"))
-	{
-		StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
-		if(pinholeRepresentation.isDefined("jpegImage"))
+	case	E57_SPHERICAL:
+		if(image.isDefined("sphericalRepresentation"))
 		{
-			BlobNode jpegImage(pinholeRepresentation.get("jpegImage"));
-			jpegImage.write((uint8_t*) pBuffer, start, (size_t) count);
+			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
+			transferred = WriteImage2DNode(sphericalRepresentation, imageType, pBuffer, start, count);
 		}
-		else if(pinholeRepresentation.isDefined("pngImage"))
+	case	E57_CYLINDRICAL:
+		if(image.isDefined("cylindricalRepresentation"))
 		{
-			BlobNode pngImage(pinholeRepresentation.get("pngImage"));
-			pngImage.write((uint8_t*) pBuffer, start, (size_t) count);
+			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
+			transferred = WriteImage2DNode(cylindricalRepresentation, imageType, pBuffer, start, count);
 		}
-//			if(pinholeRepresentation.isDefined("imageMask"))
-//			{
-//				BlobNode imageMask(pinholeRepresentation.get("imageMask"));
-//			}
-	}
-	else if(image.isDefined("sphericalRepresentation"))
-	{
-		StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
-		if(sphericalRepresentation.isDefined("jpegImage"))
-		{
-			BlobNode jpegImage(sphericalRepresentation.get("jpegImage"));
-			jpegImage.write((uint8_t*) pBuffer, start, (size_t) count);
-		}
-		else if(sphericalRepresentation.isDefined("pngImage"))
-		{
-			BlobNode pngImage(sphericalRepresentation.get("pngImage"));
-			pngImage.write((uint8_t*) pBuffer, start, (size_t) count);
-		}
-//			if(sphericalRepresentation.isDefined("imageMask"))
-//			{
-//				BlobNode imageMask(sphericalRepresentation.get("imageMask"));
-//			}
-	}
-	else if(image.isDefined("cylindricalRepresentation"))
-	{
-		StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
-		if(cylindricalRepresentation.isDefined("jpegImage"))
-		{
-			BlobNode jpegImage(cylindricalRepresentation.get("jpegImage"));
-			jpegImage.write((uint8_t*) pBuffer, start, (size_t) count);
-		}
-		else if(cylindricalRepresentation.isDefined("pngImage"))
-		{
-			BlobNode pngImage(cylindricalRepresentation.get("pngImage"));
-			pngImage.write((uint8_t*) pBuffer, start, (size_t) count);
-		}
-//			if(cylindricalRepresentation.isDefined("imageMask"))
-//			{
-//				BlobNode imageMask(cylindricalRepresentation.get("imageMask"));
-//			}
-	}
-	return count;
+	};
+	return transferred;
 };
-//! This function closes the CameraImage block
-bool	WriterImpl :: CloseCameraImage(
-	int32_t		imageIndex	//!< picture block index given by the NewCameraImage
+
+//! This function closes the Image2D block
+bool	WriterImpl :: CloseImage2D(
+	int32_t		imageIndex	//!< picture block index given by the NewImage2D
 		)					//!< /return Returns true if successful, false otherwise
 {
 	return false;
@@ -1372,26 +1491,6 @@ bool	WriterImpl :: WriteData3DGroupsData(
 	return true;
 };
 
-//! This function sets the extensions field that will be available
-bool	WriterImpl :: SetData3DGeneralFieldsAvailable(
-	int32_t					dataIndex,
-	std::vector<ustring>&	fieldsAvailable)
-{
-	return false;
-};
-
-int64_t	WriterImpl :: WriteData3DGeneralPoints(
-	int32_t				dataIndex,
-	int64_t				startPointIndex,
-	int64_t				pointCount,
-	bool*				valid,
-	vector<ustring>&	numericFieldNames,
-	vector<double*>&	numericBuffers,
-	vector<ustring>&	stringFieldNames,
-	vector<ustring*>&	stringBuffers)
-{
-	return 0;
-};
 
 
 
