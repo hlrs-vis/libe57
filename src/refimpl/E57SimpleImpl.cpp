@@ -38,6 +38,7 @@
 //
 //	New E57SimpleImpl.cpp
 //	V1		May 18, 2010	Stan Coleby		scoleby@intelisum.com
+//	V6		June 8, 2010	Stan Coleby		scoleby@intelisum.com
 //
 //////////////////////////////////////////////////////////////////////////
 
