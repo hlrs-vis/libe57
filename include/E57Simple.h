@@ -348,12 +348,12 @@ public:
 
 ////////////////////////////////////////////////////////////////////
 //
-//	e57::PinholeProjection
+//	e57::PinholeRepresentation
 //
 
-//! @brief The e57::PinholeProjection is a structure that stores an image that is mapped from 3D using the pinhole camera projection model.
+//! @brief The e57::PinholeRepresentation is a structure that stores an image that is mapped from 3D using the pinhole camera projection model.
 
-class PinholeProjection
+class PinholeRepresentation
 {
 public:
 	int64_t			jpegImage;		//!< Size of JPEG format image data in BlobNode.
@@ -369,12 +369,12 @@ public:
 };
 ////////////////////////////////////////////////////////////////////
 //
-//	e57::SphericalProjection
+//	e57::SphericalRepresentation
 //
 
-//! @brief The e57::SphericalProjection is a structure that stores an image that is mapped from 3D using a spherical projection model
+//! @brief The e57::SphericalRepresentation is a structure that stores an image that is mapped from 3D using a spherical projection model
 
-class SphericalProjection
+class SphericalRepresentation
 {
 public:
 	int64_t			jpegImage;		//!< Size of JPEG format image data in BlobNode.
@@ -388,12 +388,12 @@ public:
 
 ////////////////////////////////////////////////////////////////////
 //
-//	e57::CylindricalProjection
+//	e57::CylindricalRepresentation
 //
 
-//! @brief The e57::CylindricalProjection is a structure that stores an image that is mapped from 3D using a cylindrical projection model.
+//! @brief The e57::CylindricalRepresentation is a structure that stores an image that is mapped from 3D using a cylindrical projection model.
 
-class CylindricalProjection
+class CylindricalRepresentation
 {
 public:
 	int64_t			jpegImage;		//!< Size of JPEG format image data in Blob.
@@ -434,9 +434,9 @@ public:
 	e57::RigidBodyTransform				pose;	//!< A rigid body transform that describes the coordinate frame of the camera in the file-level coordinate system
 	
 	e57::VisualReferenceRepresentation	visualReferenceRepresentation;  //!< Representation for an image that does not define any camera projection model. The image is to be used for visual reference only
-	e57::PinholeProjection				pinholeRepresentation;			//!< Representation for an image using the pinhole camera projection model
-	e57::SphericalProjection			sphericalRepresentation;		//!< Representation for an image using the spherical camera projection model.
-	e57::CylindricalProjection			cylindricalRepresentation;		//!< Representation for an image using the cylindrical camera projection model
+	e57::PinholeRepresentation			pinholeRepresentation;			//!< Representation for an image using the pinhole camera projection model
+	e57::SphericalRepresentation		sphericalRepresentation;		//!< Representation for an image using the spherical camera projection model.
+	e57::CylindricalRepresentation		cylindricalRepresentation;		//!< Representation for an image using the cylindrical camera projection model
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -459,9 +459,9 @@ enum Image2DType {
 enum Image2DProjection {
 	E57_NO_PROJECTION = 0,	//!< No representation for the image data is present
     E57_VISUAL = 1,			//!< VisualReferenceRepresentation for the image data
-    E57_PINHOLE = 2,		//!< PinholeProjection for the image data
-	E57_SPHERICAL = 3,		//!< SphericalProjection for the image data
-	E57_CYLINDRICAL = 4		//!< CylindricalProjection for the image data
+    E57_PINHOLE = 2,		//!< PinholeRepresentation for the image data
+	E57_SPHERICAL = 3,		//!< SphericalRepresentation for the image data
+	E57_CYLINDRICAL = 4		//!< CylindricalRepresentation for the image data
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -521,9 +521,9 @@ enum Image2DType {
 /*! The e57::Image2DProjection identifies the representation for the image data
 <tt><PRE>
 enum Image2DProjection {
-	E57_NO_PROJECTION = 0,	//!< No Representation for the image data is present
-	E57_VISUAL = 1,		//!< VisualReferenceRepresentation for the image data
-	E57_PINHOLE = 2,	//!< PinholeRepresentation for the image data
+	E57_NO_PROJECTION = 0,	//!< No representation for the image data is present
+    E57_VISUAL = 1,		//!< VisualReferenceRepresentation for the image data
+    E57_PINHOLE = 2,	//!< PinholeRepresentation for the image data
 	E57_SPHERICAL = 3,	//!< SphericalRepresentation for the image data
 	E57_CYLINDRICAL = 4	//!< CylindricalRepresentation for the image data
 };

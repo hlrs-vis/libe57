@@ -847,7 +847,50 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 
 	return reader;
 };
+double GetGPSTime(void)
+{
+#if defined(_MSC_VER)
+SYSTEMTIME		currentSystemTime;
+GetSystemTime(&currentSystemTime);	//current UTC Time
+FILETIME		currentFileTime;
+SystemTimeToFileTime(&currentSystemTime,&currentFileTime);
 
+ULARGE_INTEGER	currentTime;
+currentTime.LowPart = currentFileTime.dwLowDateTime;
+currentTime.HighPart = currentFileTime.dwHighDateTime;
+
+SYSTEMTIME		gpsSystemTime = {1980,1,0,6,0,0,0,0};	//GPS start in Jan. 6, 1980
+FILETIME		gpsFileTime;
+SystemTimeToFileTime(&gpsSystemTime,&gpsFileTime);
+
+ULARGE_INTEGER	gpsStartTime;
+gpsStartTime.LowPart = gpsFileTime.dwLowDateTime;
+gpsStartTime.HighPart = gpsFileTime.dwHighDateTime;
+
+double gpsTime = (double) (currentTime.QuadPart - gpsStartTime.QuadPart);	//number of 100 nanosecond;
+gpsTime /= 10000000.;	//number of seconds
+return gpsTime + 15.;	//Add leap seconds
+
+#else	//TODO need a way to convert in linux
+	return 123456789.;
+#endif
+};
+char * GetNewGuid(void)
+{
+	static char	fileGuid[64];
+#if defined(_MSC_VER)
+	GUID		guid;
+	CoCreateGuid((GUID*)&guid);
+	OLECHAR wbuffer[64];
+	StringFromGUID2(guid,&wbuffer[0],64);
+	size_t	converted = 0;
+	wcstombs_s(&converted, fileGuid,wbuffer,64);
+
+#else	//TODO need a way to gen a guid for linux
+	strcpy(fileGuid,"{4179C162-49A8-4fba-ADC6-527543D26D86}");
+#endif
+	return fileGuid;
+};
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Writer
@@ -865,21 +908,7 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 // Set per-file properties.
 /// Path names: "/formatName", "/majorVersion", "/minorVersion", "/coordinateMetadata"
 	root_.set("formatName", StringNode(imf_, "ASTM E57 3D Imaging Data File"));
-
-#if defined(_MSC_VER)
-	GUID		guid;
-	CoCreateGuid((GUID*)&guid);
-
-	OLECHAR wbuffer[64];
-	StringFromGUID2(guid,&wbuffer[0],64);
-
-	char	fileGuid[64];
-	size_t	converted = 0;
-	wcstombs_s(&converted, fileGuid,wbuffer,64);
-#else	//TODO need a way to gen a guid for linux
-	char	fileGuid[] = "{4179C162-49A8-4fba-ADC6-527543D26D86}";
-#endif
-	root_.set("guid", StringNode(imf_, fileGuid));
+	root_.set("guid", StringNode(imf_, GetNewGuid()));
 
 // Get ASTM version number supported by library, so can write it into file
 	int astmMajor;
@@ -898,7 +927,7 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 // Create creationDateTime structure
 /// Path name: "/creationDateTime
     StructureNode creationDateTime = StructureNode(imf_);
-	creationDateTime.set("dateTimeValue", FloatNode(imf_, 1234567890.)); //!!! convert time() to GPStime
+	creationDateTime.set("dateTimeValue", FloatNode(imf_, GetGPSTime()));
 	creationDateTime.set("isAtomicClockReferenced", IntegerNode(imf_,0));
     root_.set("creationDateTime", creationDateTime);
 
