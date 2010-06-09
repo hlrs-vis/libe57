@@ -379,14 +379,14 @@ bool		Reader :: ReadImage2D(
 };
 
 bool		Reader :: GetImage2DSizes(
-	int32_t					imageIndex,		//!< This in the index into the image2D vector
-	e57::Image2DProjection &imageProjection,//!< identifies the projection desired.
-	e57::Image2DType &		imageType,		//!< identifies the image format desired.
-	int64_t &				imageWidth,		//!< The image width (in pixels).
-	int64_t &				imageHeight,	//!< The image height (in pixels).
-	int64_t &				imageSize,		//!< This is the total number of bytes for the image blob.
-	e57::Image2DType &		imageMaskType,	//!< This is E57_PNG_IMAGE_MASK if "imageMask" is defined in the projection
-	e57::Image2DType &		imageVisualType	//!< This is image type of the VisualReferenceRepresentation if given.
+	int32_t					imageIndex,		// This in the index into the image2D vector
+	e57::Image2DProjection &imageProjection,// identifies the projection desired.
+	e57::Image2DType &		imageType,		// identifies the image format desired.
+	int64_t &				imageWidth,		// The image width (in pixels).
+	int64_t &				imageHeight,	// The image height (in pixels).
+	int64_t &				imageSize,		// This is the total number of bytes for the image blob.
+	e57::Image2DType &		imageMaskType,	// This is E57_PNG_IMAGE_MASK if "imageMask" is defined in the projection
+	e57::Image2DType &		imageVisualType	// This is image type of the VisualReferenceRepresentation if given.
 	) const
 {
 	return impl_->GetImage2DSizes(imageIndex, imageProjection, imageType,
@@ -394,12 +394,12 @@ bool		Reader :: GetImage2DSizes(
 };
 
 int64_t		Reader :: ReadImage2DData(
-	int32_t					imageIndex,		//!< picture block index
-	e57::Image2DProjection	imageProjection,//!< identifies the projection desired.
-	e57::Image2DType		imageType,		//!< identifies the image format desired.
-	void *					pBuffer,	//!< pointer the buffer
-	int64_t					start,		//!< position in the block to start reading
-	int64_t					count		//!< size of desired chuck or buffer size
+	int32_t					imageIndex,		// picture block index
+	e57::Image2DProjection	imageProjection,// identifies the projection desired.
+	e57::Image2DType		imageType,		// identifies the image format desired.
+	void *					pBuffer,	// pointer the buffer
+	int64_t					start,		// position in the block to start reading
+	int64_t					count		// size of desired chuck or buffer size
 	) const
 {
 	return impl_->ReadImage2DData(imageIndex, imageProjection, imageType, pBuffer, start, count);
@@ -410,73 +410,73 @@ int32_t		Reader :: GetData3DCount( void) const
 	return impl_->GetData3DCount();
 };
 
-//! This function returns the file raw E57Root Structure Node
+// This function returns the file raw E57Root Structure Node
 StructureNode	Reader :: GetRawE57Root(void)
 {
 	return impl_->GetRawE57Root();
-};	//!< /return Returns the E57Root StructureNode
+};	// /return Returns the E57Root StructureNode
 
-//! This function returns the raw Data3D Vector Node
+// This function returns the raw Data3D Vector Node
 VectorNode		Reader :: GetRawData3D(void)
 {
 	return impl_->GetRawData3D();
-};//!< /return Returns the raw Data3D VectorNode
+};// /return Returns the raw Data3D VectorNode
 
-//! This function returns the raw Image2D Vector Node
+// This function returns the raw Image2D Vector Node
 VectorNode		Reader :: GetRawImage2D(void)
 {
 	return impl_->GetRawImage2D();
-};	//!< /return Returns the raw Image2D VectorNode
+};	// /return Returns the raw Image2D VectorNode
 
 bool		Reader :: ReadData3D( 
-	int32_t		dataIndex,	//!< This in the index into the images3D vector
-	Data3D &	data3DHeader //!< pointer to the Data3D structure to receive the image information
-	) const	//!< /return Returns true if sucessful
+	int32_t		dataIndex,	// This in the index into the images3D vector
+	Data3D &	data3DHeader // pointer to the Data3D structure to receive the image information
+	) const	// /return Returns true if sucessful
 {
 	return impl_->ReadData3D(dataIndex, data3DHeader);
 }
 
 bool		Reader :: GetData3DSizes(
-	int32_t		dataIndex,	//!< This in the index into the images3D vector
-	int64_t &	rowMax,		//!< This is the maximum row size
-	int64_t &	columnMax,	//!< This is the maximum column size
-	int64_t &	pointsSize,	//!< This is the total number of point records
-	int64_t &	groupsSize	//!< This is the total number of group reocrds
+	int32_t		dataIndex,	// This in the index into the images3D vector
+	int64_t &	rowMax,		// This is the maximum row size
+	int64_t &	columnMax,	// This is the maximum column size
+	int64_t &	pointsSize,	// This is the total number of point records
+	int64_t &	groupsSize	// This is the total number of group reocrds
 	) const
 {
 	return impl_->GetData3DSizes( dataIndex, rowMax, columnMax, pointsSize, groupsSize);
 }
 
 bool		Reader :: ReadData3DGroupsData(
-	int32_t		dataIndex,			//!< data block index given by the NewData3D
-	int64_t		groupCount,			//!< size of each of the buffers given
-	int64_t*	idElementValue,		//!< index for this group
-	int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
-	int64_t*	pointCount			//!< size of the groups given
-	) const							//!< \return Return true if sucessful, false otherwise
+	int32_t		dataIndex,			// data block index given by the NewData3D
+	int64_t		groupCount,			// size of each of the buffers given
+	int64_t*	idElementValue,		// index for this group
+	int64_t*	startPointIndex,	// Starting index in to the "points" data vector for the groups
+	int64_t*	pointCount			// size of the groups given
+	) const							// \return Return true if sucessful, false otherwise
 {
 	return impl_->ReadData3DGroupsData(dataIndex, groupCount, idElementValue, startPointIndex, pointCount);
 }
 
 CompressedVectorReader	Reader :: SetUpData3DPointsData(
-	int32_t		dataIndex,			//!< data block index given by the NewData3D
-	int64_t		pointCount,			//!< size of each element buffer.
-	int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
-	double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
-	double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
-	double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
-	double*		intensity,			//!< pointer to a buffer with the Point response intensity. Unit is unspecified
-	double*		colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
-	double*		colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
-	double*		colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
-	double*		sphericalRange,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
-	double*		sphericalAzimuth,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
-	double*		sphericalElevation,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
-	int64_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
-	int64_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
-	int64_t*	returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
-	int64_t*	returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
-	double*		timeStamp			//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	int32_t		dataIndex,			// data block index given by the NewData3D
+	int64_t		pointCount,			// size of each element buffer.
+	int32_t*	valid,				// Value = 1 if the point is considered valid, 0 otherwise
+	double*		cartesianX,			// pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianY,			// pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianZ,			// pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+	double*		intensity,			// pointer to a buffer with the Point response intensity. Unit is unspecified
+	double*		colorRed,			// pointer to a buffer with the Red color coefficient. Unit is unspecified
+	double*		colorGreen,			// pointer to a buffer with the Green color coefficient. Unit is unspecified
+	double*		colorBlue,			// pointer to a buffer with the Blue color coefficient. Unit is unspecified
+	double*		sphericalRange,		// pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
+	double*		sphericalAzimuth,	// pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
+	double*		sphericalElevation,	// pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+	int64_t*	rowIndex,			// pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+	int64_t*	columnIndex,		// pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+	int64_t*	returnIndex,		// pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+	int64_t*	returnCount,		// pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+	double*		timeStamp			// pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
 	) const
 {
 	return impl_->SetUpData3DPointsData( dataIndex, pointCount, valid,
@@ -490,8 +490,8 @@ CompressedVectorReader	Reader :: SetUpData3DPointsData(
 //	e57::Writer
 //
 			Writer :: Writer(
-	const ustring & filePath,		//!< file path string
-	const ustring & coordinateMetaData	//!< Information describing the Coordinate Reference System to be used for the file
+	const ustring & filePath,		// file path string
+	const ustring & coordinateMetaData	// Information describing the Coordinate Reference System to be used for the file
 ): impl_(new WriterImpl(filePath, coordinateMetaData))
 {
 }
@@ -505,78 +505,78 @@ bool		Writer :: Close(void) const
 {
 	return impl_->Close();
 };
-//! This function returns the file raw E57Root Structure Node
+// This function returns the file raw E57Root Structure Node
 StructureNode	Writer :: GetRawE57Root(void)
 {
 	return impl_->GetRawE57Root();
-};	//!< /return Returns the E57Root StructureNode
+};	// /return Returns the E57Root StructureNode
 
-//! This function returns the raw Data3D Vector Node
+// This function returns the raw Data3D Vector Node
 VectorNode		Writer :: GetRawData3D(void)
 {
 	return impl_->GetRawData3D();
-};//!< /return Returns the raw Data3D VectorNode
+};// /return Returns the raw Data3D VectorNode
 
-//! This function returns the raw Image2D Vector Node
+// This function returns the raw Image2D Vector Node
 VectorNode		Writer :: GetRawImage2D(void)
 {
 	return impl_->GetRawImage2D();
-};	//!< /return Returns the raw Image2D VectorNode
+};	// /return Returns the raw Image2D VectorNode
 
 int32_t		Writer :: NewImage2D( 
-	Image2D &	image2DHeader	//!< pointer to the Image2D structure to receive the picture information
-	) const						//!< /return Returns the image2D index
+	Image2D &	image2DHeader	// pointer to the Image2D structure to receive the picture information
+	) const						// /return Returns the image2D index
 {
 	return impl_->NewImage2D( image2DHeader);
 };
 
 
 int64_t		Writer :: WriteImage2DData(
-	int32_t					imageIndex,		//!< picture block index given by the NewImage2D
-	e57::Image2DType		imageType,		//!< identifies the image format desired.
-	e57::Image2DProjection	imageProjection,//!< identifies the projection desired.
-	void *					pBuffer,		//!< pointer the buffer
-	int64_t					start,			//!< position in the block to start writing
-	int64_t					count			//!< size of desired chuck or buffer size
-	) const									//!< /return Returns the number of bytes written
+	int32_t					imageIndex,		// picture block index given by the NewImage2D
+	e57::Image2DType		imageType,		// identifies the image format desired.
+	e57::Image2DProjection	imageProjection,// identifies the projection desired.
+	void *					pBuffer,		// pointer the buffer
+	int64_t					start,			// position in the block to start writing
+	int64_t					count			// size of desired chuck or buffer size
+	) const									// /return Returns the number of bytes written
 {
 	return impl_->WriteImage2DData( imageIndex, imageType, imageProjection, pBuffer, start, count);
 };
 
 bool		Writer :: CloseImage2D(
-	int32_t		imageIndex	//!< picture block index given by the NewImage2D
-	) const 				//!< /return Returns true if successful, false otherwise
+	int32_t		imageIndex	// picture block index given by the NewImage2D
+	) const 				// /return Returns true if successful, false otherwise
 {
 	return impl_->CloseImage2D( imageIndex);
 };
 
 int32_t		Writer :: NewData3D( 
-	Data3D &	data3DHeader	//!< pointer to the Data3D structure to receive the image information
-	) const							//!< /return Returns the index of the new scan's data3D block.
+	Data3D &	data3DHeader	// pointer to the Data3D structure to receive the image information
+	) const							// /return Returns the index of the new scan's data3D block.
 {
 	return impl_->NewData3D( data3DHeader);
 };
 
-//! This function writes out blocks of point data
+// This function writes out blocks of point data
 CompressedVectorWriter	Writer :: SetUpData3DPointsData(
-	int32_t		dataIndex,			//!< data block index given by the NewData3D
-	int64_t		pointCount,			//!< size of each of the buffers given
-	int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
-	double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
-	double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
-	double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
-	double*		intensity,			//!< pointer to a buffer with the Point response intensity. Unit is unspecified
-	double*		colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
-	double*		colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
-	double*		colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
-	double*		sphericalRange,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
-	double*		sphericalAzimuth,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
-	double*		sphericalElevation,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
-	int64_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
-	int64_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
-	int64_t*	returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
-	int64_t*	returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
-	double*		timeStamp			//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	int32_t		dataIndex,			// data block index given by the NewData3D
+	int64_t		pointCount,			// size of each of the buffers given
+	int32_t*	valid,				// Value = 1 if the point is considered valid, 0 otherwise
+	double*		cartesianX,			// pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianY,			// pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianZ,			// pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+	double*		intensity,			// pointer to a buffer with the Point response intensity. Unit is unspecified
+	double*		colorRed,			// pointer to a buffer with the Red color coefficient. Unit is unspecified
+	double*		colorGreen,			// pointer to a buffer with the Green color coefficient. Unit is unspecified
+	double*		colorBlue,			// pointer to a buffer with the Blue color coefficient. Unit is unspecified
+	double*		sphericalRange,		// pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
+	double*		sphericalAzimuth,	// pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
+	double*		sphericalElevation,	// pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+	int64_t*	rowIndex,			// pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+	int64_t*	columnIndex,		// pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+	int64_t*	returnIndex,		// pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+	int64_t*	returnCount,		// pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+	double*		timeStamp			// pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
 	) const
 {
 		return impl_->SetUpData3DPointsData( dataIndex, pointCount, valid,
@@ -586,12 +586,12 @@ CompressedVectorWriter	Writer :: SetUpData3DPointsData(
 }
 
 bool		Writer :: WriteData3DGroupsData(
-	int32_t		dataIndex,			//!< data block index given by the NewData3D
-	int64_t*	idElementValue,		//!< index for this group
-	int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
-	int64_t*	pointCount,			//!< size of the groups given
-	int32_t		count				//!< size of each of the buffers given
-	) const								//!< \return Return true if sucessful, false otherwise
+	int32_t		dataIndex,			// data block index given by the NewData3D
+	int64_t*	idElementValue,		// index for this group
+	int64_t*	startPointIndex,	// Starting index in to the "points" data vector for the groups
+	int64_t*	pointCount,			// size of the groups given
+	int32_t		count				// size of each of the buffers given
+	) const								// \return Return true if sucessful, false otherwise
 {
 	return impl_->WriteData3DGroupsData( dataIndex, idElementValue, startPointIndex, pointCount, count);
 }
