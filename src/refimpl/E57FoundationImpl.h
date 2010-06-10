@@ -1438,19 +1438,19 @@ inline void swab(double& d) {
 struct IndexPacket {  /// Note this is whole packet, not just header
     static const unsigned MAX_ENTRIES = 2048;
 
-    uint8_t     packetType;     // = E57_INDEX_PACKET
-    uint8_t     packetFlags;    // flag bitfields
-    uint16_t    packetLogicalLengthMinus1;
-    uint16_t    entryCount;
-    uint8_t     indexLevel;
-    uint8_t     reserved1[9];   // must be zero
+    boost::uint8_t     packetType;     // = E57_INDEX_PACKET
+    boost::uint8_t     packetFlags;    // flag bitfields
+    boost::uint16_t    packetLogicalLengthMinus1;
+    boost::uint16_t    entryCount;
+    boost::uint8_t     indexLevel;
+    boost::uint8_t     reserved1[9];   // must be zero
     struct IndexPacketEntry {
-        uint64_t    chunkRecordNumber;
-        uint64_t    chunkPhysicalOffset;
+        boost::uint64_t    chunkRecordNumber;
+        boost::uint64_t    chunkPhysicalOffset;
     } entries[MAX_ENTRIES];
 
                 IndexPacket();
-    void        verify(unsigned bufferLength=0, uint64_t totalRecordCount=0, uint64_t fileSize=0);
+    void        verify(unsigned bufferLength=0, boost::uint64_t totalRecordCount=0, boost::uint64_t fileSize=0);
 #ifdef E57_BIGENDIAN
     void        swab(bool toLittleEndian);
 #else
@@ -1687,7 +1687,7 @@ uint64_t SeekIndexWriter::levelWrite(unsigned levelNumber)
 void SeekIndexWriter::dump(int indent, std::ostream& os)
 {
     bool                    isOpen_;
-    std::tr1::shared_ptr<ImageFileImpl> imf_;
+    boost::shared_ptr<ImageFileImpl> imf_;
     CompressedVectorWriter  cvWriter_;
     uint64_t                sectionPhysicalOffset_;
     vector<LevelInfo>       levels_;

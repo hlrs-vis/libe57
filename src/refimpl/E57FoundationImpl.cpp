@@ -64,8 +64,26 @@
 
 #include "E57FoundationImpl.h"
 using namespace e57;
-using namespace std;
-using namespace boost;
+//using namespace std;
+using std::cerr;
+using std::endl;
+using std::vector;
+using std::ostream;
+using std::stringstream;
+using std::streamsize;
+using std::ios_base;
+using std::scientific;
+using std::setprecision;
+using std::string;
+using std::auto_ptr;
+using std::min;
+using std::max;
+
+//using namespace boost;
+using boost::weak_ptr;
+using boost::shared_ptr;
+using boost::dynamic_pointer_cast;
+
 //???using namespace std::tr1;
 
 ///============================================================================================================

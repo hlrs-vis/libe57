@@ -47,6 +47,11 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/cstdint.hpp>    // for int8_t, int16_t, int32_t, etc...
 
+
+#ifndef DOXYGEN  // Doxygen is not handling namespaces well in @includelineno commands, so disable
+namespace e57 {
+#endif
+
 // Use Boost type names for signed/unsigned integers in various witdths
 using boost::int8_t;
 using boost::uint8_t;
@@ -56,10 +61,6 @@ using boost::int32_t;
 using boost::uint32_t;
 using boost::int64_t;
 using boost::uint64_t;
-
-#ifndef DOXYGEN  // Doxygen is not handling namespaces well in @includelineno commands, so disable
-namespace e57 {
-#endif
 
 // Shorthand for unicode string
 //! @brief UTF-8 encodeded Unicode string

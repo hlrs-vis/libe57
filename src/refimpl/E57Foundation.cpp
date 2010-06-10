@@ -190,8 +190,13 @@ DEALINGS IN THE SOFTWARE.
 
 #include "E57FoundationImpl.h"
 using namespace e57;
-using namespace std;
-using namespace boost;
+//using namespace std;
+using std::endl;
+
+//using namespace boost;
+using boost::shared_ptr;
+using boost::weak_ptr;
+using boost::dynamic_pointer_cast;
 
 //=====================================================================================
 /*================*/ /*!
