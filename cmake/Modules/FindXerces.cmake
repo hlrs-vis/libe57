@@ -33,23 +33,29 @@ find_path(Xerces_INCLUDE_DIR
     ${XERCES_ROOT}/include
 )
 
+if (WIN32)
 if (Xerces_USE_STATIC_LIBS)
     find_library(Xerces_LIBRARY_DEBUG
-        xerces-c_static_3D.lib ${XERCES_ROOT}/lib
+        NAMES xerces-c_static_3D.lib libxerces-c.a
+        PATHS ${XERCES_ROOT}/lib
     )
 
     find_library(Xerces_LIBRARY_RELEASE
-        xerces-c_static_3.lib ${XERCES_ROOT}/lib
+        NAMES xerces-c_static_3.lib libxerces-c.a
+        PATHS ${XERCES_ROOT}/lib
     )
 else(Xerces_USE_STATIC_LIBS)
     find_library(Xerces_LIBRARY_DEBUG
-        xerces-c_3D.lib ${XERCES_ROOT}/lib
+        NAMES xerces-c_3D.lib libxerces-c.dll.a
+        PATHS ${XERCES_ROOT}/lib
     )
 
     find_library(Xerces_LIBRARY_RELEASE
-        xerces-c_3.lib ${XERCES_ROOT}/lib
+        NAMES xerces-c_3.lib libxerces-c.dll.a
+        PATHS ${XERCES_ROOT}/lib
     )
 endif(Xerces_USE_STATIC_LIBS)
+endif(WIN32)
 
 mark_as_advanced(
     Xerces_INCLUDE_DIR
