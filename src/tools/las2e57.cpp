@@ -35,9 +35,11 @@
 #include <iomanip>
 #include <map>
 
-#ifdef _MSC_VER
+#ifdef WIN32
 #  include <Rpc.h>  // for UuidCreate
-#  pragma comment(lib, "Rpcrt4.lib")
+#   ifdef _MSC_VER
+#       pragma comment(lib, "Rpcrt4.lib")
+#   endif
 #endif
 
 using namespace std;

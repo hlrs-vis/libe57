@@ -71,7 +71,7 @@ struct StatEntry {
 
 struct OccurrenceStats {
     uint64_t    count;
-    char*       measure;
+    const char*       measure;
     ustring     firstPath;
     double      sum;
 
@@ -311,7 +311,7 @@ ustring GetPathFunctor::getPath()
 //================================================================
 
 
-void calcInt64Stats(OccurrenceStats* occur, char* measure, int64_t value, GetPathFunctor& getPathFunctor)
+void calcInt64Stats(OccurrenceStats* occur, const char* measure, int64_t value, GetPathFunctor& getPathFunctor)
 {
 #ifdef VERBOSE
     cout << "calcInt64Stats() called, measure=" << measure << " value=" << value << " path=" << getPathFunctor.getPath() << endl;
@@ -358,7 +358,7 @@ void calcInt64Stats(OccurrenceStats* occur, char* measure, int64_t value, GetPat
 
 //================================================================
 
-void calcDoubleStats(OccurrenceStats* occur, char* measure, double value, GetPathFunctor& getPathFunctor)
+void calcDoubleStats(OccurrenceStats* occur, const char* measure, double value, GetPathFunctor& getPathFunctor)
 {
 #ifdef VERBOSE
 //    cout << "calcDoubleStats() called, measure=" << measure << " value=" << value << " pathName=" << getPathFunctor.getPath() << endl;

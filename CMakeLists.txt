@@ -155,6 +155,7 @@ target_link_libraries( las2e57
     time_conversion
     debug ${Xerces_LIBRARY_DEBUG}
     optimized ${Xerces_LIBRARY_RELEASE}
+    Rpcrt4.lib
 )
 
 add_executable( e57fields
