@@ -24,46 +24,46 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-if (Xerces3_INCLUDE_DIR)
-    set (Xerces3_FIND_QUIETLY TRUE)
-endif (Xerces3_INCLUDE_DIR)
+if (Xerces_FIND_VERSION)
+    message(WARNING "Finding a specific version of Xerces is not supported.")
+endif (Xerces_FIND_VERSION)
 
-find_path(Xerces3_INCLUDE_DIR
+find_path(Xerces_INCLUDE_DIR
     xercesc/sax2/SAX2XMLReader.hpp
     ${XERCES_ROOT}/include
 )
 
-if (Xerces3_USE_STATIC_LIBS)
-    find_library(Xerces3_LIBRARY_DEBUG
+if (Xerces_USE_STATIC_LIBS)
+    find_library(Xerces_LIBRARY_DEBUG
         xerces-c_static_3D.lib ${XERCES_ROOT}/lib
     )
 
-    find_library(Xerces3_LIBRARY_RELEASE
+    find_library(Xerces_LIBRARY_RELEASE
         xerces-c_static_3.lib ${XERCES_ROOT}/lib
     )
-else(Xerces3_USE_STATIC_LIBS)
-    find_library(Xerces3_LIBRARY_DEBUG
+else(Xerces_USE_STATIC_LIBS)
+    find_library(Xerces_LIBRARY_DEBUG
         xerces-c_3D.lib ${XERCES_ROOT}/lib
     )
 
-    find_library(Xerces3_LIBRARY_RELEASE
+    find_library(Xerces_LIBRARY_RELEASE
         xerces-c_3.lib ${XERCES_ROOT}/lib
     )
-endif(Xerces3_USE_STATIC_LIBS)
+endif(Xerces_USE_STATIC_LIBS)
 
 mark_as_advanced(
-    Xerces3_INCLUDE_DIR
-    Xerces3_LIBRARY_DEBUG
-    Xerces3_LIBRARY_RELEASE
+    Xerces_INCLUDE_DIR
+    Xerces_LIBRARY_DEBUG
+    Xerces_LIBRARY_RELEASE
 )
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
-    Xerces3
-    "Unable to find Xerces3: \nPlease set the XERCES_ROOT variable to the Xerces directory.\n"
-    Xerces3_INCLUDE_DIR
-    Xerces3_LIBRARY_DEBUG
-    Xerces3_LIBRARY_RELEASE
+    Xerces
+    "Unable to find Xerces: \nPlease set the XERCES_ROOT variable to the Xerces directory.\n"
+    Xerces_INCLUDE_DIR
+    Xerces_LIBRARY_DEBUG
+    Xerces_LIBRARY_RELEASE
 )
 
-set(Xerces3_FOUND ${XERCES3_FOUND})
+set(Xerces_FOUND ${XERCES_FOUND})

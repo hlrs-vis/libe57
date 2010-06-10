@@ -27,7 +27,7 @@
 
 cmake_minimum_required(VERSION 2.8)
 
-# Private Xerces3 find module
+# Private Xerces find module
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 project(libe57)
@@ -55,21 +55,21 @@ Please set the BOOST_INCLUDEDIR to point to the boost header files."
 )
 endif(NOT Boost_FOUND)
 
-set(Xerces3_USE_STATIC_LIBS On)
-find_package(Xerces3 QUIET)
-if (NOT Xerces3_FOUND)
+set(Xerces_USE_STATIC_LIBS On)
+find_package(Xerces QUIET)
+if (NOT Xerces_FOUND)
     set(XERCES_ROOT CACHE PATH "Location of the xerces library")
     message(FATAL_ERROR
 "Unable to find xerces library.
 Please set the the XERCES_ROOT to point to the root of the xerces directory."
 )
-endif (NOT Xerces3_FOUND)
+endif (NOT Xerces_FOUND)
 
 include_directories(
     include
     include/time_conversion
     src/refimpl
-    ${Xerces3_INCLUDE_DIR}
+    ${Xerces_INCLUDE_DIR}
     ${Boost_INCLUDE_DIR}
 )
 
@@ -123,8 +123,8 @@ set_target_properties( DemoWrite01
 )
 target_link_libraries( DemoWrite01
     RefImpl
-    debug ${Xerces3_LIBRARY_DEBUG}
-    optimized ${Xerces3_LIBRARY_RELEASE}
+    debug ${Xerces_LIBRARY_DEBUG}
+    optimized ${Xerces_LIBRARY_RELEASE}
 )
 
 add_executable( DemoRead01
@@ -135,8 +135,8 @@ set_target_properties( DemoRead01
 )
 target_link_libraries( DemoRead01
     RefImpl
-    debug ${Xerces3_LIBRARY_DEBUG}
-    optimized ${Xerces3_LIBRARY_RELEASE}
+    debug ${Xerces_LIBRARY_DEBUG}
+    optimized ${Xerces_LIBRARY_RELEASE}
 )
 
 #
@@ -153,8 +153,8 @@ target_link_libraries( las2e57
     RefImpl
     LASReader
     time_conversion
-    debug ${Xerces3_LIBRARY_DEBUG}
-    optimized ${Xerces3_LIBRARY_RELEASE}
+    debug ${Xerces_LIBRARY_DEBUG}
+    optimized ${Xerces_LIBRARY_RELEASE}
 )
 
 add_executable( e57fields
@@ -165,8 +165,8 @@ set_target_properties( e57fields
 )
 target_link_libraries( e57fields
     RefImpl
-    debug ${Xerces3_LIBRARY_DEBUG}
-    optimized ${Xerces3_LIBRARY_RELEASE}
+    debug ${Xerces_LIBRARY_DEBUG}
+    optimized ${Xerces_LIBRARY_RELEASE}
 )
 
 add_executable( e57xmldump
@@ -177,7 +177,7 @@ set_target_properties( e57xmldump
 )
 target_link_libraries( e57xmldump
     RefImpl
-    debug ${Xerces3_LIBRARY_DEBUG}
-    optimized ${Xerces3_LIBRARY_RELEASE}
+    debug ${Xerces_LIBRARY_DEBUG}
+    optimized ${Xerces_LIBRARY_RELEASE}
 )
 
