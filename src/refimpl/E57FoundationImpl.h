@@ -114,7 +114,7 @@ inline ustring exception_string(const char* errorName, const char* fileName, int
 #define LAS_V1_0_URI "http://www.astm.org/COMMIT/E57/2010-las-v0.5" //??? change to v1.0 before final release
 
 /// Create whitespace of given length, for indenting printouts in dump() functions
-inline std::string space(int n) {return(std::string(n,' '));}
+inline std::string space(const size_t n) {return(std::string(n,' '));}
 
 /// Convert number to decimal, hexadecimal, and binary strings  (Note hex strings don't have leading zeros).
 inline std::string toString(uint64_t x) {std::ostringstream ss; ss << x; return(ss.str());}
@@ -401,25 +401,25 @@ protected: //=================
 
 class SourceDestBufferImpl : public boost::enable_shared_from_this<SourceDestBufferImpl> {
 public:
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int8_t* b,   unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int8_t* b,   const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(int8_t));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint8_t* b,  unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint8_t* b,  const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(uint8_t));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int16_t* b,  unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int16_t* b,  const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(int16_t));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint16_t* b, unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint16_t* b, const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(uint16_t));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int32_t* b,  unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int32_t* b,  const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(int32_t));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint32_t* b, unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint32_t* b, const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(uint32_t));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int64_t* b,  unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int64_t* b,  const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(int64_t));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, bool* b,     unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, bool* b,     const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(bool));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, float* b,    unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, float* b,    const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(float));
-    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, double* b,   unsigned capacity, bool doConversion = false,
+    SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, double* b,   const size_t capacity, bool doConversion = false,
                          bool doScaling = false, size_t stride = sizeof(double));
     SourceDestBufferImpl(boost::weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, std::vector<ustring>* b);
 
@@ -430,7 +430,7 @@ public:
     bool                    doConversion()  {return(doConversion_);}
     bool                    doScaling()     {return(doScaling_);}
     size_t                  stride()        {return(stride_);}
-    unsigned                capacity()      {return(capacity_);}
+    size_t                  capacity()      {return(capacity_);}
     unsigned                nextIndex()     {return(nextIndex_);};
     void                    rewind()        {nextIndex_=0;};
 
@@ -472,7 +472,7 @@ friend class BitpackIntegerDecoder<uint64_t>;  //??? needed?
     ustring                 pathName_;      /// Pathname from CompressedVectorNode to source/dest object, e.g. "Indices/0"
     MemoryRepresentation    memoryRepresentation_;    /// Type of element (e.g. E57_INT8, E57_UINT64, DOUBLE...)
     char*                   base_;          /// Address of first element, for non-ustring buffers
-    unsigned                capacity_;      /// Total number of elements in array
+    size_t                  capacity_;      /// Total number of elements in array
     bool                    doConversion_;  /// Convert memory representation to/from disk representation
     bool                    doScaling_;     /// Apply scale factor for integer type
     size_t                  stride_;        /// Distance between each element (different than size_ if elements not contiguous)
@@ -729,9 +729,9 @@ public:
     void            extensionsAdd(const ustring& prefix, const ustring& uri);
     bool            extensionsLookupPrefix(const ustring& prefix, ustring& uri);
     bool            extensionsLookupUri(const ustring& uri, ustring& prefix);
-    int             extensionsCount();
-    ustring         extensionsPrefix(int index);
-    ustring         extensionsUri(int index);
+    size_t          extensionsCount();
+    ustring         extensionsPrefix(const size_t index);
+    ustring         extensionsUri(const size_t index);
 
     /// Utility functions:
     bool            isElementNameExtended(const ustring& elementName);
@@ -902,8 +902,8 @@ struct DecodeChannel {
     unsigned            bytestreamNumber;
     uint64_t            maxRecordCount;
     uint64_t            currentPacketLogicalOffset;
-    unsigned            currentBytestreamBufferIndex;
-    unsigned            currentBytestreamBufferLength;
+    size_t              currentBytestreamBufferIndex;
+    size_t              currentBytestreamBufferLength;
     bool                inputFinished;
 
                         DecodeChannel(SourceDestBuffer dbuf_arg, boost::shared_ptr<Decoder> decoder_arg, unsigned bytestreamNumber_arg, uint64_t maxRecordCount_arg);
@@ -965,8 +965,8 @@ class CompressedVectorWriterImpl {
 public:
                 CompressedVectorWriterImpl(boost::shared_ptr<CompressedVectorNodeImpl> ni, std::vector<SourceDestBuffer>& sbufs);
                 ~CompressedVectorWriterImpl();
-    void        write(unsigned requestedRecordCount);
-    void        write(std::vector<SourceDestBuffer>& sbufs, unsigned requestedRecordCount);
+    void        write(const size_t requestedRecordCount);
+    void        write(std::vector<SourceDestBuffer>& sbufs, const size_t requestedRecordCount);
     bool        isOpen();
     boost::shared_ptr<CompressedVectorNodeImpl> compressedVectorNode();
     void        close();
@@ -982,8 +982,8 @@ protected: //=================
     void        checkImageFileOpen(const char* srcFileName, int srcLineNumber, const char* srcFunctionName);
     void        checkWriterOpen(const char* srcFileName, int srcLineNumber, const char* srcFunctionName);
     void        setBuffers(std::vector<SourceDestBuffer>& sbufs); //???needed?
-    unsigned    totalOutputAvailable();
-    unsigned    currentPacketSize();
+    size_t      totalOutputAvailable();
+    size_t      currentPacketSize();
     uint64_t    packetWrite();
     void        flush();
 
@@ -1018,18 +1018,18 @@ public:
 
     virtual             ~Encoder(){};
 
-    virtual uint64_t    processRecords(unsigned recordCount) = 0;
+    virtual uint64_t    processRecords(size_t recordCount) = 0;
     virtual unsigned    sourceBufferNextIndex() = 0;
     virtual uint64_t    currentRecordIndex() = 0;
     virtual float       bitsPerRecord() = 0;
     virtual bool        registerFlushToOutput() = 0;
 
-    virtual unsigned    outputAvailable() = 0;                                /// number of bytes that can be read
-    virtual void        outputRead(char* dest, unsigned byteCount) = 0;       /// get data from encoder
+    virtual size_t      outputAvailable() = 0;                                /// number of bytes that can be read
+    virtual void        outputRead(char* dest, const size_t byteCount) = 0;       /// get data from encoder
     virtual void        outputClear() = 0;
 
     virtual void        sourceBufferSetNew(std::vector<SourceDestBuffer>& sbufs) = 0;
-    virtual unsigned    outputGetMaxSize() = 0;
+    virtual size_t      outputGetMaxSize() = 0;
     virtual void        outputSetMaxSize(unsigned byteCount) = 0;
 
     unsigned            bytestreamNumber() {return(bytestreamNumber_);};
@@ -1047,18 +1047,18 @@ protected: //================
 
 class BitpackEncoder : public Encoder {
 public:
-    virtual uint64_t    processRecords(unsigned recordCount) = 0;
+    virtual uint64_t    processRecords(size_t recordCount) = 0;
     virtual unsigned    sourceBufferNextIndex();
     virtual uint64_t    currentRecordIndex();
     virtual float       bitsPerRecord() = 0;
     virtual bool        registerFlushToOutput() = 0;
 
-    virtual unsigned    outputAvailable();                                /// number of bytes that can be read
-    virtual void        outputRead(char* dest, unsigned byteCount);       /// get data from encoder
+    virtual size_t      outputAvailable();                                /// number of bytes that can be read
+    virtual void        outputRead(char* dest, const size_t byteCount);       /// get data from encoder
     virtual void        outputClear();
 
     virtual void        sourceBufferSetNew(std::vector<SourceDestBuffer>& sbufs);
-    virtual unsigned    outputGetMaxSize();
+    virtual size_t      outputGetMaxSize();
     virtual void        outputSetMaxSize(unsigned byteCount);
 
 #ifdef E57_DEBUG
@@ -1072,9 +1072,9 @@ protected: //================
     boost::shared_ptr<SourceDestBufferImpl>  sourceBuffer_;
 
     std::vector<char>   outBuffer_;
-    unsigned            outBufferFirst_;
-    unsigned            outBufferEnd_;
-    unsigned            outBufferAlignmentSize_;
+    size_t              outBufferFirst_;
+    size_t              outBufferEnd_;
+    size_t              outBufferAlignmentSize_;
 
     uint64_t            currentRecordIndex_;
 };
@@ -1085,7 +1085,7 @@ class BitpackFloatEncoder : public BitpackEncoder {
 public:
                         BitpackFloatEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, unsigned outputMaxSize, FloatPrecision precision);
 
-    virtual uint64_t    processRecords(unsigned recordCount);
+    virtual uint64_t    processRecords(size_t recordCount);
     virtual bool        registerFlushToOutput();
     virtual float       bitsPerRecord();
 
@@ -1102,7 +1102,7 @@ class BitpackStringEncoder : public BitpackEncoder {
 public:
                         BitpackStringEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, unsigned outputMaxSize);
 
-    virtual uint64_t    processRecords(unsigned recordCount);
+    virtual uint64_t    processRecords(size_t recordCount);
     virtual bool        registerFlushToOutput();
     virtual float       bitsPerRecord();
 
@@ -1125,7 +1125,7 @@ public:
                         BitpackIntegerEncoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& sbuf,
                                               unsigned outputMaxSize, int64_t minimum, int64_t maximum, double scale, double offset);
 
-    virtual uint64_t    processRecords(unsigned recordCount);
+    virtual uint64_t    processRecords(size_t recordCount);
     virtual bool        registerFlushToOutput();
     virtual float       bitsPerRecord();
 
@@ -1149,18 +1149,18 @@ protected: //================
 class ConstantIntegerEncoder : public Encoder {
 public:
                         ConstantIntegerEncoder(unsigned bytestreamNumber, SourceDestBuffer& sbuf, int64_t minimum);
-    virtual uint64_t    processRecords(unsigned recordCount);
+    virtual uint64_t    processRecords(size_t recordCount);
     virtual unsigned    sourceBufferNextIndex();
     virtual uint64_t    currentRecordIndex();
     virtual float       bitsPerRecord();
     virtual bool        registerFlushToOutput();
 
-    virtual unsigned    outputAvailable();                                /// number of bytes that can be read
-    virtual void        outputRead(char* dest, unsigned byteCount);       /// get data from encoder
+    virtual size_t      outputAvailable();                                /// number of bytes that can be read
+    virtual void        outputRead(char* dest, const size_t byteCount);       /// get data from encoder
     virtual void        outputClear();
 
     virtual void        sourceBufferSetNew(std::vector<SourceDestBuffer>& sbufs);
-    virtual unsigned    outputGetMaxSize();
+    virtual size_t      outputGetMaxSize();
     virtual void        outputSetMaxSize(unsigned byteCount);
 
 #ifdef E57_DEBUG
@@ -1184,7 +1184,7 @@ public:
 
     virtual void        destBufferSetNew(std::vector<SourceDestBuffer>& dbufs) = 0;
     virtual uint64_t    totalRecordsCompleted() = 0;
-    virtual unsigned    inputProcess(const char* source, unsigned count) = 0;
+    virtual size_t      inputProcess(const char* source, const size_t count) = 0;
     virtual void        stateReset() = 0;
     unsigned            bytestreamNumber() {return(bytestreamNumber_);};
 #ifdef E57_DEBUG
@@ -1208,8 +1208,8 @@ public:
 
     virtual uint64_t    totalRecordsCompleted() {return(currentRecordIndex_);};
 
-    virtual unsigned    inputProcess(const char* source, unsigned byteCount);
-    virtual unsigned    inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit) = 0;
+    virtual size_t      inputProcess(const char* source, const size_t byteCount);
+    virtual size_t      inputProcessAligned(const char* inbuf, const size_t firstBit, const size_t endBit) = 0;
 
     virtual void        stateReset();
 
@@ -1227,8 +1227,8 @@ protected: //================
     boost::shared_ptr<SourceDestBufferImpl> destBuffer_;
 
     std::vector<char>   inBuffer_;
-    unsigned            inBufferFirstBit_;
-    unsigned            inBufferEndByte_;
+    size_t              inBufferFirstBit_;
+    size_t              inBufferEndByte_;
     unsigned            inBufferAlignmentSize_;
     unsigned            bitsPerWord_;
     unsigned            bytesPerWord_;
@@ -1240,7 +1240,7 @@ class BitpackFloatDecoder : public BitpackDecoder {
 public:
                         BitpackFloatDecoder(unsigned bytestreamNumber, SourceDestBuffer& dbuf, FloatPrecision precision, uint64_t maxRecordCount);
 
-    virtual unsigned    inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit);
+    virtual size_t      inputProcessAligned(const char* inbuf, const size_t firstBit, const size_t endBit);
 
 #ifdef E57_DEBUG
     virtual void        dump(int indent = 0, std::ostream& os = std::cout);
@@ -1255,7 +1255,7 @@ class BitpackStringDecoder : public BitpackDecoder {
 public:
                         BitpackStringDecoder(unsigned bytestreamNumber, SourceDestBuffer& dbuf, uint64_t maxRecordCount);
 
-    virtual unsigned    inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit);
+    virtual size_t      inputProcessAligned(const char* inbuf, const size_t firstBit, const size_t endBit);
 
 #ifdef E57_DEBUG
     virtual void        dump(int indent = 0, std::ostream& os = std::cout);
@@ -1278,7 +1278,7 @@ public:
                         BitpackIntegerDecoder(bool isScaledInteger, unsigned bytestreamNumber, SourceDestBuffer& dbuf,
                                               int64_t minimum, int64_t maximum, double scale, double offset, uint64_t maxRecordCount);
 
-    virtual unsigned    inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit);
+    virtual size_t      inputProcessAligned(const char* inbuf, const size_t firstBit, const size_t endBit);
 
 #ifdef E57_DEBUG
     virtual void        dump(int indent = 0, std::ostream& os = std::cout);
@@ -1301,7 +1301,7 @@ public:
                                               int64_t minimum, double scale, double offset, uint64_t maxRecordCount);
     virtual void        destBufferSetNew(std::vector<SourceDestBuffer>& dbufs);
     virtual uint64_t    totalRecordsCompleted() {return(currentRecordIndex_);};
-    virtual unsigned    inputProcess(const char* source, unsigned byteCount);
+    virtual size_t      inputProcess(const char* source, const size_t byteCount);
     virtual void        stateReset();
 #ifdef E57_DEBUG
     virtual void        dump(int indent = 0, std::ostream& os = std::cout);

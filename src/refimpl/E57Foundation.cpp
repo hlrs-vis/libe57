@@ -1552,9 +1552,9 @@ void ImageFile::checkInvariant(bool doRecurse) {
     }
 
     // Extension prefixes and URIs are unique
-    int eCount = extensionsCount();
-    for (int i = 0; i < eCount; i++) {
-        for (int j = i+1; j < eCount; j++) {
+    const size_t eCount = extensionsCount();
+    for (size_t i = 0; i < eCount; i++) {
+        for (size_t j = i+1; j < eCount; j++) {
             if (extensionsPrefix(i) == extensionsPrefix(j))
                 throw E57_EXCEPTION1(E57_ERROR_INVARIANCE_VIOLATION);
             if (extensionsUri(i) == extensionsUri(j))
@@ -1563,7 +1563,7 @@ void ImageFile::checkInvariant(bool doRecurse) {
     }
 
     // Verify lookup functions are correct
-    for (int i = 0; i < eCount; i++) {
+    for (size_t i = 0; i < eCount; i++) {
         ustring goodPrefix = extensionsPrefix(i);
         ustring goodUri    = extensionsUri(i);
         ustring prefix, uri;
@@ -2398,7 +2398,7 @@ The @a capacity must match the capacity of all other SourceDestBuffers that will
 @throw   ::E57_ERROR_INTERNAL           All objects in undocumented state
 @see     SourceDestBufferNumericCreate.cpp example, SourceDestVufferStringCreate.cpp example, ImageFile::reader, ImageFile::writer, CompressedVectorReader::read(std::vector<SourceDestBuffer>&), CompressedVectorWriter::write(std::vector<SourceDestBuffer>&)
 */ /*================*/
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int8_t* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int8_t* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2406,7 +2406,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint8_t* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint8_t* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2414,7 +2414,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int16_t* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int16_t* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2422,7 +2422,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint16_t* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint16_t* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2430,7 +2430,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int32_t* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int32_t* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2438,7 +2438,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint32_t* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint32_t* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2446,7 +2446,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int64_t* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int64_t* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2454,7 +2454,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, bool* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, bool* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2462,7 +2462,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, float* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, float* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2470,7 +2470,7 @@ SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathNa
 
 //! @brief   Designate buffers to transfer data to/from a CompressedVectorNode in a block.
 //! @copydetails SourceDestBuffer::SourceDestBuffer(ImageFile,const ustring,int8_t*,unsigned,bool,bool,size_t)
-SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, double* b, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBuffer::SourceDestBuffer(ImageFile destImageFile, const ustring pathName, double* b, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : impl_(new SourceDestBufferImpl(destImageFile.impl(), pathName, b, capacity, doConversion, doScaling, stride))
 {
     CHECK_THIS_INVARIANCE()
@@ -2557,9 +2557,9 @@ If the length is incorrect (in particular, too long) memory may be corrupted or 
 @throw   ::E57_ERROR_INTERNAL           All objects in undocumented state
 @see     SourceDestBufferFunctions.cpp example 
 */ /*================*/
-unsigned SourceDestBuffer::capacity() const
+size_t SourceDestBuffer::capacity() const
 {
-    CHECK_INVARIANCE_RETURN(unsigned, impl_->capacity());
+    CHECK_INVARIANCE_RETURN(size_t, impl_->capacity());
 }
 
 /*================*/ /*!
@@ -2923,7 +2923,7 @@ If CompressedVectorWriter::close is not called before the CompressedVectorWriter
 @throw   ::E57_ERROR_INTERNAL           All objects in undocumented state
 @see     SourceDestBufferNumericCreate.cpp example, CompressedVectorWriter::write(std::vector<SourceDestBuffer>&,unsigned), CompressedVectorNode::writer, CompressedVectorWriter::close, SourceDestBuffer, E57Exception
 */ /*================*/
-void CompressedVectorWriter::write(unsigned recordCount)
+void CompressedVectorWriter::write(const size_t recordCount)
 {
     CHECK_THIS_INVARIANCE()
     impl_->write(recordCount);
@@ -2970,7 +2970,7 @@ If a file I/O or checksum error occurs during the transfer, both this Compressed
 @throw   ::E57_ERROR_INTERNAL           All objects in undocumented state
 @see     SourceDestBufferNumericCreate.cpp example, CompressedVectorWriter::write(unsigned), CompressedVectorNode::writer, CompressedVectorWriter::close, SourceDestBuffer, E57Exception
 */ /*================*/
-void CompressedVectorWriter::write(std::vector<SourceDestBuffer>& sbufs, unsigned recordCount)
+void CompressedVectorWriter::write(std::vector<SourceDestBuffer>& sbufs, const size_t recordCount)
 {
     CHECK_THIS_INVARIANCE()
     impl_->write(sbufs, recordCount);
@@ -4769,9 +4769,9 @@ The default E57 namespace does not count as an extension.
 @throw   ::E57_ERROR_INTERNAL           All objects in undocumented state
 @see     Extensions.cpp example, ImageFile::extensionsPrefix, ImageFile::extensionsUri
 */ /*================*/
-int ImageFile::extensionsCount() const
+size_t ImageFile::extensionsCount() const
 {
-    CHECK_INVARIANCE_RETURN(int, impl_->extensionsCount());
+    CHECK_INVARIANCE_RETURN(size_t, impl_->extensionsCount());
 }
 
 /*================*/ /*!
@@ -4790,7 +4790,7 @@ The default E57 namespace is not counted as an extension.
 @throw   ::E57_ERROR_INTERNAL           All objects in undocumented state
 @see     Extensions.cpp example, ImageFile::extensionsCount, ImageFile::extensionsUri
 */ /*================*/
-ustring ImageFile::extensionsPrefix(int index) const
+ustring ImageFile::extensionsPrefix(const size_t index) const
 {
     CHECK_INVARIANCE_RETURN(ustring, impl_->extensionsPrefix(index));
 }
@@ -4811,7 +4811,7 @@ The default E57 namespace is not counted as an extension.
 @throw   ::E57_ERROR_INTERNAL           All objects in undocumented state
 @see     Extensions.cpp example, ImageFile::extensionsCount, ImageFile::extensionsPrefix
 */ /*================*/
-ustring ImageFile::extensionsUri(int index) const
+ustring ImageFile::extensionsUri(const size_t index) const
 {
     CHECK_INVARIANCE_RETURN(ustring, impl_->extensionsUri(index));
 }

@@ -541,7 +541,7 @@ int64_t StructureNodeImpl::childCount()
 shared_ptr<NodeImpl> StructureNodeImpl::get(int64_t index)
 {
     checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
-    if (index < 0 || index >= children_.size()) {
+		if (index < 0 || index >= static_cast<boost::int64_t>(children_.size())) {	// %%% Possible truncation on platforms where size_t = uint64
         throw E57_EXCEPTION2(E57_ERROR_CHILD_INDEX_OUT_OF_BOUNDS,
                              "this->pathName=" + this->pathName()
                              + " index=" + toString(index)
@@ -765,7 +765,7 @@ void StructureNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> imf, CheckedFi
     /// Note the prototype of a CompressedVector is a separate tree, so don't want to write out namespaces if not the ImageFile root
     if (isRoot() && shared_from_this() == imf->root()) {
         bool gotDefaultNamespace = false;
-        for (int i = 0; i < imf->extensionsCount(); i++) {
+        for (size_t i = 0; i < imf->extensionsCount(); i++) {
             const char* xmlnsExtension;
             if (imf->extensionsPrefix(i) == "") {
                 gotDefaultNamespace = true;
@@ -905,7 +905,7 @@ void VectorNodeImpl::dump(int indent, ostream& os)
 #endif
 
 //=====================================================================================
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int8_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int8_t* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_INT8), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -913,7 +913,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint8_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint8_t* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_UINT8), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -921,7 +921,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int16_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int16_t* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_INT16), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -929,7 +929,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint16_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint16_t* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_UINT16), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -937,7 +937,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int32_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int32_t* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_INT32), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -945,7 +945,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint32_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, uint32_t* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_UINT32), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -953,7 +953,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int64_t* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, int64_t* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_INT64), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -961,7 +961,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, bool* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, bool* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_BOOL), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -969,7 +969,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, float* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, float* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_REAL32), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -977,7 +977,7 @@ SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile
     checkState_();
 }
 
-SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, double* base, unsigned capacity, bool doConversion, bool doScaling, size_t stride)
+SourceDestBufferImpl::SourceDestBufferImpl(weak_ptr<ImageFileImpl> destImageFile, const ustring pathName, double* base, const size_t capacity, bool doConversion, bool doScaling, size_t stride)
 : destImageFile_(destImageFile), pathName_(pathName), memoryRepresentation_(E57_REAL64), base_(reinterpret_cast<char*>(base)),
   capacity_(capacity), doConversion_(doConversion), doScaling_(doScaling), stride_(stride), nextIndex_(0), ustrings_(0)
 {
@@ -2840,7 +2840,7 @@ XMLSize_t E57FileInputStream::readBytes(       XMLByte* const  toFill
         available_size = static_cast<size_t>(available);
     else {
         /// size_t is smaller than int64_t, Calc max that size_t can hold
-        int64_t size_max = ((1LL<<(8*sizeof(size_t))) - 1);
+        const int64_t size_max = std::numeric_limits<size_t>::max();
 
         /// read smaller of size_max, available
         ///??? redo
@@ -4028,19 +4028,19 @@ bool ImageFileImpl::extensionsLookupUri(const ustring& uri, ustring& prefix)
     return(false);
 }
 
-int ImageFileImpl::extensionsCount()
+size_t ImageFileImpl::extensionsCount()
 {
     checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     return(nameSpaces_.size());
 }
 
-ustring ImageFileImpl::extensionsPrefix(int index)
+ustring ImageFileImpl::extensionsPrefix(const size_t index)
 {
     checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     return(nameSpaces_[index].prefix);  //??? throw e57 exception here if out of bounds?
 }
 
-ustring ImageFileImpl::extensionsUri(int index)
+ustring ImageFileImpl::extensionsUri(const size_t index)
 {
     checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     return(nameSpaces_[index].uri);  //??? throw e57 exception here if out of bounds?
@@ -4281,7 +4281,7 @@ void ImageFileImpl::dump(int indent, ostream& os)
     os << space(indent) << "writerCount: " << writerCount_ << endl;
     os << space(indent) << "readerCount: " << readerCount_ << endl;
     os << space(indent) << "isWriter:    " << isWriter_ << endl;
-    for (int i=0; i < extensionsCount(); i++)
+    for (size_t i=0; i < extensionsCount(); i++)
         os << space(indent) << "nameSpace[" << i << "]: prefix=" << extensionsPrefix(i) << " uri=" << extensionsUri(i) << endl;
     os << space(indent) << "root:      " << endl;
     root_->dump(indent+2, os);
@@ -4580,7 +4580,7 @@ template<class FTYPE> CheckedFile& CheckedFile::writeFloatingPoint(FTYPE value, 
     /// E.g. 2.00000000000000000e+005  ==> 2e+005
 
     ustring s = ss.str();
-    int len = s.length();
+    size_t len = s.length();
 
 #ifdef E57_MAX_DEBUG
     ustring old_s = s;
@@ -5716,7 +5716,7 @@ void CompressedVectorWriterImpl::setBuffers(vector<SourceDestBuffer>& sbufs)
     sbufs_ = sbufs;
 }
 
-void CompressedVectorWriterImpl::write(vector<SourceDestBuffer>& sbufs, unsigned requestedRecordCount)
+void CompressedVectorWriterImpl::write(vector<SourceDestBuffer>& sbufs, const size_t requestedRecordCount)
 {
     /// don't checkImageFileOpen, write(unsigned) will do it
     /// don't checkWriterOpen(), write(unsigned) will do it
@@ -5725,7 +5725,7 @@ void CompressedVectorWriterImpl::write(vector<SourceDestBuffer>& sbufs, unsigned
     write(requestedRecordCount);
 }
 
-void CompressedVectorWriterImpl::write(unsigned requestedRecordCount)
+void CompressedVectorWriterImpl::write(const size_t requestedRecordCount)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "CompressedVectorWriterImpl::write() called" << endl; //???
@@ -5822,16 +5822,16 @@ void CompressedVectorWriterImpl::write(unsigned requestedRecordCount)
     /// When we leave this function, will likely still have data in channel ioBuffers as well as partial words in Encoder registers.
 }
 
-unsigned CompressedVectorWriterImpl::totalOutputAvailable()
+size_t CompressedVectorWriterImpl::totalOutputAvailable()
 {
-    unsigned total = 0;
-    for (unsigned i=0; i < bytestreams_.size(); i++) {
+    size_t total = 0;
+    for (size_t i=0; i < bytestreams_.size(); i++) {
         total += bytestreams_.at(i)->outputAvailable();
     }
     return(total);
 }
 
-unsigned CompressedVectorWriterImpl::currentPacketSize()
+size_t CompressedVectorWriterImpl::currentPacketSize()
 {
     /// Calc current packet size
     return(sizeof(DataPacketHeader) + bytestreams_.size()*sizeof(uint16_t) + totalOutputAvailable());
@@ -5844,7 +5844,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 #endif
 
     /// Double check that we have work to do
-    unsigned totalOutput = totalOutputAvailable();
+    size_t totalOutput = totalOutputAvailable();
     if (totalOutput == 0)
         return(0);
 #ifdef E57_MAX_VERBOSE
@@ -5852,13 +5852,13 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 #endif
 
     /// Calc maximum number of bytestream values can put in data packet.
-    unsigned packetMaxPayloadBytes = E57_DATA_PACKET_MAX - sizeof(DataPacketHeader) - bytestreams_.size()*sizeof(uint16_t);
+    size_t packetMaxPayloadBytes = E57_DATA_PACKET_MAX - sizeof(DataPacketHeader) - bytestreams_.size()*sizeof(uint16_t);
 #ifdef E57_MAX_VERBOSE
     cout << "  packetMaxPayloadBytes=" << packetMaxPayloadBytes << endl; //???
 #endif
 
     /// Allocate vector for number of bytes that each bytestream will write to file.
-    vector<unsigned> count(bytestreams_.size());
+    vector<size_t> count(bytestreams_.size());
 
     /// See if we can fit into a single data packet
     if (totalOutput < packetMaxPayloadBytes) {
@@ -5881,7 +5881,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 
 #ifdef E57_DEBUG
     /// Double check sum of count is <= packetMaxPayloadBytes
-    unsigned totalByteCount = 0;
+    size_t totalByteCount = 0;
     for (unsigned i=0; i < count.size(); i++)
         totalByteCount += count.at(i);
     if (totalByteCount > packetMaxPayloadBytes) {
@@ -5909,7 +5909,7 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
     cout << "  bsbLength=" << (unsigned)bsbLength << endl; //???
 #endif
     for (unsigned i=0; i < bytestreams_.size(); i++) {
-        bsbLength[i] = count.at(i);
+        bsbLength[i] = static_cast<uint16_t>(count.at(i));		// %%% Truncation
 #ifdef E57_MAX_VERBOSE
         cout << "  Writing " << bsbLength[i] << " bytes into bytestream " << i << endl; //???
 #endif
@@ -5922,8 +5922,8 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
 #endif
 
     /// Write contents of each bytestream in dataPacket_
-    for (unsigned i=0; i < bytestreams_.size(); i++) {
-        unsigned n = count.at(i);
+    for (size_t i=0; i < bytestreams_.size(); i++) {
+        size_t n = count.at(i);
 
 #ifdef E57_DEBUG
         /// Double check we aren't accidentally going to write off end of vector<char>
@@ -5969,8 +5969,8 @@ uint64_t CompressedVectorWriterImpl::packetWrite()
     /// Prepare header in dataPacket_, now that we are sure of packetLength
     dataPacket_.packetType = E57_DATA_PACKET;
     dataPacket_.packetFlags = 0;
-    dataPacket_.packetLogicalLengthMinus1 = static_cast<uint16_t>(packetLength-1);
-    dataPacket_.bytestreamCount = bytestreams_.size();
+    dataPacket_.packetLogicalLengthMinus1 = static_cast<uint16_t>(packetLength-1);		    // %%% Truncation
+    dataPacket_.bytestreamCount = static_cast<boost::uint16_t>(bytestreams_.size());		// %%% Truncation
 
     /// Double check that data packet is well formed
     dataPacket_.verify(packetLength);
@@ -6348,7 +6348,7 @@ void CompressedVectorReaderImpl::feedPacketToDecoders(uint64_t currentPacketLogi
 
             /// Calc where we are in the buffer
             char* uneatenStart = &bsbStart[chan->currentBytestreamBufferIndex];
-            unsigned uneatenLength = bsbLength - chan->currentBytestreamBufferIndex;
+            size_t uneatenLength = bsbLength - chan->currentBytestreamBufferIndex;
 
             /// Double check we are not off end of buffer
             if (chan->currentBytestreamBufferIndex > bsbLength) {
@@ -6367,7 +6367,7 @@ void CompressedVectorReaderImpl::feedPacketToDecoders(uint64_t currentPacketLogi
                 chan->dump(8);
 #endif
             /// Feed into decoder
-            unsigned bytesProcessed = chan->decoder->inputProcess(uneatenStart, uneatenLength);
+            size_t bytesProcessed = chan->decoder->inputProcess(uneatenStart, uneatenLength);
 #ifdef E57_MAX_VERBOSE
             cout << "  stream[" << chan->bytestreamNumber << "]: bytesProcessed=" << bytesProcessed << endl;
 #endif
@@ -6713,12 +6713,12 @@ uint64_t BitpackEncoder::currentRecordIndex()
     return(currentRecordIndex_);
 }
 
-unsigned BitpackEncoder::outputAvailable()
+size_t BitpackEncoder::outputAvailable()
 {
     return(outBufferEnd_ - outBufferFirst_);
 }
 
-void BitpackEncoder::outputRead(char* dest, unsigned byteCount)
+void BitpackEncoder::outputRead(char* dest, const size_t byteCount)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "BitpackEncoder::outputRead() called, dest=" << (unsigned)dest << " byteCount="<< byteCount << endl; //???
@@ -6762,7 +6762,7 @@ void BitpackEncoder::sourceBufferSetNew(std::vector<SourceDestBuffer>& sbufs)
     sourceBuffer_ = sbufs.at(0).impl();
 }
 
-unsigned BitpackEncoder::outputGetMaxSize()
+size_t BitpackEncoder::outputGetMaxSize()
 {
     /// Its size that matters here, not capacity
     return(outBuffer_.size());
@@ -6790,12 +6790,12 @@ void BitpackEncoder::outBufferShiftDown()
     }
 
     /// Round newEnd up to nearest multiple of outBufferAlignmentSize_.
-    unsigned newEnd = outputAvailable();
-    unsigned remainder = newEnd % outBufferAlignmentSize_;
+    size_t newEnd = outputAvailable();
+    size_t remainder = newEnd % outBufferAlignmentSize_;
     if (remainder > 0)
         newEnd += outBufferAlignmentSize_ - remainder;
-    unsigned newFirst = outBufferFirst_ - (outBufferEnd_ - newEnd);
-    unsigned byteCount = outBufferEnd_ - outBufferFirst_;
+    size_t newFirst = outBufferFirst_ - (outBufferEnd_ - newEnd);
+    size_t byteCount = outBufferEnd_ - outBufferFirst_;
 
     /// Double check round up worked
     if (newEnd % outBufferAlignmentSize_)
@@ -6845,7 +6845,7 @@ BitpackFloatEncoder::BitpackFloatEncoder(unsigned bytestreamNumber, SourceDestBu
 {
 }
 
-uint64_t BitpackFloatEncoder::processRecords(unsigned recordCount)
+uint64_t BitpackFloatEncoder::processRecords(size_t recordCount)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "  BitpackFloatEncoder::processRecords() called, recordCount=" << recordCount << endl; //???
@@ -6855,7 +6855,7 @@ uint64_t BitpackFloatEncoder::processRecords(unsigned recordCount)
     /// This leaves outBufferEnd_ at a natural boundary.
     outBufferShiftDown();
 
-    unsigned typeSize = (precision_ == E57_SINGLE) ? sizeof(float) : sizeof(double);
+    size_t typeSize = (precision_ == E57_SINGLE) ? sizeof(float) : sizeof(double);
 
 #ifdef E57_DEBUG
      /// Verify that outBufferEnd_ is multiple of typeSize (so transfers of floats are aligned naturally in memory).
@@ -6864,7 +6864,7 @@ uint64_t BitpackFloatEncoder::processRecords(unsigned recordCount)
 #endif
 
     /// Figure out how many records will fit in output.
-    unsigned maxOutputRecords = (outBuffer_.size() - outBufferEnd_) / typeSize;
+    size_t maxOutputRecords = (outBuffer_.size() - outBufferEnd_) / typeSize;
 
     /// Can't process more records than will safely fit in output stream
     if (recordCount > maxOutputRecords)
@@ -6939,7 +6939,7 @@ BitpackStringEncoder::BitpackStringEncoder(unsigned bytestreamNumber, SourceDest
 {
 }
 
-uint64_t BitpackStringEncoder::processRecords(unsigned recordCount)
+uint64_t BitpackStringEncoder::processRecords(size_t recordCount)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "  BitpackStringEncoder::processRecords() called, recordCount=" << recordCount << endl; //???
@@ -6949,7 +6949,7 @@ uint64_t BitpackStringEncoder::processRecords(unsigned recordCount)
     outBufferShiftDown();
 
     /// Figure out how many bytes outBuffer can accept.
-    unsigned bytesFree = outBuffer_.size() - outBufferEnd_;
+    size_t bytesFree = outBuffer_.size() - outBufferEnd_;
 
     /// Form the starting address for next available location in outBuffer
     char* outp = &outBuffer_[outBufferEnd_];
@@ -7210,15 +7210,15 @@ void BitpackDecoder::destBufferSetNew(vector<SourceDestBuffer>& dbufs)
     destBuffer_ = dbufs.at(0).impl();
 }
 
-unsigned BitpackDecoder::inputProcess(const char* source, unsigned availableByteCount)
+size_t BitpackDecoder::inputProcess(const char* source, const size_t availableByteCount)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "BitpackDecoder::inputprocess() called, source=" << (unsigned)source << " availableByteCount="<< availableByteCount << endl;
 #endif
-    unsigned bytesUnsaved = availableByteCount;
-    unsigned bitsEaten = 0;
+    size_t bytesUnsaved = availableByteCount;
+    size_t bitsEaten = 0;
     do {
-        unsigned byteCount = min(bytesUnsaved, inBuffer_.size() - inBufferEndByte_);
+        size_t byteCount = min(bytesUnsaved, inBuffer_.size() - static_cast<size_t>(inBufferEndByte_));
 
         /// Copy input bytes from caller, if any
         if (byteCount > 0) {
@@ -7248,9 +7248,9 @@ unsigned BitpackDecoder::inputProcess(const char* source, unsigned availableByte
         /// The subclass may transfer this partial word in a full word transfer, but it must be carefull to only use the defined bits.
         /// inBuffer_ is a multiple of largest word size, so this full word transfer off the end will always be in defined memory.
 
-        unsigned firstWord = inBufferFirstBit_ / bitsPerWord_;
-        unsigned firstNaturalBit = firstWord * bitsPerWord_;
-        unsigned endBit = inBufferEndByte_ * 8;
+        size_t firstWord = inBufferFirstBit_ / bitsPerWord_;
+        size_t firstNaturalBit = firstWord * bitsPerWord_;
+        size_t endBit = inBufferEndByte_ * 8;
 #ifdef E57_MAX_VERBOSE
     cout << "  feeding aligned decoder " << endBit - inBufferFirstBit_ << " bits." << endl;
 #endif
@@ -7289,8 +7289,8 @@ void BitpackDecoder::inBufferShiftDown()
     /// Move uneaten data down to beginning of inBuffer_.
     /// Keep on natural boundaries.
     /// Moves all of word that contains inBufferFirstBit.
-    unsigned firstWord          = inBufferFirstBit_ / bitsPerWord_;
-    unsigned firstNaturalByte   = firstWord * bytesPerWord_;
+    size_t firstWord          = inBufferFirstBit_ / bitsPerWord_;
+    size_t firstNaturalByte   = firstWord * bytesPerWord_;
 #ifdef E57_DEBUG
     if (firstNaturalByte > inBufferEndByte_) {
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL,
@@ -7298,7 +7298,7 @@ void BitpackDecoder::inBufferShiftDown()
                              + " inBufferEndByte=" + toString(inBufferEndByte_));
     }
 #endif
-    unsigned byteCount          = inBufferEndByte_ - firstNaturalByte;
+    size_t byteCount          = inBufferEndByte_ - firstNaturalByte;
     if (byteCount > 0)
         memmove(&inBuffer_[0], &inBuffer_[firstNaturalByte], byteCount);  /// Overlapping regions ok with memmove().
 
@@ -7337,7 +7337,7 @@ BitpackFloatDecoder::BitpackFloatDecoder(unsigned bytestreamNumber, SourceDestBu
 {
 }
 
-unsigned BitpackFloatDecoder::inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit)
+size_t BitpackFloatDecoder::inputProcessAligned(const char* inbuf, const size_t firstBit, const size_t endBit)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "BitpackFloatDecoder::inputProcessAligned() called, inbuf=" << (unsigned)inbuf << " firstBit=" << firstBit << " endBit=" << endBit << endl;
@@ -7345,9 +7345,9 @@ unsigned BitpackFloatDecoder::inputProcessAligned(const char* inbuf, unsigned fi
     /// Read from inbuf, decode, store in destBuffer
     /// Repeat until have filled destBuffer, or completed all records
 
-    unsigned n = destBuffer_->capacity() - destBuffer_->nextIndex();
+    size_t n = destBuffer_->capacity() - destBuffer_->nextIndex();
 
-    unsigned typeSize = (precision_ == E57_SINGLE) ? sizeof(float) : sizeof(double);
+    size_t typeSize = (precision_ == E57_SINGLE) ? sizeof(float) : sizeof(double);
 
 #ifdef E57_DEBUG
     /// Verify that inbuf is naturally aligned to correct boundary (4 or 8 bytes).  Base class should be doing this for us.
@@ -7363,7 +7363,7 @@ unsigned BitpackFloatDecoder::inputProcessAligned(const char* inbuf, unsigned fi
 #endif
 
     /// Calc how many whole records worth of data we have in inbuf
-    unsigned maxInputRecords = (endBit - firstBit) / (8*typeSize);
+    size_t maxInputRecords = (endBit - firstBit) / (8*typeSize);
 
     /// Can't process more records than we have input data for.
     if (n > maxInputRecords)
@@ -7439,7 +7439,7 @@ BitpackStringDecoder::BitpackStringDecoder(unsigned bytestreamNumber, SourceDest
     memset(prefixBytes_, 0, sizeof(prefixBytes_));
 }
 
-unsigned BitpackStringDecoder::inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit)
+size_t BitpackStringDecoder::inputProcessAligned(const char* inbuf, const size_t firstBit, const size_t endBit)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "BitpackStringDecoder::inputProcessAligned() called, inbuf=" << (unsigned)inbuf << " firstBit=" << firstBit << " endBit=" << endBit << endl;
@@ -7454,8 +7454,8 @@ unsigned BitpackStringDecoder::inputProcessAligned(const char* inbuf, unsigned f
 #endif
 
     /// Converts start/end bits to whole bytes
-    unsigned nBytesAvailable = (endBit - firstBit) >> 3;
-    unsigned nBytesRead = 0;
+    size_t nBytesAvailable = (endBit - firstBit) >> 3;
+    size_t nBytesRead = 0;
 
     /// Loop until we've finished all the records, or ran out of input currently available
     while (currentRecordIndex_ < maxRecordCount_ && nBytesRead < nBytesAvailable) {
@@ -7522,7 +7522,7 @@ unsigned BitpackStringDecoder::inputProcessAligned(const char* inbuf, unsigned f
             uint64_t nBytesNeeded = stringLength_ - nBytesStringRead_;
 
             /// Can process the smaller of unread or needed bytes
-            unsigned nBytesProcess = nBytesAvailable - nBytesRead;
+            size_t nBytesProcess = nBytesAvailable - nBytesRead;
             if (nBytesNeeded < static_cast<uint64_t>(nBytesProcess))
                 nBytesProcess = static_cast<unsigned>(nBytesNeeded);
 
@@ -7597,7 +7597,7 @@ void ConstantIntegerDecoder::destBufferSetNew(vector<SourceDestBuffer>& dbufs)
     destBuffer_ = dbufs.at(0).impl();
 }
 
-unsigned ConstantIntegerDecoder::inputProcess(const char* source, unsigned availableByteCount)
+size_t ConstantIntegerDecoder::inputProcess(const char* source, const size_t availableByteCount)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "ConstantIntegerDecoder::inputprocess() called, source=" << (unsigned)source << " availableByteCount=" << availableByteCount << endl;
@@ -7606,7 +7606,7 @@ unsigned ConstantIntegerDecoder::inputProcess(const char* source, unsigned avail
     /// We don't need any input bytes to produce output, so ignore source and availableByteCount.
 
     /// Fill dest buffer unless get to maxRecordCount
-    unsigned count = destBuffer_->capacity() - destBuffer_->nextIndex();
+    size_t count = destBuffer_->capacity() - destBuffer_->nextIndex();
     uint64_t remainingRecordCount = maxRecordCount_ - currentRecordIndex_;
     if (static_cast<uint64_t>(count) > remainingRecordCount)
         count = static_cast<unsigned>(remainingRecordCount);
@@ -7966,7 +7966,7 @@ BitpackIntegerEncoder<RegisterT>::BitpackIntegerEncoder(bool isScaledInteger, un
 }
 
 template <typename RegisterT>
-uint64_t BitpackIntegerEncoder<RegisterT>::processRecords(unsigned recordCount)
+uint64_t BitpackIntegerEncoder<RegisterT>::processRecords(size_t recordCount)
 {
     //??? what are state guarantees if get an exception during transfer?
 #ifdef E57_MAX_VERBOSE
@@ -7987,12 +7987,12 @@ uint64_t BitpackIntegerEncoder<RegisterT>::processRecords(unsigned recordCount)
      /// Verify that outBufferEnd_ is multiple of sizeof(RegisterT) (so transfers of RegisterT are aligned naturally in memory).
      if (outBufferEnd_ % sizeof(RegisterT))
          throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "outBufferEnd=" + toString(outBufferEnd_));
-     unsigned transferMax = (outBuffer_.size() - outBufferEnd_) / sizeof(RegisterT);
+     size_t transferMax = (outBuffer_.size() - outBufferEnd_) / sizeof(RegisterT);
 #endif
 
     /// Precalculate exact maximum number of records that will fit in output before overflow.
-    unsigned outputWordCapacity = (outBuffer_.size() - outBufferEnd_) / sizeof(RegisterT);
-    unsigned maxOutputRecords = (outputWordCapacity*8*sizeof(RegisterT) + 8*sizeof(RegisterT) - registerBitsUsed_ - 1) / bitsPerRecord_;
+    size_t outputWordCapacity = (outBuffer_.size() - outBufferEnd_) / sizeof(RegisterT);
+    size_t maxOutputRecords = (outputWordCapacity*8*sizeof(RegisterT) + 8*sizeof(RegisterT) - registerBitsUsed_ - 1) / bitsPerRecord_;
 
     /// Number of transfers is the smaller of what was requested and what will fit.
     recordCount = min(recordCount, maxOutputRecords);
@@ -8157,7 +8157,7 @@ ConstantIntegerEncoder::ConstantIntegerEncoder(unsigned bytestreamNumber, Source
   minimum_(minimum)
 {}
 
-uint64_t ConstantIntegerEncoder::processRecords(unsigned recordCount)
+uint64_t ConstantIntegerEncoder::processRecords(size_t recordCount)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "ConstantIntegerEncoder::processRecords() called, recordCount=" << recordCount << endl;
@@ -8198,13 +8198,13 @@ bool ConstantIntegerEncoder::registerFlushToOutput()
     return(true);
 }
 
-unsigned ConstantIntegerEncoder::outputAvailable()
+size_t ConstantIntegerEncoder::outputAvailable()
 {
     /// We don't produce any output
     return(0);
 }
 
-void ConstantIntegerEncoder::outputRead(char* /*dest*/, unsigned byteCount)
+void ConstantIntegerEncoder::outputRead(char* /*dest*/, const size_t byteCount)
 {
     /// Should never request any output data
     if (byteCount > 0)
@@ -8223,7 +8223,7 @@ void ConstantIntegerEncoder::sourceBufferSetNew(std::vector<SourceDestBuffer>& s
     sourceBuffer_ = sbufs.at(0).impl();
 }
 
-unsigned ConstantIntegerEncoder::outputGetMaxSize()
+size_t ConstantIntegerEncoder::outputGetMaxSize()
 {
     /// We don't produce any output
     return(0);
@@ -8264,7 +8264,7 @@ BitpackIntegerDecoder<RegisterT>::BitpackIntegerDecoder(bool isScaledInteger, un
 }
 
 template <typename RegisterT>
-unsigned BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf, unsigned firstBit, unsigned endBit)
+size_t BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf, const size_t firstBit, const size_t endBit)
 {
 #ifdef E57_MAX_VERBOSE
     cout << "BitpackIntegerDecoder::inputProcessAligned() called, inbuf=" << (unsigned)inbuf << " firstBit=" << firstBit << " endBit=" << endBit << endl;
@@ -8283,15 +8283,15 @@ unsigned BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "firstBit=" + toString(firstBit));
 #endif
 
-    unsigned destRecords = destBuffer_->capacity() - destBuffer_->nextIndex();
+    size_t destRecords = destBuffer_->capacity() - destBuffer_->nextIndex();
 
     /// Precalculate exact number of full records that are in inbuf
     /// We can handle the case where don't have a full word at end of inbuf, but all the bits of the record are there;
-    unsigned bitCount = endBit - firstBit;
-    unsigned maxInputRecords = bitCount / bitsPerRecord_;
+    size_t bitCount = endBit - firstBit;
+    size_t maxInputRecords = bitCount / bitsPerRecord_;
 
     /// Number of transfers is the smaller of what was requested and what is available in input.
-    unsigned recordCount = min(destRecords, maxInputRecords);
+    size_t recordCount = min(destRecords, maxInputRecords);
 
     // Can't process more than defined in input file
     if (static_cast<uint64_t>(recordCount) > maxRecordCount_ - currentRecordIndex_)
@@ -8314,9 +8314,9 @@ unsigned BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf
     ///  destBitmask                          00000000 00000000 01111111 11111111
     ///  w & mask                             00000000 00000000 0HHHLLLL LLLLLLLL
 
-    unsigned bitOffset = firstBit;
+    size_t bitOffset = firstBit;
 
-    for (unsigned i = 0; i < recordCount; i++) {
+    for (size_t i = 0; i < recordCount; i++) {
         /// Get lower word (contains at least the LSbit of the value),
         RegisterT low = inp[wordPosition];
         SWAB(&low);  // swab if necessary

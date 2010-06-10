@@ -290,31 +290,31 @@ protected: //=================
 
 class SourceDestBuffer {
 public:
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int8_t* b,   unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int8_t* b,   const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(int8_t));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint8_t* b,  unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint8_t* b,  const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(uint8_t));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int16_t* b,  unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int16_t* b,  const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(int16_t));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint16_t* b, unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint16_t* b, const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(uint16_t));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int32_t* b,  unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int32_t* b,  const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(int32_t));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint32_t* b, unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, uint32_t* b, const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(uint32_t));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int64_t* b,  unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, int64_t* b,  const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(int64_t));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, bool* b,     unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, bool* b,     const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(bool));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, float* b,    unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, float* b,    const size_t  capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(float));
-    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, double* b,   unsigned capacity,
+    SourceDestBuffer(ImageFile destImageFile, const ustring pathName, double* b,   const size_t capacity,
                      bool doConversion = false, bool doScaling = false, size_t stride = sizeof(double));
     SourceDestBuffer(ImageFile destImageFile, const ustring pathName, std::vector<ustring>* b);
 
     ustring         pathName() const;
     enum MemoryRepresentation  memoryRepresentation() const;
-    unsigned        capacity() const;
+    size_t          capacity() const;
     bool            doConversion() const;
     bool            doScaling() const;
     size_t          stride() const;
@@ -359,8 +359,8 @@ protected: //=================
 
 class CompressedVectorWriter {
 public:
-    void        write(unsigned requestedRecordCount);
-    void        write(std::vector<SourceDestBuffer>& sbufs, unsigned requestedRecordCount);
+    void        write(const size_t requestedRecordCount);
+    void        write(std::vector<SourceDestBuffer>& sbufs, const size_t requestedRecordCount);
     void        close();
     bool        isOpen();
     CompressedVectorNode compressedVectorNode() const;
@@ -622,9 +622,9 @@ public:
     void            extensionsAdd(const ustring& prefix, const ustring& uri);
     bool            extensionsLookupPrefix(const ustring& prefix, ustring& uri) const;
     bool            extensionsLookupUri(const ustring& uri, ustring& prefix) const;
-    int             extensionsCount() const;
-    ustring         extensionsPrefix(int index) const;
-    ustring         extensionsUri(int index) const;
+    size_t          extensionsCount() const;
+    ustring         extensionsPrefix(const size_t index) const;
+    ustring         extensionsUri(const size_t index) const;
 
     // Field name functions:
     bool            isElementNameExtended(const ustring& elementName) const;

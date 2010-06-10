@@ -464,10 +464,10 @@ void DenseGroupingScheme::addMember(int64_t id, double coords[3], int64_t record
 {
     if (id < minimumId || maximumId < id)
         throw EXCEPTION("group identifier out of bounds");
-    if (!isFixedSize && id - minimumId + 1 > groups.size()) {
-        unsigned oldSize = groups.size();
-        groups.resize(static_cast<size_t>(id - minimumId + 1));
-        for (unsigned i = oldSize; i < groups.size(); i++)
+		if (!isFixedSize && id - minimumId + 1 > static_cast<boost::int64_t>(groups.size())) {		// %%% Truncation possible.
+        const size_t oldSize = groups.size();
+        groups.resize(static_cast<size_t>(id - minimumId + 1));		// %%% Possible truncation.
+        for (size_t i = oldSize; i < groups.size(); i++)
             groups[i].id = minimumId + i;
     }
     groups[static_cast<size_t>(id - minimumId)].addMember(coords, recordIndex);
