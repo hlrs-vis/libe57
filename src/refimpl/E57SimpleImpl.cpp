@@ -70,11 +70,9 @@
 #  error "no supported OS platform defined"
 #endif
 
-
-
-
 #include <sstream>
 #include "E57SimpleImpl.h"
+#include "time_conversion.h"
 
 using namespace e57;
 using namespace std;
@@ -849,6 +847,25 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 };
 double GetGPSTime(void)
 {
+#ifdef _C_TIMECONV_H_
+
+unsigned short     utc_year;     //!< Universal Time Coordinated    [year]
+unsigned char      utc_month;    //!< Universal Time Coordinated    [1-12 months] 
+unsigned char      utc_day;      //!< Universal Time Coordinated    [1-31 days]
+unsigned char      utc_hour;     //!< Universal Time Coordinated    [hours]
+unsigned char      utc_minute;   //!< Universal Time Coordinated    [minutes]
+float              utc_seconds;  //!< Universal Time Coordinated    [s]
+unsigned char      utc_offset;   //!< Integer seconds that GPS is ahead of UTC time, always positive             [s], obtained from a look up table
+double             julian_date;  //!< Number of days since noon Universal Time Jan 1, 4713 BCE (Julian calendar) [days]
+unsigned short     gps_week;     //!< GPS week (0-1024+)            [week]
+double             gps_tow;	  //!< GPS time of week (0-604800.0) [s]
+
+BOOL ret = TIMECONV_GetSystemTime(&utc_year, &utc_month, &utc_day, &utc_hour, &utc_minute, &utc_seconds,
+	&utc_offset, &julian_date, &gps_week, &gps_tow);
+
+double gpsTime = (gps_week * 604800.) + gps_tow;
+
+#else
 #if defined(_MSC_VER)
 SYSTEMTIME		currentSystemTime;
 GetSystemTime(&currentSystemTime);	//current UTC Time
@@ -869,15 +886,16 @@ gpsStartTime.HighPart = gpsFileTime.dwHighDateTime;
 
 double gpsTime = (double) (currentTime.QuadPart - gpsStartTime.QuadPart);	//number of 100 nanosecond;
 gpsTime /= 10000000.;	//number of seconds
-return gpsTime + 15.;	//Add leap seconds
-
-#else	//TODO need a way to convert in linux
-	return 123456789.;
+gpsTime += 15.;			//Add leap seconds
 #endif
+
+#endif
+return gpsTime;
 };
 char * GetNewGuid(void)
 {
 	static char	fileGuid[64];
+
 #if defined(_MSC_VER)
 	GUID		guid;
 	CoCreateGuid((GUID*)&guid);
