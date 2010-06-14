@@ -30,7 +30,21 @@ cmake_minimum_required(VERSION 2.8)
 # Private Xerces find module
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-project(libe57)
+project(RefImpl)
+
+# developer adjustable version numbers
+set(${PROJECT_NAME}_MAJOR_VERSION 0)
+set(${PROJECT_NAME}_MINOR_VERSION 1)
+
+execute_process(
+    COMMAND svnversion
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE ${PROJECT_NAME}_BUILD_VERSION
+)
+string(STRIP ${${PROJECT_NAME}_BUILD_VERSION} ${PROJECT_NAME}_BUILD_VERSION)
+if (NOT ${PROJECT_NAME}_BUILD_VERSION)
+    set(${PROJECT_NAME}_BUILD_VERSION "unknown")
+endif ()
 
 if (MSVC)
     # Compiler switches for C++
@@ -44,6 +58,55 @@ if (MSVC)
     set(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG")
 endif (MSVC)
+
+# calculate the library name tag
+set(T_ ${PROJECT_NAME})
+set(T_ ${T_}-${${PROJECT_NAME}_MAJOR_VERSION})
+set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
+set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
+set(T_ ${T_}-${CMAKE_SYSTEM_PROCESSOR})
+if (CMAKE_CL_64)
+    set(T_ ${T_}_64)
+endif (CMAKE_CL_64)
+string(TOLOWER ${CMAKE_SYSTEM_NAME} T1_)
+set(T_ ${T_}-${T1_})
+if (MSVC90)
+    set(T1_ "-vc-9.0")
+elseif (MSVC10)
+    set(T1_ "-vc-10.0")
+elseif (MSVC80)
+    set(T1_ "-vc-8.0")
+elseif (MSVC71)
+    set(T1_ "-vc-7.11")
+elseif (MSVC70)
+    set(T1_ "-vc-7")
+elseif (MINGW)
+    set(T1_ "-mgw")
+    exec_program(${CMAKE_CXX_COMPILER}
+    ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
+    OUTPUT_VARIABLE T2_
+  )
+  string(REGEX REPLACE "([0-9])\\.([0-9])(\\.[0-9])?" "\\1\\2" T2_ ${T2_})
+  message(STATUS ${T2_})
+    set(T1_ ${T1_}-${T2_})
+else()
+    set(T1_)
+endif()
+set(T_ ${T_}${T1_})
+set(${PROJECT_NAME}_TAG ${T_})
+
+# propose a default installation directory
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    string(REGEX REPLACE "/${PROJECT_NAME}" "" CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+    set(T_ -${${PROJECT_NAME}_MAJOR_VERSION})
+    set(T_ ${T_}-${${PROJECT_NAME}_MINOR_VERSION})
+    set(T_ ${T_}-${${PROJECT_NAME}_BUILD_VERSION})
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/${${PROJECT_NAME}_TAG}
+        CACHE PATH
+        "Install path prefix, prepended onto install directories."
+        FORCE
+    )
+endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 # Find the Boost and Xerces libraries
 find_package(Boost QUIET)
@@ -85,6 +148,21 @@ add_library( RefImpl STATIC
 )
 set_target_properties( RefImpl
     PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+)
+set_target_properties( RefImpl
+    PROPERTIES DEBUG_POSTFIX "-d"
+)
+install(
+    FILES
+        include/E57Foundation.h
+    DESTINATION
+        include/e57
+)
+install(
+    TARGETS
+        RefImpl
+    ARCHIVE DESTINATION
+        lib
 )
 
 #
@@ -157,6 +235,12 @@ target_link_libraries( las2e57
     optimized ${Xerces_LIBRARY_RELEASE}
     Rpcrt4.lib
 )
+install(
+    TARGETS
+        las2e57
+    RUNTIME DESTINATION
+        bin
+)
 
 add_executable( e57fields
     src/tools/e57fields.cpp
@@ -169,6 +253,12 @@ target_link_libraries( e57fields
     debug ${Xerces_LIBRARY_DEBUG}
     optimized ${Xerces_LIBRARY_RELEASE}
 )
+install(
+    TARGETS
+        e57fields
+    RUNTIME DESTINATION
+        bin
+)
 
 add_executable( e57xmldump
     src/tools/e57xmldump.cpp
@@ -180,5 +270,11 @@ target_link_libraries( e57xmldump
     RefImpl
     debug ${Xerces_LIBRARY_DEBUG}
     optimized ${Xerces_LIBRARY_RELEASE}
+)
+install(
+    TARGETS
+        e57xmldump
+    RUNTIME DESTINATION
+        bin
 )
 
