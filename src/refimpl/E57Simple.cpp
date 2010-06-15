@@ -543,13 +543,6 @@ int64_t		Writer :: WriteImage2DData(
 	return impl_->WriteImage2DData( imageIndex, imageType, imageProjection, pBuffer, start, count);
 };
 
-bool		Writer :: CloseImage2D(
-	int32_t		imageIndex	// picture block index given by the NewImage2D
-	) const 				// /return Returns true if successful, false otherwise
-{
-	return impl_->CloseImage2D( imageIndex);
-};
-
 int32_t		Writer :: NewData3D( 
 	Data3D &	data3DHeader	// pointer to the Data3D structure to receive the image information
 	) const							// /return Returns the index of the new scan's data3D block.

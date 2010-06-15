@@ -1061,6 +1061,11 @@ int32_t	WriterImpl :: NewImage2D(
 		if( image2DHeader.visualReferenceRepresentation.imageMask)
 			visualReferenceRepresentation.set("imageMask",
 				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.imageMask));
+
+		visualReferenceRepresentation.set("imageHeight", 
+			IntegerNode(imf_, image2DHeader.visualReferenceRepresentation.imageHeight));
+		visualReferenceRepresentation.set("imageWidth", 
+			IntegerNode(imf_, image2DHeader.visualReferenceRepresentation.imageWidth));
 	}
 	else if( image2DHeader.pinholeRepresentation.jpegImage ||
 		image2DHeader.pinholeRepresentation.pngImage)
@@ -1237,13 +1242,6 @@ int64_t	WriterImpl :: WriteImage2DData(
 	return transferred;
 };
 
-//! This function closes the Image2D block
-bool	WriterImpl :: CloseImage2D(
-	int32_t		imageIndex	//!< picture block index given by the NewImage2D
-		)					//!< /return Returns true if successful, false otherwise
-{
-	return false;
-}
 //! This function sets up the Data3D header and positions the cursor for the binary data
 //* The user needs to config a Data3D structure with all the scanning information before making this call. */
 

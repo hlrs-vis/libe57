@@ -670,11 +670,6 @@ public:
 						int64_t					count		//!< size of desired chuck or buffer size
 						) const;						//!< @return Returns the number of bytes written
 
-//! @brief This function closes the Image2D block
-	bool		CloseImage2D(
-						int32_t		imageIndex	//!< picture block index given by the NewImage2D
-						) const ;				//!< @return Returns true if successful, false otherwise
-
 //! @brief This function sets up the Data3D header and positions the cursor for the binary data
 //* @details The user needs to config a Data3D structure with all the scanning information before making this call. */
 

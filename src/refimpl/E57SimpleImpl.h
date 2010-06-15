@@ -292,11 +292,6 @@ virtual int64_t		WriteImage2DNode(
 						int64_t					count			//!< size of desired chuck or buffer size
 						);
 
-//! This function closes the Image2D block
-virtual bool		CloseImage2D(
-						int32_t		imageIndex		//!< picture block index given by the NewImage2D
-)						;							//!< /return Returns true if successful, false otherwise
-
 //! This function sets up the Data3D header and positions the cursor for the binary data
 //* The user needs to config a Data3D structure with all the scanning information before making this call. */
 
