@@ -28,9 +28,11 @@
 cmake_minimum_required(VERSION 2.8)
 
 # Private Xerces find module
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules/")
 
-project(E57RefImpl)
+include(CMakeGenerateDocumentation)
+
+project(E57RefImpl-doc)
 
 # developer adjustable version numbers
 set(${PROJECT_NAME}_MAJOR_VERSION 0)
@@ -65,34 +67,6 @@ set(T_ ${PROJECT_NAME})
 set(T_ ${T_}-${${PROJECT_NAME}_MAJOR_VERSION})
 set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
 set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
-set(T_ ${T_}-${CMAKE_SYSTEM_PROCESSOR})
-if (CMAKE_CL_64)
-    set(T_ ${T_}_64)
-endif (CMAKE_CL_64)
-string(TOLOWER ${CMAKE_SYSTEM_NAME} T1_)
-set(T_ ${T_}-${T1_})
-if (MSVC90)
-    set(T1_ "-vc-9.0")
-elseif (MSVC10)
-    set(T1_ "-vc-10.0")
-elseif (MSVC80)
-    set(T1_ "-vc-8.0")
-elseif (MSVC71)
-    set(T1_ "-vc-7.11")
-elseif (MSVC70)
-    set(T1_ "-vc-7")
-elseif (MINGW)
-    set(T1_ "-mgw")
-    exec_program(${CMAKE_CXX_COMPILER}
-        ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
-        OUTPUT_VARIABLE T2_
-    )
-    string(REGEX REPLACE "([0-9])\\.([0-9])(\\.[0-9])?" "\\1\\2" T2_ ${T2_})
-    set(T1_ ${T1_}-${T2_})
-else()
-    set(T1_)
-endif()
-set(T_ ${T_}${T1_})
 set(${PROJECT_NAME}_TAG ${T_})
 
 # propose a default installation directory
@@ -129,9 +103,8 @@ Please set the the XERCES_ROOT to point to the root of the xerces directory."
 endif (NOT Xerces_FOUND)
 
 include_directories(
-    include
-    include/time_conversion
-    src/refimpl
+    ../include
+    ../src/refimpl
     ${Xerces_INCLUDE_DIR}
     ${Boost_INCLUDE_DIR}
 )
@@ -141,10 +114,10 @@ include_directories(
 #
 
 add_library( E57RefImpl STATIC
-    src/refimpl/E57Foundation.cpp
-    src/refimpl/E57FoundationImpl.cpp
-    src/refimpl/E57FoundationImpl.h
-    include/E57Foundation.h
+    ../src/refimpl/E57Foundation.cpp
+    ../src/refimpl/E57FoundationImpl.cpp
+    ../src/refimpl/E57FoundationImpl.h
+    ../include/E57Foundation.h
 )
 set_target_properties( E57RefImpl
     PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
@@ -152,116 +125,13 @@ set_target_properties( E57RefImpl
 set_target_properties( E57RefImpl
     PROPERTIES DEBUG_POSTFIX "-d"
 )
-install(
-    FILES
-        include/E57Foundation.h
-    DESTINATION
-        include/e57
-)
-install(
-    TARGETS
-        E57RefImpl
-    ARCHIVE DESTINATION
-        lib
-)
 
 #
-# Files for LAS format support
+# E57-4 Tools needed for doc building
 #
-
-add_library( LASReader STATIC
-    src/LASReader/LASReader.cpp
-    include/LASReader.h
-)
-set_target_properties( LASReader
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-)
-
-#
-# Time conversion utilities
-#
-
-add_library( time_conversion STATIC
-    src/time_conversion/time_conversion.c
-    include/time_conversion/time_conversion.h
-    include/time_conversion/basictypes.h
-    include/time_conversion/constants.h
-    include/time_conversion/gnss_error.h
-)
-
-#
-# Example programs
-#
-
-add_executable( DemoWrite01
-    src/examples/DemoWrite01.cpp
-)
-set_target_properties( DemoWrite01
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-)
-target_link_libraries( DemoWrite01
-    E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
-)
-
-add_executable( DemoRead01
-    src/examples/DemoRead01.cpp
-)
-set_target_properties( DemoRead01
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-)
-target_link_libraries( DemoRead01
-    E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
-)
-
-#
-# E57-4 Tools
-#
-
-add_executable( las2e57
-    src/tools/las2e57.cpp
-)
-set_target_properties( las2e57
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-)
-target_link_libraries( las2e57
-    E57RefImpl
-    LASReader
-    time_conversion
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
-    Rpcrt4.lib
-)
-install(
-    TARGETS
-        las2e57
-    RUNTIME DESTINATION
-        bin
-)
-
-add_executable( e57fields
-    src/tools/e57fields.cpp
-)
-set_target_properties( e57fields
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-)
-target_link_libraries( e57fields
-    E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
-)
-install(
-    TARGETS
-        e57fields
-    RUNTIME DESTINATION
-        bin
-)
 
 add_executable( e57xmldump
-    src/tools/e57xmldump.cpp
+    ../src/tools/e57xmldump.cpp
 )
 set_target_properties( e57xmldump
     PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
@@ -271,10 +141,81 @@ target_link_libraries( e57xmldump
     debug ${Xerces_LIBRARY_DEBUG}
     optimized ${Xerces_LIBRARY_RELEASE}
 )
-install(
-    TARGETS
-        e57xmldump
-    RUNTIME DESTINATION
-        bin
+
+#
+# Documentation
+#
+
+set(DOC_EXAMPLES
+    FoundationAPI/examples/HelloWorld.cpp
+    FoundationAPI/examples/Cancel.cpp
+    FoundationAPI/examples/Extensions.cpp
+    FoundationAPI/examples/NameParse.cpp
+    FoundationAPI/examples/ImageFileDump.cpp
+    FoundationAPI/examples/NodeFunctions.cpp
+    FoundationAPI/examples/StructureCreate.cpp
+    FoundationAPI/examples/VectorCreate.cpp
+    FoundationAPI/examples/VectorFunctions.cpp
+    FoundationAPI/examples/IntegerCreate.cpp
+    FoundationAPI/examples/ScaledIntegerCreate.cpp
+    FoundationAPI/examples/FloatCreate.cpp
+    FoundationAPI/examples/StringCreate.cpp
+    FoundationAPI/examples/BlobCreate.cpp
+    FoundationAPI/examples/CompressedVectorCreate.cpp
+    FoundationAPI/examples/SourceDestBufferNumericCreate.cpp
+    FoundationAPI/examples/SourceDestBufferStringCreate.cpp
+    FoundationAPI/examples/E57ExceptionFunctions.cpp
+    FoundationAPI/examples/RawXML.cpp
+    FoundationAPI/examples/Versions.cpp
+    FoundationAPI/examples/SourceDestBufferFunctions.cpp
+    FoundationAPI/examples/CheckInvariant.cpp
 )
 
+file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/FoundationAPI/examples)
+
+generate_documentation(doc
+    FoundationAPI/Doxyfile
+    DOXYVAR_INPUT
+        ../src/refimpl/E57Foundation.cpp
+        ../include/E57Foundation.h
+        ${DOC_EXAMPLES}
+    DOXYVAR_OUTPUT_DIRECTORY
+        ${PROJECT_BINARY_DIR}
+    DOXYVAR_EXAMPLE_PATH
+        FoundationAPI/examples
+        ${PROJECT_BINARY_DIR}/FoundationAPI/examples
+        ../src/refimpl
+)
+
+foreach(X ${DOC_EXAMPLES})
+    get_filename_component(F ${X} NAME_WE)
+    add_executable(${F} ${X})
+    set_target_properties(${F} PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY)
+    target_link_libraries(${F}
+        E57RefImpl
+        debug ${Xerces_LIBRARY_DEBUG}
+        optimized ${Xerces_LIBRARY_RELEASE}
+    )
+    add_custom_command(TARGET ${F} POST_BUILD
+        COMMAND ${F} > FoundationAPI/examples/${F}.out
+        COMMAND e57xmldump temp._e57 > FoundationAPI/examples/${F}.xml
+    )
+    add_dependencies(doc ${F})
+endforeach()
+
+install(
+    DIRECTORY
+        ${PROJECT_BINARY_DIR}/html
+    DESTINATION
+        .
+)
+
+install(
+    FILES
+        libE57ReleaseNotes.doc
+        las2e57.doc
+        e57xmldump.doc
+        e57fields.doc
+    DESTINATION
+        .
+)

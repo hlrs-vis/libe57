@@ -30,7 +30,7 @@
 
 :: Set current major/minor version number of Reference Implementation
 @set RefImplMajor=0
-@set RefImplMinor=1
+@set RefImplMinor=2
 
 :: Form the library name of Reference Implementation (e.g. "RefImpl-0-1-27.lib")
 @set RefImplLib=RefImpl-%RefImplMajor%-%RefImplMinor%-%RefImplRevisionId%.lib
