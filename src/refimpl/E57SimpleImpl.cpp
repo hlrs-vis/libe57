@@ -344,6 +344,7 @@ int64_t ReaderImpl :: ReadImage2DNode(
 				jpegImage.read((uint8_t*) pBuffer, start, (size_t) count);
 				transferred = count;
 			}
+			break;
 		}
 	case	E57_PNG_IMAGE:
 		{
@@ -353,6 +354,7 @@ int64_t ReaderImpl :: ReadImage2DNode(
 				pngImage.read((uint8_t*) pBuffer, start, (size_t) count);
 				transferred = count;
 			}
+			break;
 		}
 	case	E57_PNG_IMAGE_MASK:
 		{
@@ -362,6 +364,7 @@ int64_t ReaderImpl :: ReadImage2DNode(
 				imageMask.read((uint8_t*) pBuffer, start, (size_t) count);
 				transferred = count;
 			}
+			break;
 		}
 	};
 	return transferred;
@@ -488,24 +491,31 @@ int64_t	ReaderImpl :: ReadImage2DData(
 			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
 			transferred = ReadImage2DNode(visualReferenceRepresentation, imageType, pBuffer, start, count);
 		}
+		break;
+
 	case	E57_PINHOLE:
 		if(image.isDefined("pinholeRepresentation"))
 		{
 			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
 			transferred = ReadImage2DNode(pinholeRepresentation, imageType, pBuffer, start, count);
 		}
+		break;
+
 	case	E57_SPHERICAL:
 		if(image.isDefined("sphericalRepresentation"))
 		{
 			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
 			transferred = ReadImage2DNode(sphericalRepresentation, imageType, pBuffer, start, count);
 		}
+		break;
+
 	case	E57_CYLINDRICAL:
 		if(image.isDefined("cylindricalRepresentation"))
 		{
 			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
 			transferred = ReadImage2DNode(cylindricalRepresentation, imageType, pBuffer, start, count);
 		}
+		break;
 	};
 	return transferred;
 };
@@ -1174,6 +1184,7 @@ int64_t WriterImpl :: WriteImage2DNode(
 				jpegImage.write((uint8_t*) pBuffer, start, (size_t) count);
 				transferred = count;
 			}
+			break;
 		}
 	case	E57_PNG_IMAGE:
 		{
@@ -1183,6 +1194,7 @@ int64_t WriterImpl :: WriteImage2DNode(
 				pngImage.write((uint8_t*) pBuffer, start, (size_t) count);
 				transferred = count;
 			}
+			break;
 		}
 	case	E57_PNG_IMAGE_MASK:
 		{
@@ -1192,6 +1204,7 @@ int64_t WriterImpl :: WriteImage2DNode(
 				imageMask.write((uint8_t*) pBuffer, start, (size_t) count);
 				transferred = count;
 			}
+			break;
 		}
 	};
 	return transferred;
@@ -1220,24 +1233,28 @@ int64_t	WriterImpl :: WriteImage2DData(
 			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
 			transferred = WriteImage2DNode(visualReferenceRepresentation, imageType, pBuffer, start, count);
 		}
+		break;
 	case	E57_PINHOLE:
 		if(image.isDefined("pinholeRepresentation"))
 		{
 			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
 			transferred = WriteImage2DNode(pinholeRepresentation, imageType, pBuffer, start, count);
 		}
+		break;
 	case	E57_SPHERICAL:
 		if(image.isDefined("sphericalRepresentation"))
 		{
 			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
 			transferred = WriteImage2DNode(sphericalRepresentation, imageType, pBuffer, start, count);
 		}
+		break;
 	case	E57_CYLINDRICAL:
 		if(image.isDefined("cylindricalRepresentation"))
 		{
 			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
 			transferred = WriteImage2DNode(cylindricalRepresentation, imageType, pBuffer, start, count);
 		}
+		break;
 	};
 	return transferred;
 };
