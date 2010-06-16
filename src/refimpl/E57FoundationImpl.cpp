@@ -3663,7 +3663,8 @@ bool E57XmlParser::isAttributeDefined(const Attributes& attributes, const wchar_
 
 ImageFileImpl::ImageFileImpl()
 : writerCount_(0),
-  readerCount_(0)
+  readerCount_(0),
+  file_(0)
 {
     /// First phase of construction, can't do much until have the ImageFile object.
     /// See ImageFileImpl::construct2() for second phase.
@@ -3681,7 +3682,9 @@ void ImageFileImpl::construct2(const ustring& fileName, const ustring& mode, con
 
     /// Get shared_ptr to this object
     shared_ptr<ImageFileImpl> imf=shared_from_this();
+    file_ = reinterpret_cast<CheckedFile*>(-1); // yes, really! Work around a strange invariant check <rs 2010-06-16> //todo: FIXME
     shared_ptr<StructureNodeImpl> root(new StructureNodeImpl(imf));
+    file_ = 0;
     root_ = root; //??? ok?
 
     /// Mark the root as attached to an ImageFile (this one)
@@ -4656,9 +4659,9 @@ void CheckedFile::seek(uint64_t offset, OffsetMode omode)
 uint64_t CheckedFile::lseek64(int64_t offset, int whence)
 {
 #if defined(WIN32)
-#  if defined(_MSC_VER)
+#  if defined(_MSC_VER) || defined(__MINGW32__) //<rs 2010-06-16> mingw _is_ WIN32!
     __int64 result = _lseeki64(fd_, offset, whence);
-#  elif defined(__GNUC__)
+#  elif defined(__GNUC__) //<rs 2010-06-16> this most likely will not get triggered (cygwin != WIN32)?
 #    ifdef E57_MAX_DEBUG
     if (sizeof(off_t) != sizeof(offset))
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "sizeof(off_t)=" + toString(sizeof(off_t)));
