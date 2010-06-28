@@ -28,6 +28,10 @@ if (Xerces_FIND_VERSION)
     message(WARNING "Finding a specific version of Xerces is not supported.")
 endif (Xerces_FIND_VERSION)
 
+if( NOT $ENV{XERCES_ROOT} STREQUAL "" )
+    set(XERCES_ROOT $ENV{XERCES_ROOT})
+endif()
+
 find_path(Xerces_INCLUDE_DIR
     xercesc/sax2/SAX2XMLReader.hpp
     ${XERCES_ROOT}/include
