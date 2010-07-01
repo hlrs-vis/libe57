@@ -25,7 +25,7 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-default namespace e57 = "http://www.astm.org/COMMIT/E57/2010-e57-v0.5"
+default namespace e57 = "http://www.astm.org/COMMIT/E57/2010-e57-v0.6"
 datatypes         xsd = "http://www.w3.org/2001/XMLSchema-datatypes"
 
 start = element e57Root{E57Root}
@@ -36,9 +36,10 @@ E57Root =
   & element guid{String}
   & element versionMajor{Integer}
   & element versionMinor{Integer}
+  & element e57LibraryVersion{String}?  
   & element creationDateTime{DateTime}?
   & element data3D{HeterogeneousVector & element vectorChild{Data3D}*}?
-  & element cameraImages{HeterogeneousVector & element vectorChild{CameraImage}*}?
+  & element images2D{HeterogeneousVector & element vectorChild{Image2D}*}?
   & element coordinateMetadata{String}?
 
 Data3D =
@@ -52,6 +53,7 @@ Data3D =
   & element description{String}?
   & element cartesianBounds{CartesianBounds}?
   & element sphericalBounds{SphericalBounds}?
+  & element indexBounds{IndexBounds}?
   & element acquisitionStart{DateTime}?
   & element acquisitionEnd{DateTime}?
   & element sensorVendor{String}?
@@ -72,16 +74,20 @@ PointRecord =
   & element sphericalRange{Float | ScaledInteger | Integer}?
   & element sphericalAzimuth{Float | ScaledInteger}?
   & element sphericalElevation{Float | ScaledInteger}?
-  & element valid{Integer}?
   & element rowIndex{Integer}?
   & element columnIndex{Integer}?
-  & element returnIndex{Integer}?
   & element returnCount{Integer}?
+  & element returnIndex{Integer}?
   & element timeStamp{Float | ScaledInteger | Integer}?
   & element intensity{Float | ScaledInteger | Integer}?
   & element colorRed{Float | ScaledInteger | Integer}?
   & element colorGreen{Float | ScaledInteger | Integer}?
   & element colorBlue{Float | ScaledInteger | Integer}?
+  & element cartesianInvalidState{Integer}?
+  & element sphericalInvalidState{Integer}?
+  & element isTimeStampInvalid{Integer}?
+  & element isIntensityInvalid{Integer}?
+  & element isColorInvalid{Integer}?
 
 PointGroupingSchemes = 
     Structure
@@ -107,18 +113,18 @@ RigidBodyTransform =
   
 Quaternion = 
     Structure
-  & element w{Float}
-  & element x{Float}
-  & element y{Float}
-  & element z{Float}
+  & element w{DoubleFloat}
+  & element x{DoubleFloat}
+  & element y{DoubleFloat}
+  & element z{DoubleFloat}
    
 Translation = 
     Structure
-  & element x{Float}
-  & element y{Float}
-  & element z{Float}
+  & element x{DoubleFloat}
+  & element y{DoubleFloat}
+  & element z{DoubleFloat}
   
-CameraImage = 
+Image2D = 
     Structure
   & element guid{String}
   & element visualReferenceRepresentation{VisualReferenceRepresentation}?
@@ -130,12 +136,17 @@ CameraImage =
   & element name{String}?
   & element description{String}?
   & element acquisitionDateTime{DateTime}?
+  & element sensorVendor{String}?
+  & element sensorModel{String}?
+  & element sensorSerialNumber{String}?
 
 VisualReferenceRepresentation = 
     Structure
   & element jpegImage{Blob}?
   & element pngImage{Blob}?
   & element imageMask{Blob}?
+  & element imageWidth{Integer}
+  & element imageHeight{Integer}
 
 PinholeRepresentation = 
     Structure
@@ -159,8 +170,6 @@ SphericalRepresentation =
   & element imageHeight{Integer}
   & element pixelWidth{Float}
   & element pixelHeight{Float}
-  & element azimuthStart{Float}
-  & element elevationStart{Float}
 
 CylindricalRepresentation = 
     Structure
@@ -173,7 +182,6 @@ CylindricalRepresentation =
   & element principalPointY{Float}
   & element pixelWidth{Float}
   & element pixelHeight{Float}
-  & element azimuthStart{Float}
 
 CartesianBounds = 
     Structure
@@ -192,6 +200,15 @@ SphericalBounds =
   & element elevationMaximum{Float}
   & element azimuthStart{Float}?
   & element azimuthEnd{Float}?
+
+IndexBounds = 
+    Structure
+  & element rowMinimum{Integer}?
+  & element rowMaximum{Integer}?
+  & element columnMinimum{Integer}?
+  & element columnMaximum{Integer}?
+  & element returnMinimum{Integer}?
+  & element returnMaximum{Integer}?
 
 DateTime = 
     Structure
@@ -218,6 +235,13 @@ ScaledInteger =
 Float =
     attribute type{"Float"}
   & attribute precision{"single" | "double"}?
+  & attribute minimum{xsd:double}?
+  & attribute maximum{xsd:double}?
+  & xsd:double?
+  
+DoubleFloat =
+    attribute type{"Float"}
+  & attribute precision{"double"}?
   & attribute minimum{xsd:double}?
   & attribute maximum{xsd:double}?
   & xsd:double?

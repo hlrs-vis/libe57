@@ -157,7 +157,7 @@ class Encoder;
 
 /// Version numbers of ASTM standard that this library supports
 const uint32_t E57_FORMAT_MAJOR = 0;
-const uint32_t E57_FORMAT_MINOR = 5;
+const uint32_t E57_FORMAT_MINOR = 6;
 
 /// Version of Reference Implementation, E57_REFIMPL_REVISION_ID should be passed from compiler command line
 /// All this macro trickery because E57_REFIMPL_REVISION_ID might not be numeric (e.g. 27M, or exported).

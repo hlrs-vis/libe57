@@ -38,7 +38,7 @@ int main(int /*argc*/, char** /*argv*/)
         StructureNode root = imf.root();
 
         /// Register extension with URI=www.example.com/DemoExtension and prefix=demo
-        imf.extensionsAdd("demo", "www.example.com/DemoExtension");
+        imf.extensionsAdd("demo", "http://www.example.com/DemoExtension");
 
         /// Set per-file properties.
         /// Path names: "/formatName", "/majorVersion", "/minorVersion", "/coordinateMetadata"
@@ -89,7 +89,7 @@ int main(int /*argc*/, char** /*argv*/)
         proto.set("cartesianX",  ScaledIntegerNode(imf, 0, 0, 32767, 0.001, 0));
         proto.set("cartesianY",  ScaledIntegerNode(imf, 0, 0, 32767, 0.001, 0));
         proto.set("cartesianZ",  ScaledIntegerNode(imf, 0, 0, 32767, 0.001, 0));
-        proto.set("valid",       IntegerNode(imf, 0, 0, 1));
+        proto.set("cartesianInvalidState", IntegerNode(imf, 0, 0, 2));
         proto.set("rowIndex",    IntegerNode(imf, 0, 0, 1));
         proto.set("columnIndex", IntegerNode(imf, 0, 0, 4));
         proto.set("returnIndex", IntegerNode(imf, 0, 0, 0));
@@ -217,27 +217,27 @@ int main(int /*argc*/, char** /*argv*/)
         scan0.set("relativeHumidity", FloatNode(imf, 40.0));
 
         ///================
-        /// Create camera image area.
-        /// Path name: "/cameraImages"
-        VectorNode cameraImages = VectorNode(imf, true);
-        root.set("cameraImages", cameraImages);
+        /// Create 2D image area.
+        /// Path name: "/images2D"
+        VectorNode images2D = VectorNode(imf, true);
+        root.set("images2D", images2D);
 
         /// Add a first picture area to the list.
-        /// Path name: "/cameraImages/0"
+        /// Path name: "/images2D/0"
         StructureNode picture0 = StructureNode(imf);
-        cameraImages.append(picture0);
+        images2D.append(picture0);
 
         /// Attach a guid to first picture.
-        /// Path name: "/cameraImages/0/guid"
+        /// Path name: "/images2D/0/guid"
         picture0.set("guid", StringNode(imf, "3F2504E0-4F89-11D3-9A0C-0305E82C3302"));
 
         /// Make an area holding pinhole projection parameters for first picture.
-        /// Path name: "/cameraImages/0/pinholeRepresentation"
+        /// Path name: "/images2D/0/pinholeRepresentation"
         StructureNode pinhole = StructureNode(imf);
         picture0.set("pinholeRepresentation", pinhole);
 
         /// Add pinhole parameters
-        /// Path names: "/cameraImages/0/pinholeRepresentation/imageWidth", etc...
+        /// Path names: "/images2D/0/pinholeRepresentation/imageWidth", etc...
         pinhole.set("imageWidth",      IntegerNode(imf, 1024));
         pinhole.set("imageHeight",     IntegerNode(imf, 1024));
         pinhole.set("focalLength",     FloatNode(imf, 1.0));
@@ -247,7 +247,7 @@ int main(int /*argc*/, char** /*argv*/)
         pinhole.set("principalPointY", FloatNode(imf, 512.0));
 
         /// Create a toy 10 byte blob (instead of copying a big .jpg into .e57 file)
-        /// Path name: "/cameraImages/0/pinholeRepresentation/jpegImage"
+        /// Path name: "/images2D/0/pinholeRepresentation/jpegImage"
         BlobNode jpegImage = BlobNode(imf, 10);
         pinhole.set("jpegImage", jpegImage);
 
@@ -256,8 +256,8 @@ int main(int /*argc*/, char** /*argv*/)
         jpegImage.write(fakeBlobData, 0, 10);
 
         /// Attach a pose to picture
-        /// Path names: "/cameraImages/0/pose/rotation/w", etc...
-        ///             "/cameraImages/0/pose/translation/x", etc...
+        /// Path names: "/images2D/0/pose/rotation/w", etc...
+        ///             "/images2D/0/pose/translation/x", etc...
         StructureNode picturePose = StructureNode(imf);
         picture0.set("pose", picturePose);
         StructureNode pictureRotation = StructureNode(imf);
@@ -273,7 +273,7 @@ int main(int /*argc*/, char** /*argv*/)
         pictureTranslation.set("z", FloatNode(imf, 0.0));
 
         /// Add name, description, time, associated guid to first picture.
-        /// Path names: "/cameraImages/0/name", etc...
+        /// Path names: "/images2D/0/name", etc...
         picture0.set("name",                 StringNode(imf, "pic123"));
         picture0.set("description"  ,        StringNode(imf, "trial picture"));
         picture0.set("associatedData3DGuid", StringNode(imf, scanGuid0));
@@ -287,7 +287,7 @@ int main(int /*argc*/, char** /*argv*/)
         double  cartesianX[N]  = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
         double  cartesianY[N]  = {1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1};
         double  cartesianZ[N]  = {1.2, 2.2, 3.2, 4.2, 5.2, 6.2, 7.2, 8.2, 9.1, 10.2};
-        int32_t valid[N]       = {1,   1,   1,   1,   1,   1,   1,   1,   1,   1};
+        int32_t cartesianInvalidState[N] = {0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
         int32_t rowIndex[N]    = {0,   1,   0,   1,   0,   1,   0,   1,   0,   1};
         int32_t columnIndex[N] = {0,   0,   1,   1,   2,   2,   3,   3,   4,   4};
         int32_t returnIndex[N] = {0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
@@ -302,7 +302,7 @@ int main(int /*argc*/, char** /*argv*/)
         sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianX",  cartesianX,  N, true, true));
         sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianY",  cartesianY,  N, true, true));
         sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianZ",  cartesianZ,  N, true, true));
-        sourceBuffers.push_back(SourceDestBuffer(imf, "valid",       valid,       N, true));
+        sourceBuffers.push_back(SourceDestBuffer(imf, "cartesianInvalidState", cartesianInvalidState, N, true));
         sourceBuffers.push_back(SourceDestBuffer(imf, "rowIndex",    rowIndex,    N, true));
         sourceBuffers.push_back(SourceDestBuffer(imf, "columnIndex", columnIndex, N, true));
         sourceBuffers.push_back(SourceDestBuffer(imf, "returnIndex", returnIndex, N, true));

@@ -2468,7 +2468,7 @@ void FloatNodeImpl::writeXml(boost::shared_ptr<ImageFileImpl> /*imf*/, CheckedFi
         else
             cf << "/>\n";
     } else {
-        cf << " precision=\"double\"";
+        /// Don't need to write precision="double", because that's the default
 
         /// Don't need to write if are default values
         if (minimum_ > E57_DOUBLE_MIN)
@@ -3157,20 +3157,24 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 #endif
         pi.nodeType = E57_FLOAT;
 
-        /// precision is required to be defined
-        ustring precision_str = lookupAttribute(attributes, L"precision");
-        if (precision_str == "single")
-            pi.precision = E57_SINGLE;
-        else if (precision_str == "double")
-            pi.precision = E57_DOUBLE;
-        else {
-            throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT,
-                                 "precisionString=" + precision_str
-                                 + " fileName=" + imf_->fileName()
-                                 + " uri=" + toUString(uri)
-                                 + " localName=" + toUString(localName)
-                                 + " qName=" + toUString(qName));
-        }
+        if (isAttributeDefined(attributes, L"precision")) {
+			ustring precision_str = lookupAttribute(attributes, L"precision");
+			if (precision_str == "single")
+				pi.precision = E57_SINGLE;
+			else if (precision_str == "double")
+				pi.precision = E57_DOUBLE;
+			else {
+				throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT,
+									 "precisionString=" + precision_str
+									 + " fileName=" + imf_->fileName()
+									 + " uri=" + toUString(uri)
+									 + " localName=" + toUString(localName)
+									 + " qName=" + toUString(qName));
+			}
+		} else {
+            /// Not defined defined in XML, so defaults to double
+			pi.precision = E57_DOUBLE;
+		}
 
         if (isAttributeDefined(attributes, L"minimum")) {
             ustring minimum_str = lookupAttribute(attributes, L"minimum");
