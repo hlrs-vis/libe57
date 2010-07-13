@@ -240,22 +240,31 @@ public:
 
 class PointStandardizedFieldsAvailable {
 public:
-	bool	valid;				//!< indicates that the PointRecord valid field is active
-	bool	x;					//!< indicates that the PointRecord cartesianX field is active
-	bool	y;					//!< indicates that the PointRecord cartesianY field is active
-	bool	z;					//!< indicates that the PointRecord cartesianZ field is active
-	bool	range;				//!< indicates that the PointRecord sphericalRange field is active
-	bool	azimuth;			//!< indicates that the PointRecord sphericalAzimuth field is active
-	bool	elevation;			//!< indicates that the PointRecord sphericalElevation field is active
-	bool	rowIndex;			//!< indicates that the PointRecord rowIndex field is active
-	bool	columnIndex;		//!< indicates that the PointRecord columnIndex field is active
-	bool	returnIndex;		//!< indicates that the PointRecord returnIndex field is active
-	bool	returnCount;		//!< indicates that the PointRecord returnCount field is active
-	bool	timeStamp;			//!< indicates that the PointRecord timeStamp field is active
-	bool	intensity;			//!< indicates that the PointRecord intensity field is active
-	bool	colorRed;			//!< indicates that the PointRecord colorRed field is active
-	bool	colorGreen;			//!< indicates that the PointRecord colorGreen field is active
-	bool	colorBlue;			//!< indicates that the PointRecord colorBlue field is active
+	bool	cartesianXField;			//!< indicates that the PointRecord cartesianX field is active
+	bool	cartesianYField;			//!< indicates that the PointRecord cartesianY field is active
+	bool	cartesianZField;			//!< indicates that the PointRecord cartesianZ field is active
+	bool	cartesianInvalidStateField; //!< Indicates that the PointRecord cartesianInvalidState field is active
+
+	bool	sphericalRangeField;		//!< indicates that the PointRecord sphericalRange field is active
+	bool	sphericalAzimuthField;		//!< indicates that the PointRecord sphericalAzimuth field is active
+	bool	sphericalElevationField;	//!< indicates that the PointRecord sphericalElevation field is active
+	bool	sphericalInvalidStateField; //!< Indicates that the PointRecord sphericalInvalidState field is active
+
+	bool	rowIndexField;				//!< indicates that the PointRecord rowIndex field is active
+	bool	columnIndexField;			//!< indicates that the PointRecord columnIndex field is active
+	bool	returnIndexField;			//!< indicates that the PointRecord returnIndex field is active
+	bool	returnCountField;			//!< indicates that the PointRecord returnCount field is active
+
+	bool	timeStampField;				//!< indicates that the PointRecord timeStamp field is active
+	bool	isTimeStampInvalidField;	//!< Indicates that the PointRecord isTimeStampInvalid field is active
+
+	bool	intensityField;				//!< indicates that the PointRecord intensity field is active
+	bool	isIntensityInvalidField;	//!< Indicates that the PointRecord isIntensityInvalid field is active
+
+	bool	colorRedField;				//!< indicates that the PointRecord colorRed field is active
+	bool	colorGreenField;			//!< indicates that the PointRecord colorGreen field is active
+	bool	colorBlueField;				//!< indicates that the PointRecord colorBlue field is active
+	bool	isColorInvalidField;		//!< Indicates that the PointRecord isColorInvalid field is active
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -271,19 +280,28 @@ public:
 	double		cartesianX;		//!< The X coordinate (in meters) of the point in Cartesian coordinates
 	double		cartesianY;		//!< The Y coordinate (in meters) of the point in Cartesian coordinates
 	double		cartesianZ;		//!< The Z coordinate (in meters) of the point in Cartesian coordinates
+	bool		cartesianInvalidState;	//!< Indicates whether the Cartesian coordinate vector or its magnitude is meaningful. Shall be in the interval [0, 2].
+
 	double		sphericalRange;	//!< The range (in meters) of points in spherical coordinates. Shall be non-negative
 	double		sphericalAzimuth; //!< Azimuth angle (in radians) of point in spherical coordinates
 	double		sphericalElevation;	//!< Elevation angle (in radians) of point in spherical coordinates
-	bool		valid;			//!< Value = 1 if the point is considered valid, 0 otherwise
+	bool		sphericalInvalidState;  //!< Indicates whether the spherical coordinate vector or its range value are meaningful. Shall be in the interval [0, 2].
+
 	int32_t		rowIndex;		//!< The row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval [0, 2^63).
 	int32_t		columnIndex;	//!< The column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval [0, 2^63)
 	int32_t		returnIndex;	//!< Only for multi-return sensors. The number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval [0, returnCount).
 	int32_t		returnCount;	//!< Only for multi-return sensors. The total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63).
+
 	double		timeStamp;		//!< The time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	bool		isTimeStampInvalid;	//!< Indicates whether the timeStamp element is meaningful. Shall be in the interval [0, 1].
+
 	double		intensity;		//!< Point response intensity. Unit is unspecified
+	bool		isIntensityInvalid;	//!< Indicates whether the intensity element is meaningful. Shall be in the interval [0, 1].
+
 	uint8_t		colorRed;		//!< Red color coefficient. Unit is unspecified.
 	uint8_t		colorGreen;		//!< Green color coefficient. Unit is unspecified
 	uint8_t		colorBlue;		//!< Blue color coefficient. Unit is unspecified
+	bool		isColorInvalid;		//!< Indicates whether the colorRed, colorBlue, and colorGreen elements are meaningful. Shall be in the interval [0, 1].
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -339,9 +357,9 @@ public:
 class VisualReferenceRepresentation
 {
 public:
-	int64_t			jpegImage;		//!< Size of JPEG format image data in BlobNode.
-	int64_t			pngImage;		//!< Size of PNG format image data in BlobNode.
-	int64_t			imageMask;		//!< Size of PNG format image mask in BlobNode.
+	int64_t			jpegImageSize;	//!< Size of JPEG format image data in BlobNode.
+	int64_t			pngImageSize;	//!< Size of PNG format image data in BlobNode.
+	int64_t			imageMaskSize;	//!< Size of PNG format image mask in BlobNode.
 	int32_t			imageWidth;		//!< The image width (in pixels). Shall be positive
 	int32_t			imageHeight;	//!< The image height (in pixels). Shall be positive
 };
@@ -356,9 +374,9 @@ public:
 class PinholeRepresentation
 {
 public:
-	int64_t			jpegImage;		//!< Size of JPEG format image data in BlobNode.
-	int64_t			pngImage;		//!< Size of PNG format image data in BlobNode.
-	int64_t			imageMask;		//!< Size of PNG format image mask in BlobNode.
+	int64_t			jpegImageSize;	//!< Size of JPEG format image data in BlobNode.
+	int64_t			pngImageSize;	//!< Size of PNG format image data in BlobNode.
+	int64_t			imageMaskSize;	//!< Size of PNG format image mask in BlobNode.
 	int32_t			imageWidth;		//!< The image width (in pixels). Shall be positive
 	int32_t			imageHeight;	//!< The image height (in pixels). Shall be positive
 	double			focalLength;	//!< The camera's focal length (in meters). Shall be positive
@@ -377,9 +395,9 @@ public:
 class SphericalRepresentation
 {
 public:
-	int64_t			jpegImage;		//!< Size of JPEG format image data in BlobNode.
-	int64_t			pngImage;		//!< Size of PNG format image data in BlobNode.
-	int64_t			imageMask;		//!< Size of PNG format image mask in BlobNode.
+	int64_t			jpegImageSize;	//!< Size of JPEG format image data in BlobNode.
+	int64_t			pngImageSize;	//!< Size of PNG format image data in BlobNode.
+	int64_t			imageMaskSize;	//!< Size of PNG format image mask in BlobNode.
 	int32_t			imageWidth;		//!< The image width (in pixels). Shall be positive
 	int32_t			imageHeight;	//!< The image height (in pixels). Shall be positive
 	double			pixelWidth;		//!< The width of a pixel in the image (in radians). Shall be positive
@@ -396,9 +414,9 @@ public:
 class CylindricalRepresentation
 {
 public:
-	int64_t			jpegImage;		//!< Size of JPEG format image data in Blob.
-	int64_t			pngImage;		//!< Size of PNG format image data in Blob.
-	int64_t			imageMask;		//!< Size of PNG format image mask in Blob.
+	int64_t			jpegImageSize;	//!< Size of JPEG format image data in Blob.
+	int64_t			pngImageSize;	//!< Size of PNG format image data in Blob.
+	int64_t			imageMaskSize;	//!< Size of PNG format image mask in Blob.
 	int32_t			imageWidth;		//!< The image width (in pixels). Shall be positive
 	int32_t			imageHeight;	//!< The image height (in pixels). Shall be positive
 	double			pixelWidth;		//!< The width of a pixel in the image (in radians). Shall be positive
@@ -588,22 +606,32 @@ Call the CompressedVectorReader::read() until all data is read.
 	CompressedVectorReader	SetUpData3DPointsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		pointCount,			//!< size of each element buffer.
-						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
+
 						double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+						int32_t*	cartesianInvalidState = NULL,	//!< Value = 0 if the point is considered valid, 1 otherwise
+
 						double*		intensity = NULL,	//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+						int32_t*	isIntensityInvalid = NULL,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+
 						double*		colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
 						double*		colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
 						double*		colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+						int32_t*	isColorInvalid = NULL,	//!< Value = 0 if the color is considered valid, 1 otherwise
+
 						double*		sphericalRange = NULL,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
 						double*		sphericalAzimuth = NULL,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
 						double*		sphericalElevation = NULL,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+						int32_t*	sphericalInvalidState = NULL, //!< Value = 0 if the range is considered valid, 1 otherwise
+
 						int64_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
 						int64_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
 						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
 						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
-						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+
+						double*		timeStamp = NULL,	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+						int32_t*	isTimeStampInvalid = NULL	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 						) const;					//!< @return Return true if sucessful, false otherwise
 
 ////////////////////////////////////////////////////////////////////
@@ -681,22 +709,31 @@ public:
 	CompressedVectorWriter	SetUpData3DPointsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		pointCount,			//!< size of each of the buffers given
-						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
 						double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+						int32_t*	cartesianInvalidState = NULL,	//!< Value = 0 if the point is considered valid, 1 otherwise
+
 						double*		intensity = NULL,	//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+						int32_t*	isIntensityInvalid = NULL,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+
 						double*		colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
 						double*		colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
 						double*		colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+						int32_t*	isColorInvalid = NULL,	//!< Value = 0 if the color is considered valid, 1 otherwise
+
 						double*		sphericalRange = NULL,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
 						double*		sphericalAzimuth = NULL,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
 						double*		sphericalElevation = NULL,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+						int32_t*	sphericalInvalidState = NULL, //!< Value = 0 if the range is considered valid, 1 otherwise
+
 						int64_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
 						int64_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
 						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
 						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
-						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+
+						double*		timeStamp = NULL,	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+						int32_t*	isTimeStampInvalid = NULL	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 						) const ;		//!< @return Return true if sucessful, false otherwise
 
 

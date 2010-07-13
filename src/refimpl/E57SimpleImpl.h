@@ -200,22 +200,31 @@ Call the CompressedVectorReader::read() until all data is read.
 virtual CompressedVectorReader	SetUpData3DPointsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		pointCount,			//!< size of each element buffer.
-						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
 						double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+						int32_t*	cartesianInvalidState = NULL,	//!< Value = 0 if the point is considered valid, 1 otherwise
+
 						double*		intensity = NULL,	//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+						int32_t*	isIntensityInvalid = NULL,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+
 						double*		colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
 						double*		colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
 						double*		colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+						int32_t*	isColorInvalid = NULL,	//!< Value = 0 if the color is considered valid, 1 otherwise
+
 						double*		sphericalRange = NULL,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
 						double*		sphericalAzimuth = NULL,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
 						double*		sphericalElevation = NULL,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+						int32_t*	sphericalInvalidState = NULL, //!< Value = 0 if the range is considered valid, 1 otherwise
+
 						int64_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
 						int64_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
 						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
 						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
-						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+
+						double*		timeStamp = NULL,	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+						int32_t*	isTimeStampInvalid = NULL	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 						);
 
 //! This function returns the file raw E57Root Structure Node
@@ -303,22 +312,31 @@ virtual int32_t		NewData3D(
 virtual CompressedVectorWriter	SetUpData3DPointsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
 						int64_t		pointCount,			//!< size of each of the buffers given
-						int32_t*	valid,				//!< Value = 1 if the point is considered valid, 0 otherwise
 						double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+						int32_t*	cartesianInvalidState = NULL,	//!< Value = 0 if the point is considered valid, 1 otherwise
+
 						double*		intensity = NULL,	//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+						int32_t*	isIntensityInvalid = NULL,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+
 						double*		colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
 						double*		colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
 						double*		colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+						int32_t*	isColorInvalid = NULL,	//!< Value = 0 if the color is considered valid, 1 otherwise
+
 						double*		sphericalRange = NULL,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
 						double*		sphericalAzimuth = NULL,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
 						double*		sphericalElevation = NULL,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+						int32_t*	sphericalInvalidState = NULL, //!< Value = 0 if the range is considered valid, 1 otherwise
+
 						int64_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
 						int64_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
 						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
 						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
-						double*		timeStamp = NULL	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+
+						double*		timeStamp = NULL,	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+						int32_t*	isTimeStampInvalid = NULL	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 						);
 
 

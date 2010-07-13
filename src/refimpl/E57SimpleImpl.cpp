@@ -223,13 +223,13 @@ bool	ReaderImpl :: ReadImage2D(
 			StructureNode visualReferenceRepresentation(image.get("visualReferenceRepresentation"));
 
 			if(visualReferenceRepresentation.isDefined("jpegImage"))
-				image2DHeader.visualReferenceRepresentation.jpegImage = 
+				image2DHeader.visualReferenceRepresentation.jpegImageSize = 
 					BlobNode(visualReferenceRepresentation.get("jpegImage")).byteCount();
 			if(visualReferenceRepresentation.isDefined("pngImage"))
-				image2DHeader.visualReferenceRepresentation.pngImage = 
+				image2DHeader.visualReferenceRepresentation.pngImageSize = 
 					BlobNode(visualReferenceRepresentation.get("pngImage")).byteCount();
 			if(visualReferenceRepresentation.isDefined("imageMask"))
-				image2DHeader.visualReferenceRepresentation.imageMask = 
+				image2DHeader.visualReferenceRepresentation.imageMaskSize = 
 					BlobNode(visualReferenceRepresentation.get("imageMask")).byteCount();
 
 			image2DHeader.visualReferenceRepresentation.imageHeight = (int32_t)
@@ -243,13 +243,13 @@ bool	ReaderImpl :: ReadImage2D(
 			StructureNode pinholeRepresentation(image.get("pinholeRepresentation"));
 
 			if(pinholeRepresentation.isDefined("jpegImage"))
-				image2DHeader.pinholeRepresentation.jpegImage = 
+				image2DHeader.pinholeRepresentation.jpegImageSize = 
 					BlobNode(pinholeRepresentation.get("jpegImage")).byteCount();
 			if(pinholeRepresentation.isDefined("pngImage"))
-				image2DHeader.pinholeRepresentation.pngImage = 
+				image2DHeader.pinholeRepresentation.pngImageSize = 
 					BlobNode(pinholeRepresentation.get("pngImage")).byteCount();
 			if(pinholeRepresentation.isDefined("imageMask"))
-				image2DHeader.pinholeRepresentation.imageMask = 
+				image2DHeader.pinholeRepresentation.imageMaskSize = 
 					BlobNode(pinholeRepresentation.get("imageMask")).byteCount();
 
 			image2DHeader.pinholeRepresentation.focalLength = 
@@ -273,13 +273,13 @@ bool	ReaderImpl :: ReadImage2D(
 			StructureNode sphericalRepresentation(image.get("sphericalRepresentation"));
 
 			if(sphericalRepresentation.isDefined("jpegImage"))
-				image2DHeader.sphericalRepresentation.jpegImage = 
+				image2DHeader.sphericalRepresentation.jpegImageSize = 
 					BlobNode(sphericalRepresentation.get("jpegImage")).byteCount();
 			if(sphericalRepresentation.isDefined("pngImage"))
-				image2DHeader.sphericalRepresentation.pngImage = 
+				image2DHeader.sphericalRepresentation.pngImageSize = 
 					BlobNode(sphericalRepresentation.get("pngImage")).byteCount();
 			if(sphericalRepresentation.isDefined("imageMask"))
-				image2DHeader.sphericalRepresentation.imageMask = 
+				image2DHeader.sphericalRepresentation.imageMaskSize = 
 					BlobNode(sphericalRepresentation.get("imageMask")).byteCount();
 
 			image2DHeader.sphericalRepresentation.imageHeight = (int32_t)
@@ -297,13 +297,13 @@ bool	ReaderImpl :: ReadImage2D(
 			StructureNode cylindricalRepresentation(image.get("cylindricalRepresentation"));
 
 			if(cylindricalRepresentation.isDefined("jpegImage"))
-				image2DHeader.cylindricalRepresentation.jpegImage = 
+				image2DHeader.cylindricalRepresentation.jpegImageSize = 
 					BlobNode(cylindricalRepresentation.get("jpegImage")).byteCount();
 			if(cylindricalRepresentation.isDefined("pngImage"))
-				image2DHeader.cylindricalRepresentation.pngImage = 
+				image2DHeader.cylindricalRepresentation.pngImageSize = 
 					BlobNode(cylindricalRepresentation.get("pngImage")).byteCount();
 			if(cylindricalRepresentation.isDefined("imageMask"))
-				image2DHeader.cylindricalRepresentation.imageMask = 
+				image2DHeader.cylindricalRepresentation.imageMaskSize = 
 					BlobNode(cylindricalRepresentation.get("imageMask")).byteCount();
 
 			image2DHeader.cylindricalRepresentation.imageHeight = (int32_t)
@@ -684,21 +684,31 @@ bool	ReaderImpl :: ReadData3D(
 
 // Get a prototype of datatypes that will be stored in points record.
 
-		data3DHeader.pointFields.valid = proto.isDefined("valid");
-		data3DHeader.pointFields.x = proto.isDefined("cartesianX");
-		data3DHeader.pointFields.y = proto.isDefined("cartesianY");
-		data3DHeader.pointFields.z = proto.isDefined("cartesianZ");
-		data3DHeader.pointFields.range = proto.isDefined("sphericalRange");
-		data3DHeader.pointFields.azimuth = proto.isDefined("spherialAzimuth");
-		data3DHeader.pointFields.elevation = proto.isDefined("sphericalElevation");
-		data3DHeader.pointFields.rowIndex = proto.isDefined("rowIndex");
-		data3DHeader.pointFields.columnIndex = proto.isDefined("columnIndex");
-		data3DHeader.pointFields.returnIndex = proto.isDefined("returnIndex");
-		data3DHeader.pointFields.returnCount = proto.isDefined("returnCount");
-		data3DHeader.pointFields.intensity = proto.isDefined("intensity");
-		data3DHeader.pointFields.colorRed = proto.isDefined("colorRed");
-		data3DHeader.pointFields.colorGreen = proto.isDefined("colorGreen");
-		data3DHeader.pointFields.colorBlue = proto.isDefined("colorBlue");
+		data3DHeader.pointFields.cartesianXField = proto.isDefined("cartesianX");
+		data3DHeader.pointFields.cartesianYField = proto.isDefined("cartesianY");
+		data3DHeader.pointFields.cartesianZField = proto.isDefined("cartesianZ");
+		data3DHeader.pointFields.cartesianInvalidStateField = proto.isDefined("cartesianInvalidState");
+
+		data3DHeader.pointFields.sphericalRangeField = proto.isDefined("sphericalRange");
+		data3DHeader.pointFields.sphericalAzimuthField = proto.isDefined("spherialAzimuth");
+		data3DHeader.pointFields.sphericalElevationField = proto.isDefined("sphericalElevation");
+		data3DHeader.pointFields.sphericalInvalidStateField = proto.isDefined("sphericalInvalidState");
+
+		data3DHeader.pointFields.rowIndexField = proto.isDefined("rowIndex");
+		data3DHeader.pointFields.columnIndexField = proto.isDefined("columnIndex");
+		data3DHeader.pointFields.returnIndexField = proto.isDefined("returnIndex");
+		data3DHeader.pointFields.returnCountField = proto.isDefined("returnCount");
+
+		data3DHeader.pointFields.timeStampField = proto.isDefined("timeStamp");
+		data3DHeader.pointFields.isTimeStampInvalidField = proto.isDefined("isTimeStampInvalid");
+
+		data3DHeader.pointFields.intensityField = proto.isDefined("intensity");
+		data3DHeader.pointFields.isIntensityInvalidField = proto.isDefined("isIntensityInvalid");
+
+		data3DHeader.pointFields.colorRedField = proto.isDefined("colorRed");
+		data3DHeader.pointFields.colorGreenField = proto.isDefined("colorGreen");
+		data3DHeader.pointFields.colorBlueField = proto.isDefined("colorBlue");
+		data3DHeader.pointFields.isColorInvalidField = proto.isDefined("isColorInvalid");
 
 		return true;
 	}
@@ -793,22 +803,31 @@ bool	ReaderImpl :: ReadData3DGroupsData(
 CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 	int32_t		dataIndex,
 	int64_t		count,
-	int32_t*	valid,
-	double*		x,
-	double*		y,
-	double*		z,
-	double*		intensity,
-	double*		colorRed,
-	double*		colorGreen,
-	double*		colorBlue,
-	double*		range,
-	double*		azimuth,
-	double*		elevation,
-	int64_t*	rowIndex,
-	int64_t*	columnIndex,
-	int64_t*	returnIndex,
-	int64_t*	returnCount,
-	double*		timeStamp
+	double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+	int32_t*	cartesianInvalidState,	//!< Value = 0 if the point is considered valid, 1 otherwise
+
+	double*		intensity,			//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+	int32_t*	isIntensityInvalid,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+
+	double*		colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+	double*		colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+	double*		colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+	int32_t*	isColorInvalid,		//!< Value = 0 if the color is considered valid, 1 otherwise
+
+	double*		sphericalRange,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
+	double*		sphericalAzimuth,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
+	double*		sphericalElevation,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+	int32_t*	sphericalInvalidState, //!< Value = 0 if the range is considered valid, 1 otherwise
+
+	int64_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+	int64_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+	int64_t*	returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+	int64_t*	returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+
+	double*		timeStamp,			//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	int32_t*	isTimeStampInvalid	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 	)
 {
 	int64_t		readCount = 0;
@@ -818,20 +837,24 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 	StructureNode proto(points.prototype());
 
 	vector<SourceDestBuffer> destBuffers;
-	if(proto.isDefined("cartesianX") && (x != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianX",  x,  (unsigned) count, true, true));
-	if(proto.isDefined("cartesianY") && (y != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianY",  y,  (unsigned) count, true, true));
-	if(proto.isDefined("cartesianZ") && (z != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianZ",  z,  (unsigned) count, true, true));
-	if(proto.isDefined("sphericalRange") && (range != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",  range,  (unsigned) count, true, true));
-	if(proto.isDefined("spherialAzimuth") && (azimuth != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",  azimuth,  (unsigned) count, true, true));
-	if(proto.isDefined("sphericalElevation") && (elevation != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",  elevation,  (unsigned) count, true, true));
-	if(proto.isDefined("valid") && (valid != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "valid",       valid,       (unsigned) count, true));
+	if(proto.isDefined("cartesianX") && (cartesianX != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianX",  cartesianX,  (unsigned) count, true, true));
+	if(proto.isDefined("cartesianY") && (cartesianY != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianY",  cartesianY,  (unsigned) count, true, true));
+	if(proto.isDefined("cartesianZ") && (cartesianZ != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianZ",  cartesianZ,  (unsigned) count, true, true));
+	if(proto.isDefined("cartesianInvalidState") && (cartesianInvalidState != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianInvalidState",       cartesianInvalidState,       (unsigned) count, true));
+
+	if(proto.isDefined("sphericalRange") && (sphericalRange != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",  sphericalRange,  (unsigned) count, true, true));
+	if(proto.isDefined("spherialAzimuth") && (sphericalAzimuth != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",  sphericalAzimuth,  (unsigned) count, true, true));
+	if(proto.isDefined("sphericalElevation") && (sphericalElevation != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",  sphericalElevation,  (unsigned) count, true, true));
+	if(proto.isDefined("sphericalInvalidState") && (sphericalInvalidState != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "sphericalInvalidState",       sphericalInvalidState,       (unsigned) count, true));
+
 	if(proto.isDefined("rowIndex") && (rowIndex != NULL))
 		destBuffers.push_back(SourceDestBuffer(imf_, "rowIndex",    rowIndex,    (unsigned) count, true));
 	if(proto.isDefined("columnIndex") && (columnIndex != NULL))
@@ -840,16 +863,25 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 		destBuffers.push_back(SourceDestBuffer(imf_, "returnIndex", returnIndex, (unsigned) count, true));
 	if(proto.isDefined("returnCount") && (returnCount != NULL))
 		destBuffers.push_back(SourceDestBuffer(imf_, "returnCount", returnCount, (unsigned) count, true));
+
 	if(proto.isDefined("timeStamp") && (timeStamp != NULL))
 		destBuffers.push_back(SourceDestBuffer(imf_, "timeStamp",   timeStamp,   (unsigned) count, true));
+	if(proto.isDefined("isTimeStampInvalid") && (isTimeStampInvalid != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "isTimeStampInvalid",       isTimeStampInvalid,       (unsigned) count, true));
+
 	if(proto.isDefined("intensity") && (intensity != NULL))
 		destBuffers.push_back(SourceDestBuffer(imf_, "intensity",   intensity,   (unsigned) count, true));
+	if(proto.isDefined("isIntensityInvalid") && (isIntensityInvalid != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "isIntensityInvalid",       isIntensityInvalid,       (unsigned) count, true));
+
 	if(proto.isDefined("colorRed") && (colorRed != NULL))
 		destBuffers.push_back(SourceDestBuffer(imf_, "colorRed",    colorRed,    (unsigned) count, true));
 	if(proto.isDefined("colorGreen") && (colorGreen != NULL))
 		destBuffers.push_back(SourceDestBuffer(imf_, "colorGreen",  colorGreen,  (unsigned) count, true));
 	if(proto.isDefined("colorBlue") && (colorBlue != NULL))
 		destBuffers.push_back(SourceDestBuffer(imf_, "colorBlue",   colorBlue,   (unsigned) count, true));
+	if(proto.isDefined("isColorInvalid") && (isColorInvalid != NULL))
+		destBuffers.push_back(SourceDestBuffer(imf_, "isColorInvalid",       isColorInvalid,       (unsigned) count, true));
 
 	CompressedVectorReader reader = points.reader(destBuffers);
 
@@ -886,7 +918,7 @@ ULARGE_INTEGER	currentTime;
 currentTime.LowPart = currentFileTime.dwLowDateTime;
 currentTime.HighPart = currentFileTime.dwHighDateTime;
 
-SYSTEMTIME		gpsSystemTime = {1980,1,0,6,0,0,0,0};	//GPS start in Jan. 6, 1980
+SYSTEMTIME		gpsSystemTime = {1980,1,0,6,0,0,0,0};	//GPS started in Jan. 6, 1980
 FILETIME		gpsFileTime;
 SystemTimeToFileTime(&gpsSystemTime,&gpsFileTime);
 
@@ -1056,42 +1088,42 @@ int32_t	WriterImpl :: NewImage2D(
     translation.set("y", FloatNode(imf_, image2DHeader.pose.translation.y));
     translation.set("z", FloatNode(imf_, image2DHeader.pose.translation.z));
 
-	if( image2DHeader.visualReferenceRepresentation.jpegImage ||
-		image2DHeader.visualReferenceRepresentation.pngImage)
+	if( image2DHeader.visualReferenceRepresentation.jpegImageSize > 0 ||
+		image2DHeader.visualReferenceRepresentation.pngImageSize > 0)
 	{
 		StructureNode visualReferenceRepresentation = StructureNode(imf_);
 		image.set("visualReferenceRepresentation", visualReferenceRepresentation);
 
-		if( image2DHeader.visualReferenceRepresentation.jpegImage)
+		if( image2DHeader.visualReferenceRepresentation.jpegImageSize > 0)
 			visualReferenceRepresentation.set("jpegImage",
-				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.jpegImage));
-		else if( image2DHeader.visualReferenceRepresentation.pngImage)
+				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.jpegImageSize));
+		else if( image2DHeader.visualReferenceRepresentation.pngImageSize > 0)
 			visualReferenceRepresentation.set("pngImage",
-				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.pngImage));
-		if( image2DHeader.visualReferenceRepresentation.imageMask)
+				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.pngImageSize));
+		if( image2DHeader.visualReferenceRepresentation.imageMaskSize > 0)
 			visualReferenceRepresentation.set("imageMask",
-				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.imageMask));
+				BlobNode(imf_,image2DHeader.visualReferenceRepresentation.imageMaskSize));
 
 		visualReferenceRepresentation.set("imageHeight", 
 			IntegerNode(imf_, image2DHeader.visualReferenceRepresentation.imageHeight));
 		visualReferenceRepresentation.set("imageWidth", 
 			IntegerNode(imf_, image2DHeader.visualReferenceRepresentation.imageWidth));
 	}
-	else if( image2DHeader.pinholeRepresentation.jpegImage ||
-		image2DHeader.pinholeRepresentation.pngImage)
+	else if( image2DHeader.pinholeRepresentation.jpegImageSize > 0 ||
+		image2DHeader.pinholeRepresentation.pngImageSize > 0)
 	{
 		StructureNode pinholeRepresentation = StructureNode(imf_);
 		image.set("pinholeRepresentation", pinholeRepresentation);
 
-		if( image2DHeader.pinholeRepresentation.jpegImage)
+		if( image2DHeader.pinholeRepresentation.jpegImageSize > 0)
 			pinholeRepresentation.set("jpegImage",
-				BlobNode(imf_,image2DHeader.pinholeRepresentation.jpegImage));
-		else if( image2DHeader.pinholeRepresentation.pngImage)
+				BlobNode(imf_,image2DHeader.pinholeRepresentation.jpegImageSize));
+		else if( image2DHeader.pinholeRepresentation.pngImageSize > 0)
 			pinholeRepresentation.set("pngImage",
-				BlobNode(imf_,image2DHeader.pinholeRepresentation.pngImage));
-		if( image2DHeader.pinholeRepresentation.imageMask)
+				BlobNode(imf_,image2DHeader.pinholeRepresentation.pngImageSize));
+		if( image2DHeader.pinholeRepresentation.imageMaskSize > 0)
 			pinholeRepresentation.set("imageMask",
-				BlobNode(imf_,image2DHeader.pinholeRepresentation.imageMask));
+				BlobNode(imf_,image2DHeader.pinholeRepresentation.imageMaskSize));
 
 		pinholeRepresentation.set("focalLength", 
 			FloatNode(imf_, image2DHeader.pinholeRepresentation.focalLength));
@@ -1108,21 +1140,21 @@ int32_t	WriterImpl :: NewImage2D(
 		pinholeRepresentation.set("principalPointY", 
 			FloatNode(imf_, image2DHeader.pinholeRepresentation.principalPointY));
 	}
-	else if( image2DHeader.sphericalRepresentation.jpegImage ||
-		image2DHeader.sphericalRepresentation.pngImage)
+	else if( image2DHeader.sphericalRepresentation.jpegImageSize > 0 ||
+		image2DHeader.sphericalRepresentation.pngImageSize > 0)
 	{
 		StructureNode sphericalRepresentation = StructureNode(imf_);
 		image.set("sphericalRepresentation", sphericalRepresentation);
 
-		if( image2DHeader.sphericalRepresentation.jpegImage)
+		if( image2DHeader.sphericalRepresentation.jpegImageSize > 0)
 			sphericalRepresentation.set("jpegImage",
-				BlobNode(imf_,image2DHeader.sphericalRepresentation.jpegImage));
-		else if( image2DHeader.sphericalRepresentation.pngImage)
+				BlobNode(imf_,image2DHeader.sphericalRepresentation.jpegImageSize));
+		else if( image2DHeader.sphericalRepresentation.pngImageSize > 0)
 			sphericalRepresentation.set("pngImage",
-				BlobNode(imf_,image2DHeader.sphericalRepresentation.pngImage));
-		if( image2DHeader.sphericalRepresentation.imageMask)
+				BlobNode(imf_,image2DHeader.sphericalRepresentation.pngImageSize));
+		if( image2DHeader.sphericalRepresentation.imageMaskSize > 0)
 			sphericalRepresentation.set("imageMask",
-				BlobNode(imf_,image2DHeader.sphericalRepresentation.imageMask));
+				BlobNode(imf_,image2DHeader.sphericalRepresentation.imageMaskSize));
 
 		sphericalRepresentation.set("imageHeight", 
 			IntegerNode(imf_, image2DHeader.sphericalRepresentation.imageHeight));
@@ -1133,21 +1165,21 @@ int32_t	WriterImpl :: NewImage2D(
 		sphericalRepresentation.set("pixelWidth", 
 			FloatNode(imf_, image2DHeader.sphericalRepresentation.pixelWidth));
 	}
-	else if( image2DHeader.cylindricalRepresentation.jpegImage ||
-		image2DHeader.cylindricalRepresentation.pngImage)
+	else if( image2DHeader.cylindricalRepresentation.jpegImageSize > 0 ||
+		image2DHeader.cylindricalRepresentation.pngImageSize > 0)
 	{
 		StructureNode cylindricalRepresentation = StructureNode(imf_);
 		image.set("cylindricalRepresentation", cylindricalRepresentation);
 
-		if( image2DHeader.cylindricalRepresentation.jpegImage)
+		if( image2DHeader.cylindricalRepresentation.jpegImageSize > 0)
 			cylindricalRepresentation.set("jpegImage",
-				BlobNode(imf_,image2DHeader.cylindricalRepresentation.jpegImage));
-		else if( image2DHeader.cylindricalRepresentation.pngImage)
+				BlobNode(imf_,image2DHeader.cylindricalRepresentation.jpegImageSize));
+		else if( image2DHeader.cylindricalRepresentation.pngImageSize > 0)
 			cylindricalRepresentation.set("pngImage",
-				BlobNode(imf_,image2DHeader.cylindricalRepresentation.pngImage));
-		if( image2DHeader.cylindricalRepresentation.imageMask)
+				BlobNode(imf_,image2DHeader.cylindricalRepresentation.pngImageSize));
+		if( image2DHeader.cylindricalRepresentation.imageMaskSize > 0)
 			cylindricalRepresentation.set("imageMask",
-				BlobNode(imf_,image2DHeader.cylindricalRepresentation.imageMask));
+				BlobNode(imf_,image2DHeader.cylindricalRepresentation.imageMaskSize));
 
 		cylindricalRepresentation.set("imageHeight", 
 			IntegerNode(imf_, image2DHeader.cylindricalRepresentation.imageHeight));
@@ -1399,53 +1431,62 @@ int32_t	WriterImpl :: NewData3D(
     ///      "/data3D/0/points/0/cartesianX"
     StructureNode proto = StructureNode(imf_);
 
-	if(data3DHeader.pointFields.valid)
-		proto.set("valid",       IntegerNode(imf_, 0, 0, 1));
-
-	if(data3DHeader.pointFields.x)
+	if(data3DHeader.pointFields.cartesianXField)
 		proto.set("cartesianX",  FloatNode(imf_, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 //			proto.set("cartesianX",  ScaledIntegerNode(imf_, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
-	if(data3DHeader.pointFields.y)
+	if(data3DHeader.pointFields.cartesianYField)
 		proto.set("cartesianY",  FloatNode(imf_, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 //			proto.set("cartesianY",  ScaledIntegerNode(imf_, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
-	if(data3DHeader.pointFields.z)
+	if(data3DHeader.pointFields.cartesianZField)
 		proto.set("cartesianZ",  FloatNode(imf_, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
 //			proto.set("cartesianZ",  ScaledIntegerNode(imf_, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
+	if(data3DHeader.pointFields.cartesianInvalidStateField)
+		proto.set("cartesianInvalidState",       IntegerNode(imf_, 0, 0, 1));
 
-	if(data3DHeader.pointFields.range)
+	if(data3DHeader.pointFields.sphericalRangeField)
 		proto.set("sphericalRange",  ScaledIntegerNode(imf_, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 //			proto.set("sphericalRange",  FloatNode(imf_, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
-	if(data3DHeader.pointFields.azimuth)
-		proto.set("spherialAzimuth",  ScaledIntegerNode(imf_, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
+	if(data3DHeader.pointFields.sphericalAzimuthField)
+		proto.set("sphericalAzimuth",  ScaledIntegerNode(imf_, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 //			proto.set("spherialAzimuth",  FloatNode(imf_, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
-	if(data3DHeader.pointFields.elevation)
+	if(data3DHeader.pointFields.sphericalElevationField)
 		proto.set("sphericalElevation",  ScaledIntegerNode(imf_, 0, E57_INT16_MIN, E57_INT16_MAX, 0.001, 0));
 //			proto.set("sphericalElevation",  FloatNode(imf_, 0., E57_SINGLE, E57_FLOAT_MIN, E57_FLOAT_MAX));
+	if(data3DHeader.pointFields.sphericalInvalidStateField)
+		proto.set("sphericalInvalidState",       IntegerNode(imf_, 0, 0, 1));
 
-	if(data3DHeader.pointFields.rowIndex)
+	if(data3DHeader.pointFields.rowIndexField)
 		proto.set("rowIndex",    IntegerNode(imf_, 0, 0, row));
-	if(data3DHeader.pointFields.columnIndex)
+	if(data3DHeader.pointFields.columnIndexField)
 		proto.set("columnIndex", IntegerNode(imf_, 0, 0, col));
 
-	if(data3DHeader.pointFields.returnIndex)
+	if(data3DHeader.pointFields.returnIndexField)
 		proto.set("returnIndex", IntegerNode(imf_, 0, 0, 0));
-    if(data3DHeader.pointFields.returnCount)
+    if(data3DHeader.pointFields.returnCountField)
 		proto.set("returnCount", IntegerNode(imf_, 1, 1, 1));
-	if(data3DHeader.pointFields.timeStamp)
-		proto.set("timeStamp",   FloatNode(imf_, 0.0, E57_DOUBLE));
 
-	if(data3DHeader.pointFields.intensity)
+	if(data3DHeader.pointFields.timeStampField)
+		proto.set("timeStamp",   FloatNode(imf_, 0.0, E57_DOUBLE));
+	if(data3DHeader.pointFields.isTimeStampInvalidField)
+		proto.set("isTimeStampInvalid",       IntegerNode(imf_, 0, 0, 1));
+
+	if(data3DHeader.pointFields.intensityField)
 		proto.set("intensity",   FloatNode(imf_, 0.0, E57_SINGLE, 0.0, 1.0));
 //			proto.set("intensity",   IntegerNode(imf_, 0, 0, 255));
-	if(data3DHeader.pointFields.colorRed)
+	if(data3DHeader.pointFields.isIntensityInvalidField)
+		proto.set("isIntensityInvalid",       IntegerNode(imf_, 0, 0, 1));
+
+	if(data3DHeader.pointFields.colorRedField)
 		proto.set("colorRed",    FloatNode(imf_, 0.0, E57_SINGLE, 0.0, 1.0));
 //			proto.set("colorRed",   IntegerNode(imf_, 0, 0, 255));
-	if(data3DHeader.pointFields.colorGreen)
+	if(data3DHeader.pointFields.colorGreenField)
 		proto.set("colorGreen",  FloatNode(imf_, 0.0, E57_SINGLE, 0.0, 1.0));
 //			proto.set("colorGreen",   IntegerNode(imf_, 0, 0, 255));
-	if(data3DHeader.pointFields.colorBlue)
+	if(data3DHeader.pointFields.colorBlueField)
 		proto.set("colorBlue",   FloatNode(imf_, 0.0, E57_SINGLE, 0.0, 1.0));
 //			proto.set("colorBlue",   IntegerNode(imf_, 0, 0, 255));
+	if(data3DHeader.pointFields.isColorInvalidField)
+		proto.set("isColorInvalid",       IntegerNode(imf_, 0, 0, 1));
 
 //        proto.set("demo:extra2", StringNode(imf_));
 
@@ -1464,22 +1505,32 @@ int32_t	WriterImpl :: NewData3D(
 CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 	int32_t		dataIndex,
 	int64_t		count,
-	int32_t*	valid,
-	double*		x,
-	double*		y,
-	double*		z,
-	double*		intensity,
-	double*		colorRed,
-	double*		colorGreen,
-	double*		colorBlue,
-	double*		range,
-	double*		azimuth,
-	double*		elevation,
-	int64_t*	rowIndex,
-	int64_t*	columnIndex,
-	int64_t*	returnIndex,
-	int64_t*	returnCount,
-	double*		timeStamp
+	double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+	int32_t*	cartesianInvalidState,	//!< Value = 0 if the point is considered valid, 1 otherwise
+
+	double*		intensity,			//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+	int32_t*	isIntensityInvalid,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+
+	double*		colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+	double*		colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+	double*		colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+	int32_t*	isColorInvalid,		//!< Value = 0 if the color is considered valid, 1 otherwise
+
+	double*		sphericalRange,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
+	double*		sphericalAzimuth,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
+	double*		sphericalElevation,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+	int32_t*	sphericalInvalidState, //!< Value = 0 if the range is considered valid, 1 otherwise
+
+	int64_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+	int64_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+	int64_t*	returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+	int64_t*	returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+
+	double*		timeStamp,			//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	int32_t*	isTimeStampInvalid	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
+
 	)
 {
 	StructureNode scan(data3D_.get(dataIndex));
@@ -1487,20 +1538,24 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 	StructureNode proto(points.prototype());
 
 	vector<SourceDestBuffer> sourceBuffers;
-	if(proto.isDefined("cartesianX") && (x != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianX",  x,  (unsigned) count, true, true));
-	if(proto.isDefined("cartesianY") && (y != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianY",  y,  (unsigned) count, true, true));
-	if(proto.isDefined("cartesianZ") && (z != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianZ",  z,  (unsigned) count, true, true));
-	if(proto.isDefined("sphericalRange") && (range != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",  range,  (unsigned) count, true, true));
-	if(proto.isDefined("spherialAzimuth") && (azimuth != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",  azimuth,  (unsigned) count, true, true));
-	if(proto.isDefined("sphericalElevation") && (elevation != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",  elevation,  (unsigned) count, true, true));
-	if(proto.isDefined("valid") && (valid != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "valid",       valid,       (unsigned) count, true));
+	if(proto.isDefined("cartesianX") && (cartesianX != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianX",  cartesianX,  (unsigned) count, true, true));
+	if(proto.isDefined("cartesianY") && (cartesianY != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianY",  cartesianY,  (unsigned) count, true, true));
+	if(proto.isDefined("cartesianZ") && (cartesianZ != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianZ",  cartesianZ,  (unsigned) count, true, true));
+	if(proto.isDefined("cartesianInvalidState") && (cartesianInvalidState != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianInvalidState",       cartesianInvalidState,       (unsigned) count, true));
+
+	if(proto.isDefined("sphericalRange") && (sphericalRange != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",  sphericalRange,  (unsigned) count, true, true));
+	if(proto.isDefined("spherialAzimuth") && (sphericalAzimuth != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",  sphericalAzimuth,  (unsigned) count, true, true));
+	if(proto.isDefined("sphericalElevation") && (sphericalElevation != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",  sphericalElevation,  (unsigned) count, true, true));
+	if(proto.isDefined("sphericalInvalidState") && (sphericalInvalidState != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalInvalidState",       sphericalInvalidState,       (unsigned) count, true));
+
 	if(proto.isDefined("rowIndex") && (rowIndex != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "rowIndex",    rowIndex,    (unsigned) count, true));
 	if(proto.isDefined("columnIndex") && (columnIndex != NULL))
@@ -1509,16 +1564,25 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "returnIndex", returnIndex, (unsigned) count, true));
 	if(proto.isDefined("returnCount") && (returnCount != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "returnCount", returnCount, (unsigned) count, true));
+
 	if(proto.isDefined("timeStamp") && (timeStamp != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "timeStamp",   timeStamp,   (unsigned) count, true));
+	if(proto.isDefined("isTimeStampInvalid") && (isTimeStampInvalid != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "isTimeStampInvalid",       isTimeStampInvalid,       (unsigned) count, true));
+
 	if(proto.isDefined("intensity") && (intensity != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "intensity",   intensity,   (unsigned) count, true));
+	if(proto.isDefined("isIntensityInvalid") && (isIntensityInvalid != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "isIntensityInvalid",       isIntensityInvalid,       (unsigned) count, true));
+
 	if(proto.isDefined("colorRed") && (colorRed != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "colorRed",    colorRed,    (unsigned) count, true));
 	if(proto.isDefined("colorGreen") && (colorGreen != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "colorGreen",  colorGreen,  (unsigned) count, true));
 	if(proto.isDefined("colorBlue") && (colorBlue != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "colorBlue",   colorBlue,   (unsigned) count, true));
+	if(proto.isDefined("isColorInvalid") && (isColorInvalid != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "isColorInvalid",       isColorInvalid,       (unsigned) count, true));
 
 	CompressedVectorWriter writer = points.writer(sourceBuffers);
 

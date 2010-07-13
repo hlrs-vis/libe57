@@ -99,7 +99,7 @@ An example of a typical use of this interface would be as follows:
 		double* yBuffer = new double[nPointsSize];
 		double* zBuffer = new double[nPointsSize];
 		CompressedVectorReader dataReader = eReader.SetUpData3DPointsData(
-			scanIndex, nPointsSize, NULL, xBuffer, yBuffer, zBuffer);
+			scanIndex, nPointsSize, xBuffer, yBuffer, zBuffer, NULL);
 
 //Read the point data
 		dataReader.read();
@@ -264,22 +264,31 @@ using namespace boost;
 	pointGroupingSchemes.groupingByLine.groupsSize = 0;
 	pointGroupingSchemes.groupingByLine.idElementName = "columnIndex";
 
-	pointFields.azimuth = false;
-	pointFields.colorBlue = false;
-	pointFields.colorGreen = false;
-	pointFields.colorRed = false;
-	pointFields.columnIndex = false;
-	pointFields.elevation = false;
-	pointFields.intensity = false;
-	pointFields.valid = false;
-	pointFields.range = false;
-	pointFields.returnCount = false;
-	pointFields.returnIndex = false;
-	pointFields.rowIndex = false;
-	pointFields.timeStamp = false;
-	pointFields.x = false;
-	pointFields.y = false;
-	pointFields.z = false;
+	pointFields.sphericalAzimuthField = false;
+	pointFields.sphericalRangeField = false;
+	pointFields.sphericalElevationField = false;
+	pointFields.sphericalInvalidStateField = false;
+
+	pointFields.colorBlueField = false;
+	pointFields.colorGreenField = false;
+	pointFields.colorRedField = false;
+	pointFields.isColorInvalidField = false;
+
+	pointFields.columnIndexField = false;
+	pointFields.returnCountField = false;
+	pointFields.returnIndexField = false;
+	pointFields.rowIndexField = false;
+
+	pointFields.intensityField = false;
+	pointFields.isIntensityInvalidField = false;
+
+	pointFields.timeStampField = false;
+	pointFields.isTimeStampInvalidField = false;
+
+	pointFields.cartesianXField = false;
+	pointFields.cartesianYField = false;
+	pointFields.cartesianZField = false;
+	pointFields.cartesianInvalidStateField = false;
 
 	pointsSize = 0;
 };
@@ -304,13 +313,13 @@ using namespace boost;
 	pose.translation.y = 0.;
 	pose.translation.z = 0.;
 
-	visualReferenceRepresentation.imageMask = 0;
-	visualReferenceRepresentation.pngImage = 0;
-	visualReferenceRepresentation.jpegImage = 0;
+	visualReferenceRepresentation.imageMaskSize = 0;
+	visualReferenceRepresentation.pngImageSize = 0;
+	visualReferenceRepresentation.jpegImageSize = 0;
 
-	pinholeRepresentation.jpegImage = 0;
-	pinholeRepresentation.pngImage = 0;
-	pinholeRepresentation.imageMask = 0;
+	pinholeRepresentation.jpegImageSize = 0;
+	pinholeRepresentation.pngImageSize = 0;
+	pinholeRepresentation.imageMaskSize = 0;
 	pinholeRepresentation.focalLength = 0.;
 	pinholeRepresentation.imageHeight = 0;
 	pinholeRepresentation.imageWidth = 0;
@@ -319,17 +328,17 @@ using namespace boost;
 	pinholeRepresentation.principalPointX = 0;
 	pinholeRepresentation.principalPointY = 0;
 
-	sphericalRepresentation.jpegImage = 0;
-	sphericalRepresentation.pngImage = 0;
-	sphericalRepresentation.imageMask = 0;
+	sphericalRepresentation.jpegImageSize = 0;
+	sphericalRepresentation.pngImageSize = 0;
+	sphericalRepresentation.imageMaskSize = 0;
 	sphericalRepresentation.imageHeight = 0;
 	sphericalRepresentation.imageWidth = 0;
 	sphericalRepresentation.pixelHeight = 0;
 	sphericalRepresentation.pixelWidth = 0;
 
-	cylindricalRepresentation.jpegImage = 0;
-	cylindricalRepresentation.pngImage = 0;
-	cylindricalRepresentation.imageMask = 0;
+	cylindricalRepresentation.jpegImageSize = 0;
+	cylindricalRepresentation.pngImageSize = 0;
+	cylindricalRepresentation.imageMaskSize = 0;
 	cylindricalRepresentation.imageHeight = 0;
 	cylindricalRepresentation.imageWidth = 0;
 	cylindricalRepresentation.pixelHeight = 0;
@@ -461,28 +470,40 @@ bool		Reader :: ReadData3DGroupsData(
 CompressedVectorReader	Reader :: SetUpData3DPointsData(
 	int32_t		dataIndex,			// data block index given by the NewData3D
 	int64_t		pointCount,			// size of each element buffer.
-	int32_t*	valid,				// Value = 1 if the point is considered valid, 0 otherwise
-	double*		cartesianX,			// pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
-	double*		cartesianY,			// pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
-	double*		cartesianZ,			// pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
-	double*		intensity,			// pointer to a buffer with the Point response intensity. Unit is unspecified
-	double*		colorRed,			// pointer to a buffer with the Red color coefficient. Unit is unspecified
-	double*		colorGreen,			// pointer to a buffer with the Green color coefficient. Unit is unspecified
-	double*		colorBlue,			// pointer to a buffer with the Blue color coefficient. Unit is unspecified
-	double*		sphericalRange,		// pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
-	double*		sphericalAzimuth,	// pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
-	double*		sphericalElevation,	// pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
-	int64_t*	rowIndex,			// pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
-	int64_t*	columnIndex,		// pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
-	int64_t*	returnIndex,		// pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
-	int64_t*	returnCount,		// pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
-	double*		timeStamp			// pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+	int32_t*	cartesianInvalidState,	//!< Value = 0 if the point is considered valid, 1 otherwise
+
+	double*		intensity,			//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+	int32_t*	isIntensityInvalid,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+
+	double*		colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+	double*		colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+	double*		colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+	int32_t*	isColorInvalid,		//!< Value = 0 if the color is considered valid, 1 otherwise
+
+	double*		sphericalRange,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
+	double*		sphericalAzimuth,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
+	double*		sphericalElevation,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+	int32_t*	sphericalInvalidState, //!< Value = 0 if the range is considered valid, 1 otherwise
+
+	int64_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+	int64_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+	int64_t*	returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+	int64_t*	returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+
+	double*		timeStamp,			//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	int32_t*	isTimeStampInvalid	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 	) const
 {
-	return impl_->SetUpData3DPointsData( dataIndex, pointCount, valid,
-		cartesianX, cartesianY, cartesianZ, intensity, colorRed, colorGreen, colorBlue,
-		sphericalRange, sphericalAzimuth, sphericalElevation, rowIndex, columnIndex,
-		returnIndex, returnCount, timeStamp);
+	return impl_->SetUpData3DPointsData( dataIndex, pointCount,
+		cartesianX, cartesianY, cartesianZ, cartesianInvalidState,
+		intensity, isIntensityInvalid,
+		colorRed, colorGreen, colorBlue, isColorInvalid,
+		sphericalRange, sphericalAzimuth, sphericalElevation, sphericalInvalidState,
+		rowIndex, columnIndex, returnIndex, returnCount,
+		timeStamp, isTimeStampInvalid);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -554,28 +575,40 @@ int32_t		Writer :: NewData3D(
 CompressedVectorWriter	Writer :: SetUpData3DPointsData(
 	int32_t		dataIndex,			// data block index given by the NewData3D
 	int64_t		pointCount,			// size of each of the buffers given
-	int32_t*	valid,				// Value = 1 if the point is considered valid, 0 otherwise
-	double*		cartesianX,			// pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
-	double*		cartesianY,			// pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
-	double*		cartesianZ,			// pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
-	double*		intensity,			// pointer to a buffer with the Point response intensity. Unit is unspecified
-	double*		colorRed,			// pointer to a buffer with the Red color coefficient. Unit is unspecified
-	double*		colorGreen,			// pointer to a buffer with the Green color coefficient. Unit is unspecified
-	double*		colorBlue,			// pointer to a buffer with the Blue color coefficient. Unit is unspecified
-	double*		sphericalRange,		// pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
-	double*		sphericalAzimuth,	// pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
-	double*		sphericalElevation,	// pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
-	int64_t*	rowIndex,			// pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
-	int64_t*	columnIndex,		// pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
-	int64_t*	returnIndex,		// pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
-	int64_t*	returnCount,		// pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
-	double*		timeStamp			// pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
+	double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
+	int32_t*	cartesianInvalidState,	//!< Value = 0 if the point is considered valid, 1 otherwise
+
+	double*		intensity,			//!< pointer to a buffer with the Point response intensity. Unit is unspecified
+	int32_t*	isIntensityInvalid,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+
+	double*		colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+	double*		colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+	double*		colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+	int32_t*	isColorInvalid,		//!< Value = 0 if the color is considered valid, 1 otherwise
+
+	double*		sphericalRange,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
+	double*		sphericalAzimuth,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
+	double*		sphericalElevation,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
+	int32_t*	sphericalInvalidState, //!< Value = 0 if the range is considered valid, 1 otherwise
+
+	int64_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+	int64_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+	int64_t*	returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+	int64_t*	returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+
+	double*		timeStamp,			//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
+	int32_t*	isTimeStampInvalid	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 	) const
 {
-		return impl_->SetUpData3DPointsData( dataIndex, pointCount, valid,
-		cartesianX, cartesianY, cartesianZ, intensity, colorRed, colorGreen, colorBlue,
-		sphericalRange, sphericalAzimuth, sphericalElevation, rowIndex, columnIndex,
-		returnIndex, returnCount, timeStamp);
+		return impl_->SetUpData3DPointsData( dataIndex, pointCount,
+			cartesianX, cartesianY, cartesianZ, cartesianInvalidState,
+			intensity, isIntensityInvalid,
+			colorRed, colorGreen, colorBlue, isColorInvalid,
+			sphericalRange, sphericalAzimuth, sphericalElevation, sphericalInvalidState,
+			rowIndex, columnIndex, returnIndex, returnCount,
+			timeStamp, isTimeStampInvalid);
 }
 
 bool		Writer :: WriteData3DGroupsData(
