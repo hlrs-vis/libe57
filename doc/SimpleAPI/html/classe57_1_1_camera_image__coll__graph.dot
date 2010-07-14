@@ -1,0 +1,24 @@
+digraph G
+{
+  bgcolor="transparent";
+  edge [fontname="FreeSans",fontsize=10,labelfontname="FreeSans",labelfontsize=10];
+  node [fontname="FreeSans",fontsize=10,shape=record];
+  rankdir=LR;
+  Node1 [label="e57::CameraImage",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled" fontcolor="black"];
+  Node2 -> Node1 [dir=back,color="darkorchid3",fontsize=10,style="dashed",label="acquisitionDateTime",fontname="FreeSans"];
+  Node2 [label="e57::DateTime",height=0.2,width=0.4,color="black",URL="$classe57_1_1_date_time.html",tooltip="e57::DateTime is a structure for encoding date and time."];
+  Node3 -> Node1 [dir=back,color="darkorchid3",fontsize=10,style="dashed",label="visualReferenceRepresentation",fontname="FreeSans"];
+  Node3 [label="e57::VisualReferenceRepresentation",height=0.2,width=0.4,color="black",URL="$classe57_1_1_visual_reference_representation.html",tooltip="The e57::VisualReferenceRepresentation is a structure that stores an image that is..."];
+  Node4 -> Node1 [dir=back,color="darkorchid3",fontsize=10,style="dashed",label="sphericalRepresentation",fontname="FreeSans"];
+  Node4 [label="e57::SphericalProjection",height=0.2,width=0.4,color="black",URL="$classe57_1_1_spherical_projection.html",tooltip="The e57::SphericalProjection is a structure that stores an image that is mapped from..."];
+  Node5 -> Node1 [dir=back,color="darkorchid3",fontsize=10,style="dashed",label="pinholeRepresentation",fontname="FreeSans"];
+  Node5 [label="e57::PinholeProjection",height=0.2,width=0.4,color="black",URL="$classe57_1_1_pinhole_projection.html",tooltip="The e57::PinholeProjection is a structure that stores an image that is mapped from..."];
+  Node6 -> Node1 [dir=back,color="darkorchid3",fontsize=10,style="dashed",label="pose",fontname="FreeSans"];
+  Node6 [label="e57::RigidBodyTransform",height=0.2,width=0.4,color="black",URL="$classe57_1_1_rigid_body_transform.html",tooltip="e57::RigidBodyTransform is a structure that defines a rigid body transform in cartesian..."];
+  Node7 -> Node6 [dir=back,color="darkorchid3",fontsize=10,style="dashed",label="rotation",fontname="FreeSans"];
+  Node7 [label="e57::Quaternion",height=0.2,width=0.4,color="black",URL="$classe57_1_1_quaternion.html",tooltip="e57::Quaternion is a quaternion which represents a rigid body rotation."];
+  Node8 -> Node6 [dir=back,color="darkorchid3",fontsize=10,style="dashed",label="translation",fontname="FreeSans"];
+  Node8 [label="e57::Translation",height=0.2,width=0.4,color="black",URL="$classe57_1_1_translation.html",tooltip="e57::Translation is a direction vector from the origin to a point."];
+  Node9 -> Node1 [dir=back,color="darkorchid3",fontsize=10,style="dashed",label="cylindricalRepresentation",fontname="FreeSans"];
+  Node9 [label="e57::CylindricalProjection",height=0.2,width=0.4,color="black",URL="$classe57_1_1_cylindrical_projection.html",tooltip="The e57::CylindricalProjection is a structure that stores an image that is mapped..."];
+}
