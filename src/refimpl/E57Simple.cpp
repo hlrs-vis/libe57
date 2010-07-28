@@ -80,8 +80,36 @@ An example of a typical use of this interface would be as follows:
 		e57::Data3D		scanHeader;
 		eReader.ReadData3D( scanIndex, scanHeader);
 
-//Access all the header information like
-		char* scanGuid = scanHeader.guid.c_str();
+//Access all the header information
+		_bstr_t bstrName = scanHeader.name.c_str();
+		_bstr_t bstrGuid = scanHeader.guid.c_str();
+		_bstr_t bstrDesc = scanHeader.description.c_str();
+
+//Get pose information
+		ISI::Point translation;
+		translation.x(scanHeader.pose.translation.x);
+		translation.y(scanHeader.pose.translation.y);
+		translation.z(scanHeader.pose.translation.z);
+
+		ISI::Quat rotation;
+		rotation.w(scanHeader.pose.rotation.w);
+		rotation.x(scanHeader.pose.rotation.x);
+		rotation.y(scanHeader.pose.rotation.y);
+		rotation.z(scanHeader.pose.rotation.z);
+
+//Get scanner information
+		_bstr_t bstrSerial = scanHeader.sensorSerialNumber.c_str();
+		_bstr_t bstrVendor = scanHeader.sensorVendor.c_str();
+		_bstr_t bstrModel = scanHeader.sensorModel.c_str();
+		_bstr_t bstrSoftware = scanHeader.sensorSoftwareVersion.c_str();
+		_bstr_t bstrFirmware = scanHeader.sensorFirmwareVersion.c_str();
+		_bstr_t bstrHardware = scanHeader.sensorHardwareVersion.c_str();
+
+//Get environment information
+		double temperature = scanHeader.temperature;
+		double humidity = scanHeader.relativeHumidity;
+		double airPressure = scanHeader.atmosphericPressure;
+
 		...
 
 /////////////////////////////////////////////////////////////////
@@ -94,23 +122,109 @@ An example of a typical use of this interface would be as follows:
 		int64_t nGroupsSize = 0;	//Number of groups
 		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize);
 
-//Set up buffers
-		double* xBuffer = new double[nPointsSize];
-		double* yBuffer = new double[nPointsSize];
-		double* zBuffer = new double[nPointsSize];
-		CompressedVectorReader dataReader = eReader.SetUpData3DPointsData(
-			scanIndex, nPointsSize, xBuffer, yBuffer, zBuffer, NULL);
+//Setup buffers
+		int32_t * isInvalidData = NULL;
+		if(scanHeader.pointFields.cartesianInvalidStateField)
+			isInvalidData = new int32_t[nRow];
+
+//Setup Points
+		double * xData = NULL;
+		if(scanHeader.pointFields.cartesianXField)
+			xData = new double[nRow];
+
+		double * yData = NULL;
+		if(scanHeader.pointFields.cartesianYField)
+			yData = new double[nRow];
+
+		double * zData = NULL;
+		if(scanHeader.pointFields.cartesianZField)
+			zData = new double[nRow];
+
+//Setup intensity buffers if present
+		double * intData = NULL;
+		bool bIntensity = false;
+		if(scanHeader.pointFields.intensityField)
+		{
+			bIntensity = true;
+			intData = new double[nRow];
+		}
+
+//Setup color buffers if present
+		double * redData = NULL;
+		double * greenData = NULL;
+		double * blueData = NULL;
+		bool bColor = false;
+		if(header.pointFields.colorRedField)
+		{
+			bColor = true;
+			redData = new double[nRow];
+			greenData = new double[nRow];
+			blueData = new double[nRow];
+		}
+
+//Read the group information
+		int64_t * idElementValue = NULL;
+		int64_t * startPointIndex = NULL;
+		int64_t * pointCount = NULL;
+
+		if(nGroupsSize > 0)
+		{
+			idElementValue = new int64_t[nGroupsSize];
+			startPointIndex = new int64_t[nGroupsSize];
+			pointCount = new int64_t[nGroupsSize];
+
+			if(!eReader.ReadData3DGroupsData(scanIndex, nGroupsSize, idElementValue,
+				startPointIndex, pointCount))
+				nGroupsSize = 0;
+		}
+
+//Get dataReader object
+
+		e57::CompressedVectorReader dataReader = eReader.SetUpData3DPointsData(
+				scanIndex,			//!< data block index given by the NewData3D
+				nRow,				//!< size of each of the buffers given
+				xData,				//!< pointer to a buffer with the x data
+				yData,				//!< pointer to a buffer with the y data
+				zData,				//!< pointer to a buffer with the z data
+				isInvalidData,		//!< pointer to a buffer with the valid indication
+				intData,			//!< pointer to a buffer with the lidar return intesity
+				NULL,
+				redData,			//!< pointer to a buffer with the color red data
+				greenData,			//!< pointer to a buffer with the color green data
+				blueData,			//!< pointer to a buffer with the color blue data
+				NULL
+				);
 
 //Read the point data
-		dataReader.read();
 
-// ... access the data ...
+		for(long col = 0; col < nColumn; col++)
+		{
+//Read a column
+			unsigned size = dataReader.read();
+
+			for(long row = 0; row < nRow; row++)
+			{
+				pScan->SetPoint(row,col, xData[row], yData[row], zData[row]);
+
+				if(bIntensity)
+					pScan->SetIntensity(row, col, intData[row]);
+
+				if(bColor)
+					pScan->SetColor(row, col, redData[row], greenData[row], blueData[row]);
+			}
+		}
 
 //Close and clean up
 		dataReader.close();
-		delete xBuffer;
-		delete yBuffer;
-		delete zBuffer;
+
+		delete isInvalidData;
+		delete xData;
+		delete yData;
+		delete zData;
+		if(intData) delete intData;
+		if(redData) delete redData;
+		if(greenData) delete greenData;
+		if(blueData) delete blueData;
 
 ///////////////////////////////////////////////////////////////////////
 // ACCESSING PICTURE IMAGE2D
@@ -156,6 +270,280 @@ An example of a typical use of this interface would be as follows:
 		delete jpegBuffer;
 
 		eReaer.Close();	
+
+///////////////////////////////////////////////////////////////////////
+// CATCH THE ERRORS
+
+	} catch(E57Exception& ex) {
+		ex.report(__FILE__, __LINE__, __FUNCTION__);
+	} catch (std::exception& ex) {
+		cerr << "Got an std::exception, what=" << ex.what() << endl;
+	} catch (...) {
+		cerr << "Got an unknown exception" << endl;
+	}
+</PRE></tt>
+@section main_Write_example Writing using the E57 Simple API
+An example of a typical use of this interface would be as follows:
+<tt><PRE>
+	try
+	{
+// Create a WriterImpl
+		_bstr_t bsFile = sFile;			//converts Unicode to UTF-8
+		e57::Writer	eWriter( (char*) bsFile);
+
+		if(!eWriter.IsOpen())			//test for being open
+			return false;
+
+///////////////////////////////////////////////////////////////
+// SETTING UP SCAN DATA3D
+
+		e57::Data3D	scanHeader;
+
+//Setup the Name and Description											
+		scanHeader.name = (char*) bstrName;
+		scanHeader.description = (char*) bstrDesc;
+
+//Setup the GUID
+		GUID	guid;						
+		pScan->GetGuid(&guid);
+		OLECHAR wbuffer[64];
+		StringFromGUID2(guid,&wbuffer[0],64);
+		_bstr_t bstrScanGuid = &wbuffer[0];
+		scanHeader.guid = (char*) bstrScanGuid;
+
+//Set up the scan size
+		scanHeader.indexBounds.rowMaximum = nRow;	
+		scanHeader.indexBounds.rowMinimum = 0;
+		scanHeader.indexBounds.columnMaximum = nColumn;
+		scanHeader.indexBounds.columnMinimum = 0;
+		scanHeader.indexBounds.returnMaximum = 0; 
+		scanHeader.indexBounds.returnMinimum = 0;
+
+		scanHeader.pointGroupingSchemes.groupingByLine.groupsSize = nColumn;
+		scanHeader.pointGroupingSchemes.groupingByLine.idElementName = "columnIndex";
+
+//Set up total number of points
+		scanHeader.pointsSize = (nColumn * nRow);	
+
+//Setup bounds
+		if(exportStatistics)			
+		{
+			scanHeader.cartesianBounds.xMaximum = pStat->GetMaxX();
+			scanHeader.cartesianBounds.xMinimum = pStat->GetMinX();
+			scanHeader.cartesianBounds.yMaximum = pStat->GetMaxY();
+			scanHeader.cartesianBounds.yMinimum = pStat->GetMinY();
+			scanHeader.cartesianBounds.zMaximum = pStat->GetMaxZ();
+			scanHeader.cartesianBounds.zMinimum = pStat->GetMinZ();
+
+			scanHeader.sphericalBounds.rangeMaximum = pStat->GetMaxRange();
+			scanHeader.sphericalBounds.rangeMinimum = pStat->GetMinRange();
+			scanHeader.sphericalBounds.azimuthEnd = pStat->GetMaxAzimuth();
+			scanHeader.sphericalBounds.azimuthStart = pStat->GetMinAzimuth();
+			scanHeader.sphericalBounds.elevationMaximum = pStat->GetMaxPolar();
+			scanHeader.sphericalBounds.elevationMinimum = pStat->GetMinPolar();
+		}
+//Setup pose rotation and transformation
+		if(exportMatrix)				
+		{
+			scanHeader.pose.rotation.w = rotation.w();
+			scanHeader.pose.rotation.x = rotation.x();
+			scanHeader.pose.rotation.y = rotation.y();
+			scanHeader.pose.rotation.z = rotation.z();
+			scanHeader.pose.translation.x = translation.x();
+			scanHeader.pose.translation.y = translation.y();
+			scanHeader.pose.translation.z = translation.z();
+		}
+//Setup scanner information
+		if(exportScanner)
+		{
+			scanHeader.sensorSerialNumber = (char*) bstrSerial;
+			scanHeader.sensorVendor = (char*) bstrVendor;
+			scanHeader.sensorModel = (char*) bstrModel;
+			scanHeader.sensorSoftwareVersion = (char*) bstrSoftware;
+			scanHeader.sensorFirmwareVersion = (char*) bstrFirmware;
+			scanHeader.sensorHardwareVersion = (char*) bstrHardware;
+
+			scanHeader.temperature = pStat->GetTemperature();
+			scanHeader.relativeHumidity = pStat->GetHumidity();
+			scanHeader.atmosphericPressure = pStat->GetAirPressure();
+		}
+/////////////////////////////////////////////////////////////////
+// SETTING UP PointRecord Fields
+
+//Setup Points
+		scanHeader.pointFields.cartesianInvalidStateField = true;
+		int32_t * isInvalidData = new int32_t[nRow];
+
+		scanHeader.pointFields.cartesianXField = true;
+		double * xData = new double[nRow];
+		scanHeader.pointFields.cartesianYField = true;
+		double * yData = new double[nRow];
+		scanHeader.pointFields.cartesianZField = true;
+		double * zData = new double[nRow];
+
+//Setup Color
+		double * redData = NULL;
+		double * greenData = NULL;
+		double * blueData = NULL;
+		if(exportColor)
+		{
+			scanHeader.pointFields.colorRedField = true;
+			redData = new double[nRow];
+			scanHeader.pointFields.colorGreenField = true;
+			greenData = new double[nRow];
+			scanHeader.pointFields.colorBlueField = true;
+			blueData = new double[nRow];
+		}
+//Setup Intensity
+		double * intData = NULL;
+		if(exportIntensity)
+		{
+			scanHeader.pointFields.intensityField = true;
+			intData = new double[nRow];
+		}
+
+//Write out a new scan header and receive back the index							
+		int scanIndex = eWriter.NewData3D(scanHeader);
+
+//Setup the data buffers
+		e57::CompressedVectorWriter dataWriter = eWriter.SetUpData3DPointsData(
+				scanIndex,			//!< data block index given by the NewData3D
+				nRow,				//!< size of each of the buffers given
+				xData,				//!< pointer to a buffer with the x data
+				yData,				//!< pointer to a buffer with the y data
+				zData,				//!< pointer to a buffer with the z data
+				isInvalidData,		//!< pointer to a buffer with the valid indication
+				intData,			//!< pointer to a buffer with the lidar return intesity
+				NULL,
+				redData,			//!< pointer to a buffer with the color red data
+				greenData,			//!< pointer to a buffer with the color green data
+				blueData,			//!< pointer to a buffer with the color blue data
+				NULL
+				);
+
+/////////////////////////////////////////////////////////////////
+// WRITING SCAN DATA
+
+		vector<int64_t>	idElementValue;
+		vector<int64_t> startPointIndex;
+		vector<int64_t> pointCount;
+		int group = 0;
+		int startPoint = 0;
+
+//Access the point data
+		for(long j = 0; j < nColumn; j++)
+		{
+			int count = 0;
+
+			for(long i = 0; i < nRow; i++)
+			{
+//Get the invalid status
+				isInvalidData[count] = (pScan->GetStatus(i,j) & INVALID) ? 1 : 0;
+//Get the point
+				ISI::Point point = pScan->GetPoint(i, j);
+				xData[count] = point.x();
+				yData[count] = point.y();
+				zData[count] = point.z();
+//Get the intensity
+				if(exportIntensity)
+					intData[count] = pScan->GetIntensity(i, j);
+//Get the color
+				if(exportColor)
+				{
+					WORD red = 0;
+					WORD green = 0;
+					WORD blue = 0;
+					pScan->GetColor(i, j, &red, &green, &blue);
+						
+					redData[count] = (double) red;
+					greenData[count] = (double) green;
+					blueData[count] = (double) blue;
+				}
+				count++;
+			}
+//Write out the buffers
+			dataWriter.write(count);
+
+//Collect the group information
+			idElementValue.push_back((int64_t) j);
+			startPointIndex.push_back((int64_t) startPoint);
+			pointCount.push_back((int64_t) count);
+			group++;
+
+			startPoint += count;
+		}
+//Finish the scan data write
+		dataWriter.close();
+
+//Write out the group information
+		eWriter.WriteData3DGroupsData(scanIndex, (int64_t*) &idElementValue[0],
+			(int64_t*) &startPointIndex[0], (int64_t*) &pointCount[0], group);
+
+//Clean up
+		if(isInvalidData) delete isInvalidData;
+		if(xData) delete xData;
+		if(yData) delete yData;
+		if(zData) delete zData;
+		if(intData) delete intData;
+		if(redData) delete redData;
+		if(greenData) delete greenData;
+		if(blueData) delete blueData;
+
+///////////////////////////////////////////////////////////////
+// SETTING UP SCAN IMAGE2D
+
+		e57::Image2D	imageHeader;
+
+//Setup the Name and Description											
+		imageHeader.name = (char*) bstrName;
+		imageHeader.description = (char*) bstrDesc;
+
+//Setup the GUID
+		imageHeader.guid = (char*) bstrImageGuid;
+		imageHeader.associatedData3DGuid = (char*) bstrScanGuid;
+
+//Setup camera information
+		imageHeader.sensorSerialNumber = (char*) bstrSerial;
+		imageHeader.sensorVendor = (char*) bstrVendor;
+		imageHeader.sensorModel = (char*) bstrModel;
+
+//Setup image orientation
+		imageHeader.pose.rotation.w = rotation.w();
+		imageHeader.pose.rotation.x = rotation.x();
+		imageHeader.pose.rotation.y = rotation.y();
+		imageHeader.pose.rotation.z = rotation.z();
+		imageHeader.pose.translation.x = translation.x();
+		imageHeader.pose.translation.y = translation.y();
+		imageHeader.pose.translation.z = translation.z();
+
+//Setup image size
+		imageHeader.sphericalRepresentation.imageHeight = imageHeight;
+		imageHeader.sphericalRepresentation.imageWidth = imageWidth;
+		imageHeader.sphericalRepresentation.pixelHeight = pixelHeight;
+		imageHeader.sphericalRepresentation.pixelWidth = pixelWidth;
+
+//Open jpeg file
+		CFile jpegFile;
+		CFileException fileError;
+		jpegFile.Open(imagePath, CFile::modeRead | CFile::typeBinary, &fileError);
+		ULONGLONG dwLength = jpegFile.GetLength();
+
+		imageHeader.sphericalRepresentation.jpegImageSize = dwLength; //Real Size before newing image header
+
+//Write the image header
+		int imageIndex = eWriter.NewImage2D(header);
+
+//Access the jpeg image data
+		void * pBuffer = new char[dwLength];
+		jpegFile.SeekToBegin();
+		jpegFile.Read(pBuffer,dwLength);
+
+//Write the jpeg data 
+		eWriter.WriteImage2DData(imageIndex, e57::E57_JPEG_IMAGE, e57::E57_SPHERICAL,
+					pBuffer,0,dwLength);
+
+//Finish the E57 file
+		eWriter.Close();	
 
 ///////////////////////////////////////////////////////////////////////
 // CATCH THE ERRORS

@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
-<title>E57 Simple API V0.6: Main Page</title>
+<title>E57 Simple API V0.71: Main Page</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -9,16 +9,15 @@
   <div class="tabs">
     <ul>
       <li class="current"><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-      <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
       <li><a href="annotated.html"><span>Classes</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
     </ul>
   </div>
 </div>
 <div class="contents">
-<h1>E57 Simple API V0.6 Documentation</h1>
+<h1>E57 Simple API V0.71 Documentation</h1>
 <p>
-<h3 align="center">July 11, 2010 </h3><h2><a class="anchor" name="main_Introduction">
+<h3 align="center">July 28, 2010 </h3><h2><a class="anchor" name="main_Introduction">
 Introduction</a></h2>
 This browser-based document describes the E57 Simple API (Application Programmer Interface) version 0.52, which is a collection of functions that help a C++ programmer wrap the E57 Foundation API.<h2><a class="anchor" name="main_Read_example">
 Reading using the E57 Simple API</a></h2>
@@ -45,9 +44,32 @@ ACCESSING SCAN DATA3D</pre></code><p>
 <code><pre>Read the scan 0 header.
 		<a class="el" href="classe57_1_1_data3_d.html" title="The e57::Data3D is a structure that stores the top-level information for a single...">e57::Data3D</a>		scanHeader;
 		eReader.ReadData3D( scanIndex, scanHeader);</pre></code><p>
-<code><pre>Access all the header information like
-		char* scanGuid = scanHeader.guid.c_str();
-		...</pre></code><p>
+<code><pre>Access all the header information
+		_bstr_t bstrName = scanHeader.name.c_str();
+		_bstr_t bstrGuid = scanHeader.guid.c_str();
+		_bstr_t bstrDesc = scanHeader.description.c_str();</pre></code><p>
+<code><pre>Get pose information
+		ISI::Point translation;
+		translation.x(scanHeader.pose.translation.x);
+		translation.y(scanHeader.pose.translation.y);
+		translation.z(scanHeader.pose.translation.z);</pre></code><p>
+<code><pre>		ISI::Quat rotation;
+		rotation.w(scanHeader.pose.rotation.w);
+		rotation.x(scanHeader.pose.rotation.x);
+		rotation.y(scanHeader.pose.rotation.y);
+		rotation.z(scanHeader.pose.rotation.z);</pre></code><p>
+<code><pre>Get scanner information
+		_bstr_t bstrSerial = scanHeader.sensorSerialNumber.c_str();
+		_bstr_t bstrVendor = scanHeader.sensorVendor.c_str();
+		_bstr_t bstrModel = scanHeader.sensorModel.c_str();
+		_bstr_t bstrSoftware = scanHeader.sensorSoftwareVersion.c_str();
+		_bstr_t bstrFirmware = scanHeader.sensorFirmwareVersion.c_str();
+		_bstr_t bstrHardware = scanHeader.sensorHardwareVersion.c_str();</pre></code><p>
+<code><pre>Get environment information
+		double temperature = scanHeader.temperature;
+		double humidity = scanHeader.relativeHumidity;
+		double airPressure = scanHeader.atmosphericPressure;</pre></code><p>
+<code><pre>		...</pre></code><p>
 <code><pre>///////////////////////////////////////////////////////////////
 ACCESSING SCAN DATA</pre></code><p>
 <code><pre>Get the Size of the Scan
@@ -56,20 +78,92 @@ ACCESSING SCAN DATA</pre></code><p>
 		int64_t nPointsSize = 0;	//Number of points
 		int64_t nGroupsSize = 0;	//Number of groups
 		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize);</pre></code><p>
-<code><pre>Set up buffers
-		double* xBuffer = new double[nPointsSize];
-		double* yBuffer = new double[nPointsSize];
-		double* zBuffer = new double[nPointsSize];
-		CompressedVectorReader dataReader = eReader.SetUpData3DPointsData(
-			scanIndex, nPointsSize, xBuffer, yBuffer, zBuffer, NULL);</pre></code><p>
-<code><pre>Read the point data
-		dataReader.read();</pre></code><p>
-<code><pre>... access the data ...</pre></code><p>
+<code><pre>Setup buffers
+		int32_t * isInvalidData = NULL;
+		if(scanHeader.pointFields.cartesianInvalidStateField)
+			isInvalidData = new int32_t[nRow];</pre></code><p>
+<code><pre>Setup Points
+		double * xData = NULL;
+		if(scanHeader.pointFields.cartesianXField)
+			xData = new double[nRow];</pre></code><p>
+<code><pre>		double * yData = NULL;
+		if(scanHeader.pointFields.cartesianYField)
+			yData = new double[nRow];</pre></code><p>
+<code><pre>		double * zData = NULL;
+		if(scanHeader.pointFields.cartesianZField)
+			zData = new double[nRow];</pre></code><p>
+<code><pre>Setup intensity buffers if present
+		double * intData = NULL;
+		bool bIntensity = false;
+		if(scanHeader.pointFields.intensityField)
+		{
+			bIntensity = true;
+			intData = new double[nRow];
+		}</pre></code><p>
+<code><pre>Setup color buffers if present
+		double * redData = NULL;
+		double * greenData = NULL;
+		double * blueData = NULL;
+		bool bColor = false;
+		if(header.pointFields.colorRedField)
+		{
+			bColor = true;
+			redData = new double[nRow];
+			greenData = new double[nRow];
+			blueData = new double[nRow];
+		}</pre></code><p>
+<code><pre>Read the group information
+		int64_t * idElementValue = NULL;
+		int64_t * startPointIndex = NULL;
+		int64_t * pointCount = NULL;</pre></code><p>
+<code><pre>		if(nGroupsSize &gt; 0)
+		{
+			idElementValue = new int64_t[nGroupsSize];
+			startPointIndex = new int64_t[nGroupsSize];
+			pointCount = new int64_t[nGroupsSize];</pre></code><p>
+<code><pre>			if(!eReader.ReadData3DGroupsData(scanIndex, nGroupsSize, idElementValue,
+				startPointIndex, pointCount))
+				nGroupsSize = 0;
+		}</pre></code><p>
+<code><pre>Get dataReader object</pre></code><p>
+<code><pre>		e57::CompressedVectorReader dataReader = eReader.SetUpData3DPointsData(
+				scanIndex,			//!&lt; data block index given by the NewData3D
+				nRow,				//!&lt; size of each of the buffers given
+				xData,				//!&lt; pointer to a buffer with the x data
+				yData,				//!&lt; pointer to a buffer with the y data
+				zData,				//!&lt; pointer to a buffer with the z data
+				isInvalidData,		//!&lt; pointer to a buffer with the valid indication
+				intData,			//!&lt; pointer to a buffer with the lidar return intesity
+				NULL,
+				redData,			//!&lt; pointer to a buffer with the color red data
+				greenData,			//!&lt; pointer to a buffer with the color green data
+				blueData,			//!&lt; pointer to a buffer with the color blue data
+				NULL
+				);</pre></code><p>
+<code><pre>Read the point data</pre></code><p>
+<code><pre>		for(long col = 0; col &lt; nColumn; col++)
+		{
+Read a column
+			unsigned size = dataReader.read();</pre></code><p>
+<code><pre>			for(long row = 0; row &lt; nRow; row++)
+			{
+				pScan-&gt;SetPoint(row,col, xData[row], yData[row], zData[row]);</pre></code><p>
+<code><pre>				if(bIntensity)
+					pScan-&gt;SetIntensity(row, col, intData[row]);</pre></code><p>
+<code><pre>				if(bColor)
+					pScan-&gt;SetColor(row, col, redData[row], greenData[row], blueData[row]);
+			}
+		}</pre></code><p>
 <code><pre>Close and clean up
-		dataReader.close();
-		delete xBuffer;
-		delete yBuffer;
-		delete zBuffer;</pre></code><p>
+		dataReader.close();</pre></code><p>
+<code><pre>		delete isInvalidData;
+		delete xData;
+		delete yData;
+		delete zData;
+		if(intData) delete intData;
+		if(redData) delete redData;
+		if(greenData) delete greenData;
+		if(blueData) delete blueData;</pre></code><p>
 <code><pre>/////////////////////////////////////////////////////////////////////
 ACCESSING PICTURE IMAGE2D</pre></code><p>
 <code><pre>Get the number of picture images available
@@ -111,8 +205,241 @@ CATCH THE ERRORS</pre></code><p>
 	} catch (...) {
 		cerr &lt;&lt; "Got an unknown exception" &lt;&lt; endl;
 	}
+</pre></code> <h2><a class="anchor" name="main_Write_example">
+Writing using the E57 Simple API</a></h2>
+An example of a typical use of this interface would be as follows: <code><pre>
+	try
+	{
+Create a WriterImpl
+		_bstr_t bsFile = sFile;			//converts Unicode to UTF-8
+		<a class="el" href="classe57_1_1_writer.html" title="This is the E57 Writer class.">e57::Writer</a>	eWriter( (char*) bsFile);</pre></code><p>
+<code><pre>		if(!eWriter.IsOpen())			//test for being open
+			return false;</pre></code><p>
+<code><pre>/////////////////////////////////////////////////////////////
+SETTING UP SCAN DATA3D</pre></code><p>
+<code><pre>		<a class="el" href="classe57_1_1_data3_d.html" title="The e57::Data3D is a structure that stores the top-level information for a single...">e57::Data3D</a>	scanHeader;</pre></code><p>
+<code><pre>Setup the Name and Description											
+		scanHeader.name = (char*) bstrName;
+		scanHeader.description = (char*) bstrDesc;</pre></code><p>
+<code><pre>Setup the GUID
+		GUID	guid;						
+		pScan-&gt;GetGuid(&amp;guid);
+		OLECHAR wbuffer[64];
+		StringFromGUID2(guid,&amp;wbuffer[0],64);
+		_bstr_t bstrScanGuid = &amp;wbuffer[0];
+		scanHeader.guid = (char*) bstrScanGuid;</pre></code><p>
+<code><pre>Set up the scan size
+		scanHeader.indexBounds.rowMaximum = nRow;	
+		scanHeader.indexBounds.rowMinimum = 0;
+		scanHeader.indexBounds.columnMaximum = nColumn;
+		scanHeader.indexBounds.columnMinimum = 0;
+		scanHeader.indexBounds.returnMaximum = 0; 
+		scanHeader.indexBounds.returnMinimum = 0;</pre></code><p>
+<code><pre>		scanHeader.pointGroupingSchemes.groupingByLine.groupsSize = nColumn;
+		scanHeader.pointGroupingSchemes.groupingByLine.idElementName = "columnIndex";</pre></code><p>
+<code><pre>Set up total number of points
+		scanHeader.pointsSize = (nColumn * nRow);</pre></code><p>
+<code><pre>Setup bounds
+		if(exportStatistics)			
+		{
+			scanHeader.cartesianBounds.xMaximum = pStat-&gt;GetMaxX();
+			scanHeader.cartesianBounds.xMinimum = pStat-&gt;GetMinX();
+			scanHeader.cartesianBounds.yMaximum = pStat-&gt;GetMaxY();
+			scanHeader.cartesianBounds.yMinimum = pStat-&gt;GetMinY();
+			scanHeader.cartesianBounds.zMaximum = pStat-&gt;GetMaxZ();
+			scanHeader.cartesianBounds.zMinimum = pStat-&gt;GetMinZ();</pre></code><p>
+<code><pre>			scanHeader.sphericalBounds.rangeMaximum = pStat-&gt;GetMaxRange();
+			scanHeader.sphericalBounds.rangeMinimum = pStat-&gt;GetMinRange();
+			scanHeader.sphericalBounds.azimuthEnd = pStat-&gt;GetMaxAzimuth();
+			scanHeader.sphericalBounds.azimuthStart = pStat-&gt;GetMinAzimuth();
+			scanHeader.sphericalBounds.elevationMaximum = pStat-&gt;GetMaxPolar();
+			scanHeader.sphericalBounds.elevationMinimum = pStat-&gt;GetMinPolar();
+		}
+Setup pose rotation and transformation
+		if(exportMatrix)				
+		{
+			scanHeader.pose.rotation.w = rotation.w();
+			scanHeader.pose.rotation.x = rotation.x();
+			scanHeader.pose.rotation.y = rotation.y();
+			scanHeader.pose.rotation.z = rotation.z();
+			scanHeader.pose.translation.x = translation.x();
+			scanHeader.pose.translation.y = translation.y();
+			scanHeader.pose.translation.z = translation.z();
+		}
+Setup scanner information
+		if(exportScanner)
+		{
+			scanHeader.sensorSerialNumber = (char*) bstrSerial;
+			scanHeader.sensorVendor = (char*) bstrVendor;
+			scanHeader.sensorModel = (char*) bstrModel;
+			scanHeader.sensorSoftwareVersion = (char*) bstrSoftware;
+			scanHeader.sensorFirmwareVersion = (char*) bstrFirmware;
+			scanHeader.sensorHardwareVersion = (char*) bstrHardware;</pre></code><p>
+<code><pre>			scanHeader.temperature = pStat-&gt;GetTemperature();
+			scanHeader.relativeHumidity = pStat-&gt;GetHumidity();
+			scanHeader.atmosphericPressure = pStat-&gt;GetAirPressure();
+		}
+///////////////////////////////////////////////////////////////
+SETTING UP PointRecord Fields</pre></code><p>
+<code><pre>Setup Points
+		scanHeader.pointFields.cartesianInvalidStateField = true;
+		int32_t * isInvalidData = new int32_t[nRow];</pre></code><p>
+<code><pre>		scanHeader.pointFields.cartesianXField = true;
+		double * xData = new double[nRow];
+		scanHeader.pointFields.cartesianYField = true;
+		double * yData = new double[nRow];
+		scanHeader.pointFields.cartesianZField = true;
+		double * zData = new double[nRow];</pre></code><p>
+<code><pre>Setup Color
+		double * redData = NULL;
+		double * greenData = NULL;
+		double * blueData = NULL;
+		if(exportColor)
+		{
+			scanHeader.pointFields.colorRedField = true;
+			redData = new double[nRow];
+			scanHeader.pointFields.colorGreenField = true;
+			greenData = new double[nRow];
+			scanHeader.pointFields.colorBlueField = true;
+			blueData = new double[nRow];
+		}
+Setup Intensity
+		double * intData = NULL;
+		if(exportIntensity)
+		{
+			scanHeader.pointFields.intensityField = true;
+			intData = new double[nRow];
+		}</pre></code><p>
+<code><pre>Write out a new scan header and receive back the index							
+		int scanIndex = eWriter.NewData3D(scanHeader);</pre></code><p>
+<code><pre>Setup the data buffers
+		e57::CompressedVectorWriter dataWriter = eWriter.SetUpData3DPointsData(
+				scanIndex,			//!&lt; data block index given by the NewData3D
+				nRow,				//!&lt; size of each of the buffers given
+				xData,				//!&lt; pointer to a buffer with the x data
+				yData,				//!&lt; pointer to a buffer with the y data
+				zData,				//!&lt; pointer to a buffer with the z data
+				isInvalidData,		//!&lt; pointer to a buffer with the valid indication
+				intData,			//!&lt; pointer to a buffer with the lidar return intesity
+				NULL,
+				redData,			//!&lt; pointer to a buffer with the color red data
+				greenData,			//!&lt; pointer to a buffer with the color green data
+				blueData,			//!&lt; pointer to a buffer with the color blue data
+				NULL
+				);</pre></code><p>
+<code><pre>///////////////////////////////////////////////////////////////
+WRITING SCAN DATA</pre></code><p>
+<code><pre>		vector&lt;int64_t&gt;	idElementValue;
+		vector&lt;int64_t&gt; startPointIndex;
+		vector&lt;int64_t&gt; pointCount;
+		int group = 0;
+		int startPoint = 0;</pre></code><p>
+<code><pre>Access the point data
+		for(long j = 0; j &lt; nColumn; j++)
+		{
+			int count = 0;</pre></code><p>
+<code><pre>			for(long i = 0; i &lt; nRow; i++)
+			{
+Get the invalid status
+				isInvalidData[count] = (pScan-&gt;GetStatus(i,j) &amp; INVALID) ? 1 : 0;
+Get the point
+				ISI::Point point = pScan-&gt;GetPoint(i, j);
+				xData[count] = point.x();
+				yData[count] = point.y();
+				zData[count] = point.z();
+Get the intensity
+				if(exportIntensity)
+					intData[count] = pScan-&gt;GetIntensity(i, j);
+Get the color
+				if(exportColor)
+				{
+					WORD red = 0;
+					WORD green = 0;
+					WORD blue = 0;
+					pScan-&gt;GetColor(i, j, &amp;red, &amp;green, &amp;blue);</pre></code><p>
+<code><pre>					redData[count] = (double) red;
+					greenData[count] = (double) green;
+					blueData[count] = (double) blue;
+				}
+				count++;
+			}
+Write out the buffers
+			dataWriter.write(count);</pre></code><p>
+<code><pre>Collect the group information
+			idElementValue.push_back((int64_t) j);
+			startPointIndex.push_back((int64_t) startPoint);
+			pointCount.push_back((int64_t) count);
+			group++;</pre></code><p>
+<code><pre>			startPoint += count;
+		}
+Finish the scan data write
+		dataWriter.close();</pre></code><p>
+<code><pre>Write out the group information
+		eWriter.WriteData3DGroupsData(scanIndex, (int64_t*) &amp;idElementValue[0],
+			(int64_t*) &amp;startPointIndex[0], (int64_t*) &amp;pointCount[0], group);</pre></code><p>
+<code><pre>Clean up
+		if(isInvalidData) delete isInvalidData;
+		if(xData) delete xData;
+		if(yData) delete yData;
+		if(zData) delete zData;
+		if(intData) delete intData;
+		if(redData) delete redData;
+		if(greenData) delete greenData;
+		if(blueData) delete blueData;</pre></code><p>
+<code><pre>/////////////////////////////////////////////////////////////
+SETTING UP SCAN IMAGE2D</pre></code><p>
+<code><pre>		<a class="el" href="classe57_1_1_image2_d.html" title="The e57::Image2D is a structure that stores an image from a camera.">e57::Image2D</a>	imageHeader;</pre></code><p>
+<code><pre>Setup the Name and Description											
+		imageHeader.name = (char*) bstrName;
+		imageHeader.description = (char*) bstrDesc;</pre></code><p>
+<code><pre>Setup the GUID
+		imageHeader.guid = (char*) bstrImageGuid;
+		imageHeader.associatedData3DGuid = (char*) bstrScanGuid;</pre></code><p>
+<code><pre>Setup camera information
+		imageHeader.sensorSerialNumber = (char*) bstrSerial;
+		imageHeader.sensorVendor = (char*) bstrVendor;
+		imageHeader.sensorModel = (char*) bstrModel;</pre></code><p>
+<code><pre>Setup image orientation
+		imageHeader.pose.rotation.w = rotation.w();
+		imageHeader.pose.rotation.x = rotation.x();
+		imageHeader.pose.rotation.y = rotation.y();
+		imageHeader.pose.rotation.z = rotation.z();
+		imageHeader.pose.translation.x = translation.x();
+		imageHeader.pose.translation.y = translation.y();
+		imageHeader.pose.translation.z = translation.z();</pre></code><p>
+<code><pre>Setup image size
+		imageHeader.sphericalRepresentation.imageHeight = imageHeight;
+		imageHeader.sphericalRepresentation.imageWidth = imageWidth;
+		imageHeader.sphericalRepresentation.pixelHeight = pixelHeight;
+		imageHeader.sphericalRepresentation.pixelWidth = pixelWidth;</pre></code><p>
+<code><pre>Open jpeg file
+		CFile jpegFile;
+		CFileException fileError;
+		jpegFile.Open(imagePath, CFile::modeRead | CFile::typeBinary, &amp;fileError);
+		ULONGLONG dwLength = jpegFile.GetLength();</pre></code><p>
+<code><pre>		imageHeader.sphericalRepresentation.jpegImageSize = dwLength; //Real Size before newing image header</pre></code><p>
+<code><pre>Write the image header
+		int imageIndex = eWriter.NewImage2D(header);</pre></code><p>
+<code><pre>Access the jpeg image data
+		void * pBuffer = new char[dwLength];
+		jpegFile.SeekToBegin();
+		jpegFile.Read(pBuffer,dwLength);</pre></code><p>
+<code><pre>Write the jpeg data 
+		eWriter.WriteImage2DData(imageIndex, e57::E57_JPEG_IMAGE, e57::E57_SPHERICAL,
+					pBuffer,0,dwLength);</pre></code><p>
+<code><pre>Finish the E57 file
+		eWriter.Close();</pre></code><p>
+<code><pre>/////////////////////////////////////////////////////////////////////
+CATCH THE ERRORS</pre></code><p>
+<code><pre>	} catch(E57Exception&amp; ex) {
+		ex.report(__FILE__, __LINE__, __FUNCTION__);
+	} catch (std::exception&amp; ex) {
+		cerr &lt;&lt; "Got an std::exception, what=" &lt;&lt; ex.what() &lt;&lt; endl;
+	} catch (...) {
+		cerr &lt;&lt; "Got an unknown exception" &lt;&lt; endl;
+	}
 </pre></code> </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Tue Jul 13 17:44:20 2010 for E57 Simple API V0.6 by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Wed Jul 28 15:18:04 2010 for E57 Simple API V0.71 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.5 </small></address>
 </body>
