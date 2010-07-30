@@ -39,6 +39,7 @@
 //	New E57Simple.cpp
 //	V5		May 18, 2010	Stan Coleby		scoleby@intelisum.com
 //	V6		June 8, 2010	Stan Coleby		scoleby@intelisum.com
+//  V7		July 28,2010	Stan Coleby		scoleby@intelisum.com
 //
 //////////////////////////////////////////////////////////////////////////
 /*================*/ /*!
@@ -65,6 +66,7 @@ An example of a typical use of this interface would be as follows:
 
 //Access all the root information like
 		char* fileGuid = rootHeader.guid.c_str();
+		double fileTime = rootHeader.creationDateTime;
 		...
 
 ///////////////////////////////////////////////////////////////
@@ -84,6 +86,9 @@ An example of a typical use of this interface would be as follows:
 		_bstr_t bstrName = scanHeader.name.c_str();
 		_bstr_t bstrGuid = scanHeader.guid.c_str();
 		_bstr_t bstrDesc = scanHeader.description.c_str();
+
+		double startGPSTime = rootHeader.acquisitionStart;
+		double endGPSTime = rootHeader.acquisitionEnd;
 
 //Get pose information
 		ISI::Point translation;
@@ -232,15 +237,37 @@ An example of a typical use of this interface would be as follows:
 //Get the number of picture images available
 		int image2DCount = eReader.GetImage2DCount();
 
-//selecting the first picture
-		int pictureIndex = 0;
+//selecting the first picture image
+		int imageIndex = 0;
 
 //Read the picture 0 header.
-		e57::Image2D	pictureHeader;
-		eReader.ReadData3D( pictureIndex, pictureHeader);
+		e57::Image2D	imageHeader;
+		eReader.ReadData3D( imageIndex, imageHeader);
 
-//Access all the header information like
-		char* pictureGuid = pictureHeader.guid.c_str();
+//Access all the header information
+
+		_bstr_t bstrName = imageHeader.name.c_str();
+		_bstr_t bstrGuid = imageHeader.guid.c_str();
+		_bstr_t bstrDesc = imageHeader.description.c_str();
+
+		double imageGPSTime = rootHeader.acquisitionDateTime;
+
+//Get pose information
+		ISI::Point translation;
+		translation.x(imageHeader.pose.translation.x);
+		translation.y(imageHeader.pose.translation.y);
+		translation.z(imageHeader.pose.translation.z);
+
+		ISI::Quat rotation;
+		rotation.w(imageHeader.pose.rotation.w);
+		rotation.x(imageHeader.pose.rotation.x);
+		rotation.y(imageHeader.pose.rotation.y);
+		rotation.z(imageHeader.pose.rotation.z);
+
+		//Get camera information
+		_bstr_t bstrSerial = imageHeader.sensorSerialNumber.c_str();
+		_bstr_t bstrVendor = imageHeader.sensorVendor.c_str();
+		_bstr_t bstrModel = imageHeader.sensorModel.c_str();
 		...
 
 ///////////////////////////////////////////////////////////////////////
@@ -255,14 +282,21 @@ An example of a typical use of this interface would be as follows:
 		e57::Image2DType	imageMaskType;		//like E57_PNG_IMAGE_MASK if present
 		e57::Image2dType	imageVisualType;	//like E57_JPEG_IMAGE if present
 
-		eReader.GetImage2DSizes( pictureIndex, imageProjection, imageType,
+		eReader.GetImage2DSizes( imageIndex, imageProjection, imageType,
 			nImageWidth, nImageHeight, nImagesSize, imageMaskType, imageVisualType);
+
+//Get pixel information off the sphericalRepresentation if imageProjection == E57_SPHERICAL
+
+		int32_t imageHeight = imageHeader.sphericalRepresentation.imageHeight;
+		int32_t imageWidth = imageHeader.sphericalRepresentation.imageWidth;
+		double pixelHeight = imageHeader.sphericalRepresentation.pixelHeight;
+		double pixelWidth = imageHeader.sphericalRepresentation.pixelWidth;
 
 //Set up buffers
 		void* jpegBuffer = new char[nImagesSize];
 
 //Read the picture data
-		eReader.ReadImage2DData(pictureIndex, imageProjection, imageType, jpegBuffer, 0, nImagesSizw);
+		eReader.ReadImage2DData(imageIndex, imageProjection, imageType, jpegBuffer, 0, nImagesSizw);
 
 // ... access the picture and decode ...
 
@@ -311,12 +345,17 @@ An example of a typical use of this interface would be as follows:
 		_bstr_t bstrScanGuid = &wbuffer[0];
 		scanHeader.guid = (char*) bstrScanGuid;
 
+		scanHeader.acquisitionStart.dateTimeValue = GetGPSTime();	//use real time
+		scanHeader.acquisitionStart.isAtomicClockReferenced = 0;
+		scanHeader.acquisitionEnd.dateTimeValue = GetGPSTime() + 1.;
+		scanHeader.acquisitionEnd.isAtomicClockReferenced = 0;
+
 //Set up the scan size
 		scanHeader.indexBounds.rowMaximum = nRow;	
 		scanHeader.indexBounds.rowMinimum = 0;
 		scanHeader.indexBounds.columnMaximum = nColumn;
 		scanHeader.indexBounds.columnMinimum = 0;
-		scanHeader.indexBounds.returnMaximum = 0; 
+		scanHeader.indexBounds.returnMaximum = 1; 
 		scanHeader.indexBounds.returnMinimum = 0;
 
 		scanHeader.pointGroupingSchemes.groupingByLine.groupsSize = nColumn;
@@ -476,8 +515,10 @@ An example of a typical use of this interface would be as follows:
 		dataWriter.close();
 
 //Write out the group information
-		eWriter.WriteData3DGroupsData(scanIndex, (int64_t*) &idElementValue[0],
-			(int64_t*) &startPointIndex[0], (int64_t*) &pointCount[0], group);
+		eWriter.WriteData3DGroupsData(scanIndex, group,
+			(int64_t*) &idElementValue[0],
+			(int64_t*) &startPointIndex[0],
+			(int64_t*) &pointCount[0]);
 
 //Clean up
 		if(isInvalidData) delete isInvalidData;
@@ -501,6 +542,10 @@ An example of a typical use of this interface would be as follows:
 //Setup the GUID
 		imageHeader.guid = (char*) bstrImageGuid;
 		imageHeader.associatedData3DGuid = (char*) bstrScanGuid;
+
+//Setup the DateTime
+		imageHeader.acquisitionDateTime.dateTimeValue = GetGPSTime(); //set current time.
+		imageHeader.acquisitionDateTime.isAtomicClockReferenced = 0;
 
 //Setup camera information
 		imageHeader.sensorSerialNumber = (char*) bstrSerial;
@@ -599,6 +644,12 @@ using namespace boost;
 //
 	E57Root::E57Root(void)
 {
+	versionMajor = 1;
+	versionMinor = 0;
+	creationDateTime.dateTimeValue = 0.;
+	creationDateTime.isAtomicClockReferenced = 0;
+	data3DSize = 0;
+	image2DSize = 0;
 };
 
 	E57Root::~E57Root(void)
@@ -704,6 +755,8 @@ using namespace boost;
 	visualReferenceRepresentation.imageMaskSize = 0;
 	visualReferenceRepresentation.pngImageSize = 0;
 	visualReferenceRepresentation.jpegImageSize = 0;
+	visualReferenceRepresentation.imageHeight = 0;
+	visualReferenceRepresentation.imageWidth = 0;
 
 	pinholeRepresentation.jpegImageSize = 0;
 	pinholeRepresentation.pngImageSize = 0;
@@ -846,7 +899,7 @@ bool		Reader :: GetData3DSizes(
 
 bool		Reader :: ReadData3DGroupsData(
 	int32_t		dataIndex,			// data block index given by the NewData3D
-	int64_t		groupCount,			// size of each of the buffers given
+	int32_t		groupCount,			// size of each of the buffers given
 	int64_t*	idElementValue,		// index for this group
 	int64_t*	startPointIndex,	// Starting index in to the "points" data vector for the groups
 	int64_t*	pointCount			// size of the groups given
@@ -1001,12 +1054,13 @@ CompressedVectorWriter	Writer :: SetUpData3DPointsData(
 
 bool		Writer :: WriteData3DGroupsData(
 	int32_t		dataIndex,			// data block index given by the NewData3D
+	int32_t		groupCount,			//!< size of each of the buffers given
 	int64_t*	idElementValue,		// index for this group
 	int64_t*	startPointIndex,	// Starting index in to the "points" data vector for the groups
-	int64_t*	pointCount,			// size of the groups given
-	int32_t		count				// size of each of the buffers given
+	int64_t*	pointCount			// size of the groups given
 	) const								// \return Return true if sucessful, false otherwise
 {
-	return impl_->WriteData3DGroupsData( dataIndex, idElementValue, startPointIndex, pointCount, count);
+	return impl_->WriteData3DGroupsData(
+		dataIndex, groupCount, idElementValue, startPointIndex, pointCount);
 }
 

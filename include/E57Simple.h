@@ -593,7 +593,7 @@ enum Image2DProjection {
 //! @brief This funtion writes out the group data.
 	bool		ReadData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
-						int64_t		groupCount,			//!< size of each of the buffers given
+						int32_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
 						int64_t*	pointCount			//!< size of the groups given
@@ -740,10 +740,10 @@ public:
 //! @brief This funtion writes out the group data
 	bool		WriteData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int32_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
-						int64_t*	pointCount,			//!< size of the groups given
-						int32_t		count				//!< size of each of the buffers given
+						int64_t*	pointCount			//!< size of the groups given
 						) const;						//!< @return Return true if sucessful, false otherwise
 
 ////////////////////////////////////////////////////////////////////

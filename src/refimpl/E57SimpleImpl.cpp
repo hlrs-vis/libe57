@@ -572,17 +572,35 @@ bool	ReaderImpl :: ReadData3D(
 		if(scan.isDefined("description"))
 			data3DHeader.description = StringNode(scan.get("description")).value();
 
+		if(scan.isDefined("originalGuids"))
+		{
+			VectorNode originalGuids(scan.get("originalGuids"));
+			if(originalGuids.childCount() > 0)
+			{
+				data3DHeader.originalGuids.clear();
+				int i;
+				for( i = 0; i < originalGuids.childCount(); i++)
+				{
+					e57::ustring str = StringNode(originalGuids.get(i)).value();
+					data3DHeader.originalGuids.push_back(str);
+				}
+			}
+		}
+
 		if(scan.isDefined("pointGroupingSchemes"))
 		{
 			StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
-			StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
-			CompressedVectorNode groups(groupingByLine.get("groups"));
+			if(pointGroupingSchemes.isDefined("groupingByLine"))
+			{
+				StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+				CompressedVectorNode groups(groupingByLine.get("groups"));
 
-			data3DHeader.pointGroupingSchemes.groupingByLine.groupsSize = groups.childCount();
-			StructureNode lineProto(groups.prototype());
+				data3DHeader.pointGroupingSchemes.groupingByLine.groupsSize = groups.childCount();
+				StructureNode lineProto(groups.prototype());
 
-			data3DHeader.pointGroupingSchemes.groupingByLine.idElementName =
-				StringNode(groupingByLine.get("idElementName")).value();
+				data3DHeader.pointGroupingSchemes.groupingByLine.idElementName =
+					StringNode(groupingByLine.get("idElementName")).value();
+			}
 		}
 
 // Get various sensor and version strings to scan.
@@ -771,7 +789,7 @@ bool	ReaderImpl :: GetData3DSizes(
 //! This funtion writes out the group data
 bool	ReaderImpl :: ReadData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
-						int64_t		groupCount,			//!< size of each of the buffers given
+						int32_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
 						int64_t*	pointCount			//!< size of the groups given
@@ -781,20 +799,28 @@ bool	ReaderImpl :: ReadData3DGroupsData(
 		return false;
 
 	StructureNode scan(data3D_.get(dataIndex));
-	StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
-	StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
-	CompressedVectorNode groups(groupingByLine.get("groups"));
+	if(scan.isDefined("pointGroupingSchemes"))
+	{
+		StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
+		if(pointGroupingSchemes.isDefined("groupingByLine"))
+		{
+			StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
 
-	vector<SourceDestBuffer> groupSDBuffers;
-    groupSDBuffers.push_back(SourceDestBuffer(imf_, "idElementValue",  idElementValue,   (unsigned) groupCount, true));
-    groupSDBuffers.push_back(SourceDestBuffer(imf_, "startPointIndex", startPointIndex,  (unsigned) groupCount, true));
-    groupSDBuffers.push_back(SourceDestBuffer(imf_, "pointCount",      pointCount,       (unsigned) groupCount, true));
+			StringNode	idElementName(groupingByLine.get("idElementName"));
+			CompressedVectorNode groups(groupingByLine.get("groups"));
 
-	CompressedVectorReader reader = groups.reader(groupSDBuffers);
-    reader.read();
-    reader.close();
+			vector<SourceDestBuffer> groupSDBuffers;
+			groupSDBuffers.push_back(SourceDestBuffer(imf_, "idElementValue",  idElementValue,   (unsigned) groupCount, true));
+			groupSDBuffers.push_back(SourceDestBuffer(imf_, "startPointIndex", startPointIndex,  (unsigned) groupCount, true));
+			groupSDBuffers.push_back(SourceDestBuffer(imf_, "pointCount",      pointCount,       (unsigned) groupCount, true));
 
-	return true;
+			CompressedVectorReader reader = groups.reader(groupSDBuffers);
+			reader.read();
+			reader.close();
+			return true;
+		}
+	}
+	return false;
 };
 
 //! This function returns the point data fields fetched in single call
@@ -1311,6 +1337,15 @@ int32_t	WriterImpl :: NewData3D(
 	scan.set("name", StringNode(imf_, data3DHeader.name));
 	scan.set("description", StringNode(imf_, data3DHeader.description));
 
+	if(data3DHeader.originalGuids.size() > 0 )
+	{
+		scan.set("originalGuids", VectorNode(imf_));
+		VectorNode originalGuids(scan.get("originalGuids"));
+		int i;
+		for(i = 0; i < (int)data3DHeader.originalGuids.size(); i++)
+			originalGuids.append(StringNode(imf_,data3DHeader.originalGuids[i]));
+	}
+
 // Add various sensor and version strings to scan.
 /// Path names: "/data3D/0/sensorVendor", etc...
 	scan.set("sensorVendor",           StringNode(imf_, data3DHeader.sensorVendor));
@@ -1591,10 +1626,10 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 //! This funtion writes out the group data
 bool	WriterImpl :: WriteData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int32_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
-						int64_t*	pointCount,			//!< size of each of the groups given
-						int32_t		count				//!< size of each of the buffers given
+						int64_t*	pointCount			//!< size of each of the groups given
 						)								//!< \return Return true if sucessful, false otherwise
 {
 
@@ -1607,12 +1642,12 @@ bool	WriterImpl :: WriteData3DGroupsData(
 	CompressedVectorNode groups(groupingByLine.get("groups"));
 
 	vector<SourceDestBuffer> groupSDBuffers;
-    groupSDBuffers.push_back(SourceDestBuffer(imf_, "idElementValue",  idElementValue,   count, true));
-    groupSDBuffers.push_back(SourceDestBuffer(imf_, "startPointIndex", startPointIndex,  count, true));
-    groupSDBuffers.push_back(SourceDestBuffer(imf_, "pointCount",      pointCount,       count, true));
+    groupSDBuffers.push_back(SourceDestBuffer(imf_, "idElementValue",  idElementValue,   (unsigned) groupCount, true));
+    groupSDBuffers.push_back(SourceDestBuffer(imf_, "startPointIndex", startPointIndex,  (unsigned) groupCount, true));
+    groupSDBuffers.push_back(SourceDestBuffer(imf_, "pointCount",      pointCount,       (unsigned) groupCount, true));
 
 	CompressedVectorWriter writer = groups.writer(groupSDBuffers);
-    writer.write(count);
+    writer.write(groupCount);
     writer.close();
 
 	return true;

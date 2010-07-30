@@ -186,7 +186,7 @@ virtual	bool		GetData3DSizes(
 //! This funtion writes out the group data
 virtual bool		ReadData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
-						int64_t		groupCount,			//!< size of each of the buffers given
+						int32_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
 						int64_t*	pointCount			//!< size of the groups given
@@ -343,10 +343,10 @@ virtual CompressedVectorWriter	SetUpData3DPointsData(
 //! This funtion writes out the group data
 virtual bool		WriteData3DGroupsData(
 						int32_t		dataIndex,			//!< data block index given by the NewData3D
+						int32_t		groupCount,			//!< size of each of the buffers given
 						int64_t*	idElementValue,		//!< index for this group
 						int64_t*	startPointIndex,	//!< Starting index in to the "points" data vector for the groups
-						int64_t*	pointCount,			//!< size of the groups given
-						int32_t		count				//!< size of each of the buffers given
+						int64_t*	pointCount			//!< size of the groups given
 						);								//!< \return Return true if sucessful, false otherwise
 
 //! This function returns the file raw E57Root Structure Node

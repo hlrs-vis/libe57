@@ -4,7 +4,7 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = "E57 Simple API V0.71"
+PROJECT_NAME           = "E57 Simple API V0.72"
 PROJECT_NUMBER         = "July 28, 2010"
 OUTPUT_DIRECTORY       = F:/Projects/E57Doxygen
 CREATE_SUBDIRS         = NO

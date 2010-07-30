@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
-<title>E57 Simple API V0.71: e57::Reader Class Reference</title>
+<title>E57 Simple API V0.72: e57::Reader Class Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -68,9 +68,9 @@ bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_reader.html#756e8b2c79abba77aa1e52def901b470">GetData3DSizes</a> (int32_t dataIndex, int64_t &amp;rowMax, int64_t &amp;columnMax, int64_t &amp;pointsSize, int64_t &amp;groupsSize) const </td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function returns the size of the point data.  <a href="#756e8b2c79abba77aa1e52def901b470"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_reader.html#37dadc6f8c1ede15bd7835f22688b608">ReadData3DGroupsData</a> (int32_t dataIndex, int64_t groupCount, int64_t *idElementValue, int64_t *startPointIndex, int64_t *pointCount) const </td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_reader.html#f7458e3295403392be9c2f03806ef34f">ReadData3DGroupsData</a> (int32_t dataIndex, int32_t groupCount, int64_t *idElementValue, int64_t *startPointIndex, int64_t *pointCount) const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This funtion writes out the group data.  <a href="#37dadc6f8c1ede15bd7835f22688b608"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This funtion writes out the group data.  <a href="#f7458e3295403392be9c2f03806ef34f"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">CompressedVectorReader&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_reader.html#8d0a539fadfdf3f4b459944fb3ec0014">SetUpData3DPointsData</a> (int32_t dataIndex, int64_t pointCount, double *cartesianX, double *cartesianY, double *cartesianZ, int32_t *cartesianInvalidState=NULL, double *intensity=NULL, int32_t *isIntensityInvalid=NULL, double *colorRed=NULL, double *colorGreen=NULL, double *colorBlue=NULL, int32_t *isColorInvalid=NULL, double *sphericalRange=NULL, double *sphericalAzimuth=NULL, double *sphericalElevation=NULL, int32_t *sphericalInvalidState=NULL, int64_t *rowIndex=NULL, int64_t *columnIndex=NULL, int64_t *returnIndex=NULL, int64_t *returnCount=NULL, double *timeStamp=NULL, int32_t *isTimeStampInvalid=NULL) const </td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function sets up the point data fields.  <a href="#8d0a539fadfdf3f4b459944fb3ec0014"></a><br></td></tr>
@@ -503,7 +503,7 @@ This is the total number of group reocrds </td></tr>
 </dl>
 </div>
 </div><p>
-<a class="anchor" name="37dadc6f8c1ede15bd7835f22688b608"></a><!-- doxytag: member="e57::Reader::ReadData3DGroupsData" ref="37dadc6f8c1ede15bd7835f22688b608" args="(int32_t dataIndex, int64_t groupCount, int64_t *idElementValue, int64_t *startPointIndex, int64_t *pointCount) const " -->
+<a class="anchor" name="f7458e3295403392be9c2f03806ef34f"></a><!-- doxytag: member="e57::Reader::ReadData3DGroupsData" ref="f7458e3295403392be9c2f03806ef34f" args="(int32_t dataIndex, int32_t groupCount, int64_t *idElementValue, int64_t *startPointIndex, int64_t *pointCount) const " -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -516,7 +516,7 @@ This is the total number of group reocrds </td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int64_t&nbsp;</td>
+          <td class="paramtype">int32_t&nbsp;</td>
           <td class="paramname"> <em>groupCount</em>, </td>
         </tr>
         <tr>
@@ -837,7 +837,7 @@ This function returns the raw <a class="el" href="classe57_1_1_image2_d.html" ti
 <hr>The documentation for this class was generated from the following files:<ul>
 <li>F:/Projects/E57Doxygen/<a class="el" href="_e57_simple_8h.html">E57Simple.h</a><li>F:/Projects/E57Doxygen/<a class="el" href="_e57_simple_8cpp.html">E57Simple.cpp</a></ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Wed Jul 28 15:18:04 2010 for E57 Simple API V0.71 by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Fri Jul 30 10:26:54 2010 for E57 Simple API V0.72 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.5 </small></address>
 </body>

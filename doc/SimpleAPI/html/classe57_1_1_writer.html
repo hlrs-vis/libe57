@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
-<title>E57 Simple API V0.71: e57::Writer Class Reference</title>
+<title>E57 Simple API V0.72: e57::Writer Class Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -55,9 +55,9 @@ bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr><td class="memItemLeft" nowrap align="right" valign="top">CompressedVectorWriter&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_writer.html#93e474c22d7b46f30fce14015421a8e2">SetUpData3DPointsData</a> (int32_t dataIndex, int64_t pointCount, double *cartesianX, double *cartesianY, double *cartesianZ, int32_t *cartesianInvalidState=NULL, double *intensity=NULL, int32_t *isIntensityInvalid=NULL, double *colorRed=NULL, double *colorGreen=NULL, double *colorBlue=NULL, int32_t *isColorInvalid=NULL, double *sphericalRange=NULL, double *sphericalAzimuth=NULL, double *sphericalElevation=NULL, int32_t *sphericalInvalidState=NULL, int64_t *rowIndex=NULL, int64_t *columnIndex=NULL, int64_t *returnIndex=NULL, int64_t *returnCount=NULL, double *timeStamp=NULL, int32_t *isTimeStampInvalid=NULL) const </td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function writes out blocks of point data.  <a href="#93e474c22d7b46f30fce14015421a8e2"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_writer.html#6b478b1c3d2aca64d513b1309c77ca8c">WriteData3DGroupsData</a> (int32_t dataIndex, int64_t *idElementValue, int64_t *startPointIndex, int64_t *pointCount, int32_t count) const </td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_writer.html#fb9d2a18a7e884929373365d41418daa">WriteData3DGroupsData</a> (int32_t dataIndex, int32_t groupCount, int64_t *idElementValue, int64_t *startPointIndex, int64_t *pointCount) const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This funtion writes out the group data.  <a href="#6b478b1c3d2aca64d513b1309c77ca8c"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This funtion writes out the group data.  <a href="#fb9d2a18a7e884929373365d41418daa"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">StructureNode&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_writer.html#074ba888a9c27ba74bd047911bf354d7">GetRawE57Root</a> (void)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function returns the file raw <a class="el" href="classe57_1_1_e57_root.html" title="The e57::E57Root is a structure that stores the top-level information for the XML...">E57Root</a> Structure Node.  <a href="#074ba888a9c27ba74bd047911bf354d7"></a><br></td></tr>
@@ -458,7 +458,7 @@ Value = 0 if the timeStamp is considered valid, 1 otherwise </td></tr>
 </dl>
 </div>
 </div><p>
-<a class="anchor" name="6b478b1c3d2aca64d513b1309c77ca8c"></a><!-- doxytag: member="e57::Writer::WriteData3DGroupsData" ref="6b478b1c3d2aca64d513b1309c77ca8c" args="(int32_t dataIndex, int64_t *idElementValue, int64_t *startPointIndex, int64_t *pointCount, int32_t count) const " -->
+<a class="anchor" name="fb9d2a18a7e884929373365d41418daa"></a><!-- doxytag: member="e57::Writer::WriteData3DGroupsData" ref="fb9d2a18a7e884929373365d41418daa" args="(int32_t dataIndex, int32_t groupCount, int64_t *idElementValue, int64_t *startPointIndex, int64_t *pointCount) const " -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -467,6 +467,12 @@ Value = 0 if the timeStamp is considered valid, 1 otherwise </td></tr>
           <td>(</td>
           <td class="paramtype">int32_t&nbsp;</td>
           <td class="paramname"> <em>dataIndex</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int32_t&nbsp;</td>
+          <td class="paramname"> <em>groupCount</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -484,13 +490,7 @@ Value = 0 if the timeStamp is considered valid, 1 otherwise </td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">int64_t *&nbsp;</td>
-          <td class="paramname"> <em>pointCount</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int32_t&nbsp;</td>
-          <td class="paramname"> <em>count</em></td><td>&nbsp;</td>
+          <td class="paramname"> <em>pointCount</em></td><td>&nbsp;</td>
         </tr>
         <tr>
           <td></td>
@@ -509,14 +509,14 @@ This funtion writes out the group data.
 <table border="0" cellspacing="2" cellpadding="0">
 <tr><td valign="top"><em>dataIndex</em>&nbsp;</td><td>
 data block index given by the NewData3D </td></tr>
+<tr><td valign="top"><em>groupCount</em>&nbsp;</td><td>
+size of each of the buffers given </td></tr>
 <tr><td valign="top"><em>idElementValue</em>&nbsp;</td><td>
 index for this group </td></tr>
 <tr><td valign="top"><em>startPointIndex</em>&nbsp;</td><td>
 Starting index in to the "points" data vector for the groups </td></tr>
 <tr><td valign="top"><em>pointCount</em>&nbsp;</td><td>
 size of the groups given </td></tr>
-<tr><td valign="top"><em>count</em>&nbsp;</td><td>
-size of each of the buffers given </td></tr>
 </table>
 </dl>
 </div>
@@ -593,7 +593,7 @@ This function returns the raw <a class="el" href="classe57_1_1_image2_d.html" ti
 <hr>The documentation for this class was generated from the following files:<ul>
 <li>F:/Projects/E57Doxygen/<a class="el" href="_e57_simple_8h.html">E57Simple.h</a><li>F:/Projects/E57Doxygen/<a class="el" href="_e57_simple_8cpp.html">E57Simple.cpp</a></ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Wed Jul 28 15:18:04 2010 for E57 Simple API V0.71 by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Fri Jul 30 10:26:54 2010 for E57 Simple API V0.72 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.5 </small></address>
 </body>
