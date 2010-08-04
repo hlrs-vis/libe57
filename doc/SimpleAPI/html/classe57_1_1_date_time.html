@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
-<title>E57 Simple API V0.72: e57::DateTime Class Reference</title>
+<title>E57 Simple API V0.2.74: e57::DateTime Class Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -32,6 +32,25 @@
 <p>
 <a href="classe57_1_1_date_time-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
+<tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6df0076d1bc7d0952b86cc051b1fd844"></a><!-- doxytag: member="e57::DateTime::DateTime" ref="6df0076d1bc7d0952b86cc051b1fd844" args="(void)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_date_time.html#6df0076d1bc7d0952b86cc051b1fd844">DateTime</a> (void)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function is the constructor for the <a class="el" href="classe57_1_1_date_time.html" title="The e57::DateTime is a structure for encoding date and time.">DateTime</a> class. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="519888a1aba4d20e09c84031e9750cf9"></a><!-- doxytag: member="e57::DateTime::~DateTime" ref="519888a1aba4d20e09c84031e9750cf9" args="(void)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_date_time.html#519888a1aba4d20e09c84031e9750cf9">~DateTime</a> (void)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function is the destructor for the <a class="el" href="classe57_1_1_date_time.html" title="The e57::DateTime is a structure for encoding date and time.">DateTime</a> class. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f02cc44a0baf5eeb5056c9d293f8bc52"></a><!-- doxytag: member="e57::DateTime::SetCurrentGPSTime" ref="f02cc44a0baf5eeb5056c9d293f8bc52" args="(void)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_date_time.html#f02cc44a0baf5eeb5056c9d293f8bc52">SetCurrentGPSTime</a> (void)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function sets dateTimeValue to be the current GPS time. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_date_time.html#268dbdfd3207cd95ca787fad09d3257a">SetUTCDateTime</a> (int year, int month, int day, int hour, int minute, float seconds)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function sets dateTimeValue to be the given date and time.  <a href="#268dbdfd3207cd95ca787fad09d3257a"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_date_time.html#a0757a396d2cd7e3798e305107850d80">GetUTCDateTime</a> (int &amp;year, int &amp;month, int &amp;day, int &amp;hour, int &amp;minute, float &amp;seconds)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This function gets the date and time from the gps dateTimeValue;.  <a href="#a0757a396d2cd7e3798e305107850d80"></a><br></td></tr>
 <tr><td colspan="2"><br><h2>Public Attributes</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e5a42a6a2d0e21cc6dab6f91e9adb35c"></a><!-- doxytag: member="e57::DateTime::dateTimeValue" ref="e5a42a6a2d0e21cc6dab6f91e9adb35c" args="" -->
 double&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classe57_1_1_date_time.html#e5a42a6a2d0e21cc6dab6f91e9adb35c">dateTimeValue</a></td></tr>
@@ -45,10 +64,151 @@ int32_t&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="c
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 The <a class="el" href="classe57_1_1_date_time.html" title="The e57::DateTime is a structure for encoding date and time.">e57::DateTime</a> is a structure for encoding date and time. 
 <p>
-The date and time is encoded using a single 562 floating point number, stored as an E57 Float element which is based on the Global Positioning 563 System (GPS) time scale. <hr>The documentation for this class was generated from the following file:<ul>
-<li>F:/Projects/E57Doxygen/<a class="el" href="_e57_simple_8h.html">E57Simple.h</a></ul>
+The date and time is encoded using a single 562 floating point number, stored as an E57 Float element which is based on the Global Positioning 563 System (GPS) time scale. <hr><h2>Member Function Documentation</h2>
+<a class="anchor" name="268dbdfd3207cd95ca787fad09d3257a"></a><!-- doxytag: member="e57::DateTime::SetUTCDateTime" ref="268dbdfd3207cd95ca787fad09d3257a" args="(int year, int month, int day, int hour, int minute, float seconds)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void DateTime::SetUTCDateTime           </td>
+          <td>(</td>
+          <td class="paramtype">int&nbsp;</td>
+          <td class="paramname"> <em>year</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&nbsp;</td>
+          <td class="paramname"> <em>month</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&nbsp;</td>
+          <td class="paramname"> <em>day</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&nbsp;</td>
+          <td class="paramname"> <em>hour</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&nbsp;</td>
+          <td class="paramname"> <em>minute</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&nbsp;</td>
+          <td class="paramname"> <em>seconds</em></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td width="100%"></td>
+        </tr>
+      </table>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Jul 30 10:26:54 2010 for E57 Simple API V0.72 by&nbsp;
+<div class="memdoc">
+
+<p>
+This function sets dateTimeValue to be the given date and time. 
+<p>
+<dl compact><dt><b>Parameters: </b></dt><dd>
+<table border="0" cellspacing="2" cellpadding="0">
+<tr><td valign="top"><em>year</em>&nbsp;</td><td>
+The year 1900-9999 </td></tr>
+<tr><td valign="top"><em>month</em>&nbsp;</td><td>
+The month 0-11 </td></tr>
+<tr><td valign="top"><em>day</em>&nbsp;</td><td>
+The day 1-31 </td></tr>
+<tr><td valign="top"><em>hour</em>&nbsp;</td><td>
+The hour 0-23 </td></tr>
+<tr><td valign="top"><em>minute</em>&nbsp;</td><td>
+The minute 0-59 </td></tr>
+<tr><td valign="top"><em>seconds</em>&nbsp;</td><td>
+The seconds 0.0 - 59.999 </td></tr>
+</table>
+</dl>
+</div>
+</div><p>
+<a class="anchor" name="a0757a396d2cd7e3798e305107850d80"></a><!-- doxytag: member="e57::DateTime::GetUTCDateTime" ref="a0757a396d2cd7e3798e305107850d80" args="(int &amp;year, int &amp;month, int &amp;day, int &amp;hour, int &amp;minute, float &amp;seconds)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void DateTime::GetUTCDateTime           </td>
+          <td>(</td>
+          <td class="paramtype">int &amp;&nbsp;</td>
+          <td class="paramname"> <em>year</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&nbsp;</td>
+          <td class="paramname"> <em>month</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&nbsp;</td>
+          <td class="paramname"> <em>day</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&nbsp;</td>
+          <td class="paramname"> <em>hour</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&nbsp;</td>
+          <td class="paramname"> <em>minute</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float &amp;&nbsp;</td>
+          <td class="paramname"> <em>seconds</em></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td width="100%"></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+This function gets the date and time from the gps dateTimeValue;. 
+<p>
+<dl compact><dt><b>Parameters: </b></dt><dd>
+<table border="0" cellspacing="2" cellpadding="0">
+<tr><td valign="top"><em>year</em>&nbsp;</td><td>
+The year 1900-9999 </td></tr>
+<tr><td valign="top"><em>month</em>&nbsp;</td><td>
+The month 0-11 </td></tr>
+<tr><td valign="top"><em>day</em>&nbsp;</td><td>
+The day 1-31 </td></tr>
+<tr><td valign="top"><em>hour</em>&nbsp;</td><td>
+The hour 0-23 </td></tr>
+<tr><td valign="top"><em>minute</em>&nbsp;</td><td>
+The minute 0-59 </td></tr>
+<tr><td valign="top"><em>seconds</em>&nbsp;</td><td>
+The seconds 0.0 - 59.999 </td></tr>
+</table>
+</dl>
+</div>
+</div><p>
+<hr>The documentation for this class was generated from the following files:<ul>
+<li>F:/Projects/E57Doxygen/<a class="el" href="_e57_simple_8h.html">E57Simple.h</a><li>F:/Projects/E57Doxygen/<a class="el" href="_e57_simple_8cpp.html">E57Simple.cpp</a></ul>
+</div>
+<hr size="1"><address style="text-align: right;"><small>Generated on Wed Aug 4 12:10:42 2010 for E57 Simple API V0.2.74 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.5 </small></address>
 </body>

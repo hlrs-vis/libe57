@@ -57,6 +57,10 @@
 #include "E57Foundation.h"
 #endif
 
+#ifndef _C_TIMECONV_H_
+#include "time_conversion.h"
+#endif
+
 using namespace std;
 using namespace boost;
 
@@ -165,8 +169,45 @@ public:
 
 class DateTime {
 public:
+
+//! @brief This function is the constructor for the DateTime class
+				DateTime(void);
+//! @brief This function is the destructor for the DateTime class
+				~DateTime(void);
+
 	double		dateTimeValue;		//!< The time, in seconds, since GPS time was zero. This time specification may include fractions of a second.
 	int32_t		isAtomicClockReferenced;	//!< This element should be present, and its value set to 1 if, and only if, the time stored in the dateTimeValue element is obtained from an atomic clock time source. Shall be either 0 or 1.
+
+//! @brief This function sets dateTimeValue to be the current GPS time
+	void		SetCurrentGPSTime(void);
+
+//! @brief This function sets dateTimeValue to be the given date and time
+	void		SetUTCDateTime(int year,		//!< The year 1900-9999
+							int month,		//!< The month 0-11
+							int day,		//!< The day 1-31
+							int hour,		//!< The hour 0-23
+							int minute,		//!< The minute 0-59
+							float seconds	//!< The seconds 0.0 - 59.999
+							);
+
+//! @brief This function gets the date and time from the gps dateTimeValue;
+	void		GetUTCDateTime(int &year,		//!< The year 1900-9999
+							int &month,		//!< The month 0-11
+							int &day,		//!< The day 1-31
+							int &hour,		//!< The hour 0-23
+							int &minute,	//!< The minute 0-59
+							float &seconds	//!< The seconds 0.0 - 59.999
+							);
+#if defined(WIN32)
+//! @brief This function sets the date and time from the Windows System Time;
+	void		SetSystemTime(
+							SYSTEMTIME	sysTim		//!< Windows System Time
+							);
+//! @brief This function gets the date and time from the Windows System Time;
+	void		GetSystemTime(
+							SYSTEMTIME	&sysTim		//!< Windows System Time
+							);
+#endif
 };
 
 ////////////////////////////////////////////////////////////////////

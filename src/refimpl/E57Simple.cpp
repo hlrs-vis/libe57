@@ -631,6 +631,32 @@ DEALINGS IN THE SOFTWARE.
 
 //! @file E57Simple.cpp
 
+#if defined(WIN32)
+#  if defined(_MSC_VER)
+#    include <io.h>
+#    include <fcntl.h>
+#    include <sys\stat.h>
+#    include <windows.h>
+#  elif defined(__GNUC__)
+#  define _LARGEFILE64_SOURCE
+#  define __LARGE64_FILES
+#  include <sys/types.h>
+#  include <unistd.h>
+
+#    include <fcntl.h>
+#    include <sys\stat.h>
+#  else
+#    error "no supported compiler defined"
+#  endif
+#elif defined(LINUX)
+#  define _LARGEFILE64_SOURCE
+#  define __LARGE64_FILES
+#  include <sys/types.h>
+#  include <unistd.h>
+#else
+#  error "no supported OS platform defined"
+#endif
+
 #include "E57Simple.h"
 #include "E57SimpleImpl.h"
 
@@ -638,6 +664,70 @@ using namespace e57;
 using namespace std;
 using namespace boost;
 
+////////////////////////////////////////////////////////////////////
+//
+//	e57::DateTime
+//
+	DateTime::DateTime(void)
+{
+	dateTimeValue = 0.;
+	isAtomicClockReferenced = 0;
+};
+
+	DateTime::~DateTime(void)
+{
+};
+
+void	DateTime::SetCurrentGPSTime(void)
+{
+	dateTimeValue = e57::GetGPSTime();
+	isAtomicClockReferenced = 0;
+};
+
+void	DateTime::SetUTCDateTime(
+	int utc_year,		//!< The year 1900-9999
+	int utc_month,		//!< The month 0-11
+	int utc_day,		//!< The day 1-31
+	int utc_hour,		//!< The hour 0-23
+	int utc_minute,		//!< The minute 0-59
+	float utc_seconds	//!< The seconds 0.0 - 59.999
+	)
+{
+	dateTimeValue = e57::GetGPSDateTimeFromUTC(utc_year, utc_month,
+		utc_day, utc_hour, utc_minute, utc_seconds);
+
+	isAtomicClockReferenced = 0;
+};
+
+void	DateTime::GetUTCDateTime(
+	int &utc_year,		//!< The year 1900-9999
+	int &utc_month,		//!< The month 0-11
+	int &utc_day,		//!< The day 1-31
+	int &utc_hour,		//!< The hour 0-23
+	int &utc_minute,	//!< The minute 0-59
+	float &utc_seconds	//!< The seconds 0.0 - 59.999
+	)
+{
+	e57::GetUTCFromGPSDateTime(dateTimeValue, utc_year, utc_month,
+		utc_day, utc_hour, utc_minute, utc_seconds);
+};
+#if defined(WIN32)
+
+void	DateTime::SetSystemTime(
+	SYSTEMTIME	sysTim		//!< Windows System Time
+	)
+{
+	dateTimeValue = e57::GetGPSDateTimeFromSystemTime(sysTim);
+	isAtomicClockReferenced = 0;
+};
+
+void	DateTime::GetSystemTime(
+	SYSTEMTIME	&sysTim		//!< Windows System Time
+	)
+{
+	e57::GetSystemTimeFromGPSDateTime(dateTimeValue,sysTim);
+};
+#endif
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::E57Root

@@ -78,6 +78,303 @@ using namespace e57;
 using namespace std;
 using namespace boost;
 
+namespace e57 {
+char *	GetNewGuid(void);
+double	GetGPSTime(void);
+
+double	GetGPSDateTimeFromUTC(
+	int utc_year,		//!< The year 1900-9999
+	int utc_month,		//!< The month 1-12
+	int utc_day,		//!< The day 1-31
+	int utc_hour,		//!< The hour 0-23
+	int utc_minute,		//!< The minute 0-59
+	float utc_seconds	//!< The seconds 0.0 - 59.999
+	);
+
+void	GetUTCFromGPSDateTime(
+    double gpsTime,		//!< GPS Date Time
+	int &utc_year,		//!< The year 1900-9999
+	int &utc_month,		//!< The month 1-12
+	int &utc_day,		//!< The day 1-31
+	int &utc_hour,		//!< The hour 0-23
+	int &utc_minute,		//!< The minute 0-59
+	float &utc_seconds	//!< The seconds 0.0 - 59.999
+	);
+#if defined(WIN32)
+double	GetGPSDateTimeFromSystemTime(
+	SYSTEMTIME	sysTim		//!< Windows System Time
+	);
+void	GetSystemTimeFromGPSDateTime(
+	double		gpsTime,	//!< GPS Date Time
+	SYSTEMTIME	&sysTim		//!< Windows System Time
+	);
+#endif
+};
+////////////////////////////////////////////////////////////////////
+//
+//	e57::GetGPSTime
+//
+double e57::GetGPSTime(void)
+{
+#ifdef _C_TIMECONV_H_
+
+unsigned short     utc_year;     //!< Universal Time Coordinated    [year]
+unsigned char      utc_month;    //!< Universal Time Coordinated    [1-12 months] 
+unsigned char      utc_day;      //!< Universal Time Coordinated    [1-31 days]
+unsigned char      utc_hour;     //!< Universal Time Coordinated    [hours]
+unsigned char      utc_minute;   //!< Universal Time Coordinated    [minutes]
+float              utc_seconds;  //!< Universal Time Coordinated    [s]
+unsigned char      utc_offset;   //!< Integer seconds that GPS is ahead of UTC time, always positive             [s], obtained from a look up table
+double             julian_date;  //!< Number of days since noon Universal Time Jan 1, 4713 BCE (Julian calendar) [days]
+unsigned short     gps_week;     //!< GPS week (0-1024+)            [week]
+double             gps_tow;	  //!< GPS time of week (0-604800.0) [s]
+
+BOOL ret = TIMECONV_GetSystemTime(&utc_year, &utc_month, &utc_day, &utc_hour, &utc_minute, &utc_seconds,
+	&utc_offset, &julian_date, &gps_week, &gps_tow);
+
+double gpsTime = (gps_week * 604800.) + gps_tow;
+
+#elif defined(WIN32)
+SYSTEMTIME		currentSystemTime;
+GetSystemTime(&currentSystemTime);	//current UTC Time
+double gpsTime = e57::GetGPSDateTimeFromSystemTime(currentSystemTime);
+#endif
+
+return gpsTime;
+};
+#if defined(WIN32)
+////////////////////////////////////////////////////////////////////
+//
+//	e57::GetGPSDateTimeFromSystemTime
+//
+double	e57::GetGPSDateTimeFromSystemTime(
+	SYSTEMTIME	sysTim		//!< Windows System Time
+	)
+{
+#ifdef _C_TIMECONV_H_
+	int utc_year = sysTim.wYear;		//!< The year 1900-9999
+	int utc_month = sysTim.wMonth;		//!< The month 0-11
+	int utc_day = sysTim.wDay;			//!< The day 1-31
+	int utc_hour = sysTim.wHour;		//!< The hour 0-23
+	int utc_minute = sysTim.wMinute;	//!< The minute 0-59
+	float utc_seconds = sysTim.wSecond;	//!< The seconds 0.0 - 59.999
+	utc_seconds += sysTim.wMilliseconds/1000;
+
+	double gpsTime = e57::GetGPSDateTimeFromUTC(
+		utc_year, utc_month, utc_day, utc_hour, utc_minute, utc_seconds);
+#else
+	FILETIME		currentFileTime;
+	SystemTimeToFileTime(&sysTim,&currentFileTime);
+
+	ULARGE_INTEGER	currentTime;
+	currentTime.LowPart = currentFileTime.dwLowDateTime;
+	currentTime.HighPart = currentFileTime.dwHighDateTime;
+
+	SYSTEMTIME		gpsSystemTime = {1980,1,0,6,0,0,0,0};	//GPS started in Jan. 6, 1980
+	FILETIME		gpsFileTime;
+	SystemTimeToFileTime(&gpsSystemTime,&gpsFileTime);
+
+	ULARGE_INTEGER	gpsStartTime;
+	gpsStartTime.LowPart = gpsFileTime.dwLowDateTime;
+	gpsStartTime.HighPart = gpsFileTime.dwHighDateTime;
+
+	double gpsTime = (double) (currentTime.QuadPart - gpsStartTime.QuadPart);	//number of 100 nanosecond;
+	gpsTime /= 10000000.;	//number of seconds
+	gpsTime += 15.;			//Add utc offset leap seconds
+#endif
+	return gpsTime;
+};
+////////////////////////////////////////////////////////////////////
+//
+//	e57::GetSystemTimeFromGPSDateTime
+//
+void	e57::GetSystemTimeFromGPSDateTime(
+	double		gpsTime,	//!< GPS Date Time
+	SYSTEMTIME	&sysTim		//!< Windows System Time
+	)
+{
+#ifdef _C_TIMECONV_H_
+	int utc_year;		//!< The year 1900-9999
+	int utc_month;		//!< The month 0-11
+	int utc_day;		//!< The day 1-31
+	int utc_hour;		//!< The hour 0-23
+	int utc_minute;		//!< The minute 0-59
+	float utc_seconds;	//!< The seconds 0.0 - 59.999
+
+	e57::GetUTCFromGPSDateTime(gpsTime, utc_year, utc_month,
+		utc_day, utc_hour, utc_minute, utc_seconds);
+
+	double julian_date = 0;
+	unsigned char day_of_week = 0;
+
+	TIMECONV_GetJulianDateFromUTCTime( utc_year, utc_month, utc_day,
+		utc_hour, utc_minute, utc_seconds, &julian_date );
+
+	TIMECONV_GetDayOfWeekFromJulianDate( julian_date, &day_of_week );
+
+	sysTim.wDayOfWeek = day_of_week;
+	sysTim.wYear = utc_year;
+	sysTim.wMonth = utc_month;
+	sysTim.wDay = utc_day;
+	sysTim.wHour = utc_hour;
+	sysTim.wMinute = utc_minute;
+	sysTim.wSecond = (WORD)(floor(utc_seconds));
+	sysTim.wMilliseconds = (WORD)((utc_seconds - sysTim.wSecond)*1000);
+
+#else
+	gpsTime -= 15.;			//Sub utc offset leap seconds
+	gpsTime *= 10000000.;	//convert to 100 nanoseconds;
+
+	SYSTEMTIME		gpsSystemTime = {1980,1,0,6,0,0,0,0};	//GPS started in Jan. 6, 1980
+	FILETIME		gpsFileTime;
+	SystemTimeToFileTime(&gpsSystemTime,&gpsFileTime);
+
+	ULARGE_INTEGER	gpsStartTime;
+	gpsStartTime.LowPart = gpsFileTime.dwLowDateTime;
+	gpsStartTime.HighPart = gpsFileTime.dwHighDateTime;
+
+	ULARGE_INTEGER	currentTime;
+	currentTime.QuadPart = ((ULONGLONG)gpsTime) + gpsStartTime.QuadPart;
+
+	FILETIME		currentFileTime;
+	currentFileTime.dwLowDateTime = currentTime.LowPart;
+	currentFileTime.dwHighDateTime = currentTime.HighPart;
+	FileTimeToSystemTime(&currentFileTime,&sysTim);
+#endif
+};
+#endif
+////////////////////////////////////////////////////////////////////
+//
+//	e57::GetGPSDateTimeFromUTC
+//
+double	e57::GetGPSDateTimeFromUTC(
+	int utc_year,		//!< The year 1900-9999
+	int utc_month,		//!< The month 0-11
+	int utc_day,		//!< The day 1-31
+	int utc_hour,		//!< The hour 0-23
+	int utc_minute,		//!< The minute 0-59
+	float utc_seconds	//!< The seconds 0.0 - 59.999
+	)
+{
+#ifdef _C_TIMECONV_H_
+ 	double             julian_date;  //!< Number of days since noon Universal Time Jan 1, 4713 BCE (Julian calendar) [days]
+	unsigned char      utc_offset;   //!< Integer seconds that GPS is ahead of UTC time, always positive  
+	unsigned short     gps_week;     //!< GPS week (0-1024+)            [week]
+	double             gps_tow;	  //!< GPS time of week (0-604800.0) [s]
+
+	BOOL result = TIMECONV_GetJulianDateFromUTCTime(
+	    utc_year,
+		utc_month,
+		utc_day,
+		utc_hour,
+		utc_minute,
+		utc_seconds,
+		&julian_date );
+ 
+	result = TIMECONV_DetermineUTCOffset(
+		julian_date,
+		&utc_offset );
+ 
+	result = TIMECONV_GetGPSTimeFromJulianDate(
+		julian_date,
+		utc_offset,
+		&gps_week,
+		&gps_tow );
+
+	double gpsTime = (gps_week * 604800.) + gps_tow;
+
+#elif defined(WIN32)
+	SYSTEMTIME	sysTim;
+	sysTim.wDayOfWeek = day_of_week;
+	sysTim.wYear = utc_year;
+	sysTim.wMonth = utc_month;
+	sysTim.wDay = utc_day;
+	sysTim.wHour = utc_hour;
+	sysTim.wMinute = utc_minute;
+	sysTim.wSecond = (WORD)(floor(utc_seconds));
+	sysTim.wMilliseconds = (WORD)((utc_seconds - t.wSecond)*1000);
+
+	double gpsTime = e57::GetGPSDateTimeFromSystemTime(sysTim);
+#endif
+	return gpsTime;
+};
+////////////////////////////////////////////////////////////////////
+//
+//	e57::GetUTCFromGPSDateTime
+//
+void	e57::GetUTCFromGPSDateTime(
+    double gpsTime,		//!< GPS Date Time
+	int &utc_Year,		//!< The year 1900-9999
+	int &utc_Month,		//!< The month 0-11
+	int &utc_Day,		//!< The day 1-31
+	int &utc_Hour,		//!< The hour 0-23
+	int &utc_Minute,		//!< The minute 0-59
+	float &utc_seconds	//!< The seconds 0.0 - 59.999
+	)
+{
+#ifdef _C_TIMECONV_H_
+	unsigned short     utc_year;     //!< Universal Time Coordinated    [year]
+	unsigned char      utc_month;    //!< Universal Time Coordinated    [1-12 months] 
+	unsigned char      utc_day;      //!< Universal Time Coordinated    [1-31 days]
+	unsigned char      utc_hour;     //!< Universal Time Coordinated    [hours]
+	unsigned char      utc_minute;   //!< Universal Time Coordinated    [minutes]
+ 	unsigned short     gps_week;     //!< GPS week (0-1024+)            [week]
+	double             gps_tow;	  //!< GPS time of week (0-604800.0) [s]
+
+	gps_week = ((int)floor(gpsTime))/604800;
+	gps_tow = gpsTime - gps_week * 604800.;
+
+	BOOL result = TIMECONV_GetUTCTimeFromGPSTime(
+		gps_week,
+		gps_tow,
+		&utc_year,
+		&utc_month,
+		&utc_day,
+		&utc_hour,
+		&utc_minute,
+		&utc_seconds);
+
+	utc_Year = utc_year;
+	utc_Month = utc_month;
+	utc_Day = utc_day;
+	utc_Hour = utc_hour;
+	utc_Minute = utc_minute;
+
+#elif defined(WIN32)
+	SYSTEMTIME	sysTim;
+	e57::GetSystemTimeFromGPSDateTime(gpsTime,sysTim);
+
+	utc_year = sysTim.wYear;		//!< The year 1900-9999
+	utc_month = sysTim.wMonth;		//!< The month 0-11
+	utc_day = sysTim.wDay;			//!< The day 1-31
+	utc_hour = sysTim.wHour;		//!< The hour 0-23
+	utc_minute = sysTim.wMinute;	//!< The minute 0-59
+	utc_seconds = sysTim.wSecond;	//!< The seconds 0.0 - 59.999
+	utc_seconds += sysTim.wMilliseconds/1000;
+#endif
+	return;
+};
+////////////////////////////////////////////////////////////////////
+//
+//	e57::GetNewGuid
+//
+char * e57::GetNewGuid(void)
+{
+	static char	fileGuid[64];
+
+#if defined(_MSC_VER)
+	GUID		guid;
+	CoCreateGuid((GUID*)&guid);
+	OLECHAR wbuffer[64];
+	StringFromGUID2(guid,&wbuffer[0],64);
+	size_t	converted = 0;
+	wcstombs_s(&converted, fileGuid,wbuffer,64);
+
+#else	//TODO need a way to gen a guid for other OS
+	strcpy(fileGuid,"{4179C162-49A8-4fba-ADC6-527543D26D86}");
+#endif
+	return fileGuid;
+};
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::ReaderImpl
@@ -913,70 +1210,7 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 
 	return reader;
 };
-double GetGPSTime(void)
-{
-#ifdef _C_TIMECONV_H_
 
-unsigned short     utc_year;     //!< Universal Time Coordinated    [year]
-unsigned char      utc_month;    //!< Universal Time Coordinated    [1-12 months] 
-unsigned char      utc_day;      //!< Universal Time Coordinated    [1-31 days]
-unsigned char      utc_hour;     //!< Universal Time Coordinated    [hours]
-unsigned char      utc_minute;   //!< Universal Time Coordinated    [minutes]
-float              utc_seconds;  //!< Universal Time Coordinated    [s]
-unsigned char      utc_offset;   //!< Integer seconds that GPS is ahead of UTC time, always positive             [s], obtained from a look up table
-double             julian_date;  //!< Number of days since noon Universal Time Jan 1, 4713 BCE (Julian calendar) [days]
-unsigned short     gps_week;     //!< GPS week (0-1024+)            [week]
-double             gps_tow;	  //!< GPS time of week (0-604800.0) [s]
-
-BOOL ret = TIMECONV_GetSystemTime(&utc_year, &utc_month, &utc_day, &utc_hour, &utc_minute, &utc_seconds,
-	&utc_offset, &julian_date, &gps_week, &gps_tow);
-
-double gpsTime = (gps_week * 604800.) + gps_tow;
-
-#else
-#if defined(_MSC_VER)
-SYSTEMTIME		currentSystemTime;
-GetSystemTime(&currentSystemTime);	//current UTC Time
-FILETIME		currentFileTime;
-SystemTimeToFileTime(&currentSystemTime,&currentFileTime);
-
-ULARGE_INTEGER	currentTime;
-currentTime.LowPart = currentFileTime.dwLowDateTime;
-currentTime.HighPart = currentFileTime.dwHighDateTime;
-
-SYSTEMTIME		gpsSystemTime = {1980,1,0,6,0,0,0,0};	//GPS started in Jan. 6, 1980
-FILETIME		gpsFileTime;
-SystemTimeToFileTime(&gpsSystemTime,&gpsFileTime);
-
-ULARGE_INTEGER	gpsStartTime;
-gpsStartTime.LowPart = gpsFileTime.dwLowDateTime;
-gpsStartTime.HighPart = gpsFileTime.dwHighDateTime;
-
-double gpsTime = (double) (currentTime.QuadPart - gpsStartTime.QuadPart);	//number of 100 nanosecond;
-gpsTime /= 10000000.;	//number of seconds
-gpsTime += 15.;			//Add leap seconds
-#endif
-
-#endif
-return gpsTime;
-};
-char * GetNewGuid(void)
-{
-	static char	fileGuid[64];
-
-#if defined(_MSC_VER)
-	GUID		guid;
-	CoCreateGuid((GUID*)&guid);
-	OLECHAR wbuffer[64];
-	StringFromGUID2(guid,&wbuffer[0],64);
-	size_t	converted = 0;
-	wcstombs_s(&converted, fileGuid,wbuffer,64);
-
-#else	//TODO need a way to gen a guid for linux
-	strcpy(fileGuid,"{4179C162-49A8-4fba-ADC6-527543D26D86}");
-#endif
-	return fileGuid;
-};
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Writer
