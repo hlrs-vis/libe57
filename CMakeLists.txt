@@ -34,7 +34,7 @@ project(E57RefImpl)
 
 # developer adjustable version numbers
 set(${PROJECT_NAME}_MAJOR_VERSION 0)
-set(${PROJECT_NAME}_MINOR_VERSION 2)
+set(${PROJECT_NAME}_MINOR_VERSION 3)
 
 # try to find subversion revision number
 execute_process(
