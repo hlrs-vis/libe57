@@ -66,7 +66,7 @@ An example of a typical use of this interface would be as follows:
 
 //Access all the root information like
 		char* fileGuid = rootHeader.guid.c_str();
-		double fileTime = rootHeader.creationDateTime;
+		double fileGPSTime = rootHeader.creationDateTime;
 		...
 
 ///////////////////////////////////////////////////////////////
@@ -345,11 +345,9 @@ An example of a typical use of this interface would be as follows:
 		_bstr_t bstrScanGuid = &wbuffer[0];
 		scanHeader.guid = (char*) bstrScanGuid;
 
-		scanHeader.acquisitionStart.dateTimeValue = GetGPSTime();	//use real time
-		scanHeader.acquisitionStart.isAtomicClockReferenced = 0;
-		scanHeader.acquisitionEnd.dateTimeValue = GetGPSTime() + 1.;
-		scanHeader.acquisitionEnd.isAtomicClockReferenced = 0;
-
+		scanHeader.acquisitionStart.SetCurrentGPSTime();	//use real time
+		scanHeader.acquisitionEnd.SetCurrentGPSTime();
+	
 //Set up the scan size
 		scanHeader.indexBounds.rowMaximum = nRow;	
 		scanHeader.indexBounds.rowMinimum = 0;
@@ -544,8 +542,7 @@ An example of a typical use of this interface would be as follows:
 		imageHeader.associatedData3DGuid = (char*) bstrScanGuid;
 
 //Setup the DateTime
-		imageHeader.acquisitionDateTime.dateTimeValue = GetGPSTime(); //set current time.
-		imageHeader.acquisitionDateTime.isAtomicClockReferenced = 0;
+		imageHeader.acquisitionDateTime.SetCurrentGPSTime() //set current time.
 
 //Setup camera information
 		imageHeader.sensorSerialNumber = (char*) bstrSerial;

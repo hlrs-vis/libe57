@@ -4,9 +4,9 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = "E57 Simple API V0.2.74"
-PROJECT_NUMBER         = "August 4, 2010"
-OUTPUT_DIRECTORY       = F:/Projects/E57Doxygen
+PROJECT_NAME           = "E57 Simple API V0.3.81"
+PROJECT_NUMBER         = "August 30, 2010"
+OUTPUT_DIRECTORY       = .
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English
 BRIEF_MEMBER_DESC      = YES
@@ -90,7 +90,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = F:/Projects/E57Doxygen
+INPUT                  = ..\..\src\refimpl\E57Simple.cpp ..\..\include\E57Simple.h
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \
