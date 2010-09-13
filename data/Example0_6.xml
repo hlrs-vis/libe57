@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<e57Root type="Structure"
+         xmlns="http://www.astm.org/COMMIT/E57/2010-e57-v0.6">
+  <formatName type="String"><![CDATA[ASTM E57 3D Imaging Data File]]></formatName>
+  <guid type="String"><![CDATA[{56D8F874-3656-4CA8-BA17-8BF9757063D0}]]></guid>
+  <versionMajor type="Integer"/>
+  <versionMinor type="Integer">6</versionMinor>
+  <e57libraryVersion type="String"><![CDATA[ReferenceImplementation 0.1.unknown]]></e57libraryVersion>
+  <coordinateMetadata type="String"/>
+  <creationDateTime type="Structure">
+    <dateTimeValue type="Float">9.6758299097398019e+008</dateTimeValue>
+    <isAtomicClockReferenced type="Integer"/>
+  </creationDateTime>
+  <data3D type="Vector" allowHeterogeneousChildren="1">
+    <vectorChild type="Structure">
+      <guid type="String"><![CDATA[{D2629847-A1DB-4579-9E86-5D146B68BEA5}]]></guid>
+      <name type="String"><![CDATA[sp412]]></name>
+      <description type="String"/>
+      <originalGuids type="Vector" allowHeterogeneousChildren="0">
+        <vectorChild type="String"><![CDATA[{D2629847-A1DB-4579-9E86-5D146B68BEA5}]]></vectorChild>
+      </originalGuids>
+      <sensorVendor type="String"><![CDATA[Z+F]]></sensorVendor>
+      <sensorModel type="String"><![CDATA[I5006]]></sensorModel>
+      <sensorSerialNumber type="String"><![CDATA[749]]></sensorSerialNumber>
+      <sensorHardwareVersion type="String"/>
+      <sensorSoftwareVersion type="String"><![CDATA[4.4.0.452]]></sensorSoftwareVersion>
+      <sensorFirmwareVersion type="String"><![CDATA[7.3.2.4067-534]]></sensorFirmwareVersion>
+      <temperature type="Float"/>
+      <relativeHumidity type="Float"/>
+      <atmosphericPressure type="Float"/>
+      <indexBounds type="Structure">
+        <rowMinimum type="Integer"/>
+        <rowMaximum type="Integer">544</rowMaximum>
+        <columnMinimum type="Integer"/>
+        <columnMaximum type="Integer">2474</columnMaximum>
+        <returnMinimum type="Integer"/>
+        <returnMaximum type="Integer">1</returnMaximum>
+      </indexBounds>
+      <cartesianBounds type="Structure">
+        <xMinimum type="Float">-3.4822070000000004e+001</xMinimum>
+        <xMaximum type="Float">6.0144900000000007e+001</xMaximum>
+        <yMinimum type="Float">-6.0470880000000008e+001</yMinimum>
+        <yMaximum type="Float">2.7181180000000001e+001</yMaximum>
+        <zMinimum type="Float">-1.7434500000000002</zMinimum>
+        <zMaximum type="Float">2.4927470000000003e+001</zMaximum>
+      </cartesianBounds>
+      <sphericalBounds type="Structure">
+        <rangeMinimum type="Float">3.9576547234441772e-001</rangeMinimum>
+        <rangeMaximum type="Float">7.7163338017299395e+001</rangeMaximum>
+        <elevationMinimum type="Float">8.9131504370612624e-001</elevationMinimum>
+        <elevationMaximum type="Float">1.29059673e+002</elevationMaximum>
+        <azimuthStart type="Float">1.1414356755805439e-003</azimuthStart>
+        <azimuthEnd type="Float">4.4799278299999997e+002</azimuthEnd>
+      </sphericalBounds>
+      <pose type="Structure">
+        <rotation type="Structure">
+          <w type="Float">4.1495323938135464e-001</w>
+          <x type="Float">-3.2966867867298849e-003</x>
+          <y type="Float">1.0011244071749291e-003</y>
+          <z type="Float">-9.0983621533387571e-001</z>
+        </rotation>
+        <translation type="Structure">
+          <x type="Float">-1.0437926491522425e+002</x>
+          <y type="Float">7.193530136798914e+001</y>
+          <z type="Float">-5.1076336466587668e-001</z>
+        </translation>
+      </pose>
+      <acquisitionStart type="Structure">
+        <dateTimeValue type="Float">9.4568586099999189e+008</dateTimeValue>
+        <isAtomicClockReferenced type="Integer"/>
+      </acquisitionStart>
+      <acquisitionEnd type="Structure">
+        <dateTimeValue type="Float">9.4568628899999189e+008</dateTimeValue>
+        <isAtomicClockReferenced type="Integer"/>
+      </acquisitionEnd>
+      <pointGroupingSchemes type="Structure">
+        <groupingByLine type="Structure">
+          <idElementName type="String"><![CDATA[columnIndex]]></idElementName>
+          <groups type="CompressedVector" fileOffset="21794476" recordCount="2474">
+            <prototype type="Structure">
+              <idElementValue type="Integer" minimum="0" maximum="2474"/>
+              <startPointIndex type="Integer" minimum="0" maximum="1345856"/>
+              <pointCount type="Integer" minimum="0" maximum="544"/>
+            </prototype>
+            <codecs type="Vector" allowHeterogeneousChildren="1">
+            </codecs>
+          </groups>
+        </groupingByLine>
+      </pointGroupingSchemes>
+      <points type="CompressedVector" fileOffset="40" recordCount="1345856">
+        <prototype type="Structure">
+          <cartesianX type="Float" precision="single"/>
+          <cartesianY type="Float" precision="single"/>
+          <cartesianZ type="Float" precision="single"/>
+          <cartesianInvalidState type="Integer" minimum="0" maximum="1"/>
+          <intensity type="Float" precision="single" minimum="0" maximum="1"/>
+        </prototype>
+        <codecs type="Vector" allowHeterogeneousChildren="1">
+        </codecs>
+      </points>
+    </vectorChild>
+  </data3D>
+  <image2D type="Vector" allowHeterogeneousChildren="1">
+    <vectorChild type="Structure">
+      <guid type="String"><![CDATA[{489CC665-BC16-4484-A04F-39FDF9798F65}]]></guid>
+      <name type="String"><![CDATA[sp412]]></name>
+      <description type="String"/>
+      <sensorVendor type="String"/>
+      <sensorModel type="String"/>
+      <sensorSerialNumber type="String"/>
+      <associatedData3DGuid type="String"><![CDATA[{D2629847-A1DB-4579-9E86-5D146B68BEA5}]]></associatedData3DGuid>
+      <acquisitionDateTime type="Structure">
+        <dateTimeValue type="Float">9.4568586099999189e+008</dateTimeValue>
+        <isAtomicClockReferenced type="Integer"/>
+      </acquisitionDateTime>
+      <pose type="Structure">
+        <rotation type="Structure">
+          <w type="Float">4.1495323938135464e-001</w>
+          <x type="Float">-3.2966867867298849e-003</x>
+          <y type="Float">1.0011244071749291e-003</y>
+          <z type="Float">-9.0983621533387571e-001</z>
+        </rotation>
+        <translation type="Structure">
+          <x type="Float">-1.0437926491522425e+002</x>
+          <y type="Float">7.193530136798914e+001</y>
+          <z type="Float">-3.9486336466587668e-001</z>
+        </translation>
+      </pose>
+      <sphericalRepresentation type="Structure">
+        <jpegImage type="Blob" fileOffset="21807876" length="1372754"/>
+        <imageHeight type="Integer">2169</imageHeight>
+        <imageWidth type="Integer">9892</imageWidth>
+        <pixelHeight type="Float">6.2860821192160918e-004</pixelHeight>
+        <pixelWidth type="Float">6.2793742364311957e-004</pixelWidth>
+      </sphericalRepresentation>
+    </vectorChild>
+  </image2D>
+</e57Root>
+   
