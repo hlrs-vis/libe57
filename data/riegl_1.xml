@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<e57Root type="Structure"
+         xmlns="http://www.astm.org/COMMIT/E57/2010-e57-v0.6">
+  <formatName type="String"><![CDATA[ASTM E57 3D Imaging Data File]]></formatName>
+  <guid type="String"><![CDATA[dev]]></guid>
+  <versionMajor type="Integer"/>
+  <versionMinor type="Integer">6</versionMinor>
+  <data3D type="Vector" allowHeterogeneousChildren="1">
+    <vectorChild type="Structure">
+      <guid type="String"><![CDATA[riegl.rxp]]></guid>
+      <points type="CompressedVector" fileOffset="40" recordCount="4276719">
+        <prototype type="Structure">
+          <cartesianX type="ScaledInteger" minimum="0" maximum="27377986" scale="2.5000000000000001e-005" offset="-4.0832891845703125e+002"/>
+          <cartesianY type="ScaledInteger" minimum="0" maximum="19910156" scale="2.5000000000000001e-005" offset="-2.2075117492675781e+002"/>
+          <cartesianZ type="ScaledInteger" minimum="0" maximum="1956276" scale="2.5000000000000001e-005" offset="-9.5104522705078125"/>
+          <valid type="Integer" minimum="0" maximum="1"/>
+          <returnIndex type="Integer" minimum="0" maximum="99"/>
+          <returnCount type="Integer" minimum="1" maximum="100">1</returnCount>
+          <timeStamp type="ScaledInteger" minimum="0" maximum="42999" scale="1e-003" offset="2.5287873065516544e+002"/>
+          <intensity type="ScaledInteger" minimum="0" maximum="68" offset="3.8999998569488525e-001"/>
+        </prototype>
+        <codecs type="Vector" allowHeterogeneousChildren="1">
+        </codecs>
+      </points>
+    </vectorChild>
+  </data3D>
+</e57Root>
+   

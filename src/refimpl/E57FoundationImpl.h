@@ -161,6 +161,7 @@ const uint32_t E57_FORMAT_MINOR = 6;
 
 /// Version of Reference Implementation, E57_REFIMPL_REVISION_ID should be passed from compiler command line
 /// All this macro trickery because E57_REFIMPL_REVISION_ID might not be numeric (e.g. 27M, or exported).
+
 #define E57_REFIMPL_MAJOR          0
 #define E57_REFIMPL_MINOR          1
 #ifndef E57_REFIMPL_REVISION_ID
@@ -171,13 +172,16 @@ const uint32_t E57_FORMAT_MINOR = 6;
 #define QUOTED_E57_REFIMPL_MAJOR        DO_QUOTE(E57_REFIMPL_MAJOR)
 #define QUOTED_E57_REFIMPL_MINOR        DO_QUOTE(E57_REFIMPL_MINOR)
 #define QUOTED_E57_REFIMPL_REVISION_ID  DO_QUOTE(E57_REFIMPL_REVISION_ID)
+#if 0
 const char E57_LIBRARY_ID[] = "ReferenceImplementation "      \
                               QUOTED_E57_REFIMPL_MAJOR        \
                               "."                             \
                               QUOTED_E57_REFIMPL_MINOR        \
                               "."                             \
                               QUOTED_E57_REFIMPL_REVISION_ID;
-
+#else
+const char E57_LIBRARY_ID[] = QUOTED_E57_REFIMPL_REVISION_ID;
+#endif
 /// Section types:
 #define E57_BLOB_SECTION                1
 #define E57_COMPRESSED_VECTOR_SECTION   2

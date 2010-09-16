@@ -48,6 +48,8 @@ else()
     string(STRIP ${${PROJECT_NAME}_BUILD_VERSION} ${PROJECT_NAME}_BUILD_VERSION)
 endif ()
 
+set(E57_REFIMPL_REVISION_ID ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION}.${${PROJECT_NAME}_BUILD_VERSION})
+
 if (MSVC)
     # Compiler switches for C++
     set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1")
@@ -110,12 +112,32 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 # Find the Boost and Xerces libraries
-find_package(Boost QUIET)
+set(Boost_USE_STATIC_LIBS   ON)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_ADDITIONAL_VERSIONS "1.42" "1.42.0" "1.43" "1.43.0")
+
+#find_package(Boost QUIET)
+#if (NOT Boost_FOUND)
+#    set(BOOST_INCLUDEDIR CACHE PATH  "Location of the boost include directory" )
+#    message(FATAL_ERROR
+#"Unable to find boost library.
+#Please set the BOOST_INCLUDEDIR to point to the boost header files."
+#)
+#endif(NOT Boost_FOUND)
+
+find_package(Boost
+    COMPONENTS
+        program_options
+        system
+        thread
+        filesystem
+    QUIET
+)
 if (NOT Boost_FOUND)
-    set(BOOST_INCLUDEDIR CACHE PATH  "Location of the boost include directory" )
+    set(BOOST_ROOT CACHE PATH  "Location of the boost root directory" )
     message(FATAL_ERROR
 "Unable to find boost library.
-Please set the BOOST_INCLUDEDIR to point to the boost header files."
+Please set the BOOST_ROOT to point to the boost distribution files."
 )
 endif(NOT Boost_FOUND)
 
@@ -137,6 +159,14 @@ include_directories(
     ${Boost_INCLUDE_DIR}
 )
 
+link_directories(
+    ${Boost_LIBRARY_DIRS}
+)
+
+add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
+set(CDEFS "XERCES_STATIC_LIBRARY\;E57_REFIMPL_REVISION_ID=${${PROJECT_NAME}_TAG}\;SVN_VERSION=${${PROJECT_NAME}_BUILD_VERSION}")
+set(CFLAGS " ")
+
 #
 # The reference implementation
 #
@@ -148,10 +178,11 @@ add_library( E57RefImpl STATIC
     include/E57Foundation.h
 )
 set_target_properties( E57RefImpl
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
 )
 set_target_properties( E57RefImpl
     PROPERTIES DEBUG_POSTFIX "-d"
+    COMPILE_FLAGS ${CFLAGS}
 )
 install(
     FILES
@@ -175,7 +206,8 @@ add_library( LASReader STATIC
     include/LASReader.h
 )
 set_target_properties( LASReader
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
+    COMPILE_FLAGS ${CFLAGS}
 )
 
 #
@@ -198,7 +230,8 @@ add_executable( DemoWrite01
     src/examples/DemoWrite01.cpp
 )
 set_target_properties( DemoWrite01
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
+    COMPILE_FLAGS ${CFLAGS}
 )
 target_link_libraries( DemoWrite01
     E57RefImpl
@@ -210,7 +243,8 @@ add_executable( DemoRead01
     src/examples/DemoRead01.cpp
 )
 set_target_properties( DemoRead01
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
+    COMPILE_FLAGS ${CFLAGS}
 )
 target_link_libraries( DemoRead01
     E57RefImpl
@@ -226,7 +260,8 @@ add_executable( las2e57
     src/tools/las2e57.cpp
 )
 set_target_properties( las2e57
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
+    COMPILE_FLAGS ${CFLAGS}
 )
 target_link_libraries( las2e57
     E57RefImpl
@@ -247,7 +282,8 @@ add_executable( e57fields
     src/tools/e57fields.cpp
 )
 set_target_properties( e57fields
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
+    COMPILE_FLAGS ${CFLAGS}
 )
 target_link_libraries( e57fields
     E57RefImpl
@@ -265,7 +301,8 @@ add_executable( e57xmldump
     src/tools/e57xmldump.cpp
 )
 set_target_properties( e57xmldump
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
+    COMPILE_FLAGS ${CFLAGS}
 )
 target_link_libraries( e57xmldump
     E57RefImpl
@@ -278,4 +315,41 @@ install(
     RUNTIME DESTINATION
         bin
 )
+
+add_executable( e57unpack
+    src/tools/e57unpack.cpp
+)
+set_target_properties( e57unpack
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
+    COMPILE_FLAGS ${CFLAGS}
+)
+if (MSVC)
+target_link_libraries( e57unpack
+    E57RefImpl
+    debug ${Xerces_LIBRARY_DEBUG}
+    optimized ${E57_LIBRARY_RELEASE} ${Xerces_LIBRARY_RELEASE}
+)
+else (MSVC)
+target_link_libraries( e57unpack
+    E57RefImpl
+    debug ${Xerces_LIBRARY_DEBUG}
+    optimized ${E57_LIBRARY_RELEASE} ${Xerces_LIBRARY_RELEASE}
+    ${Boost_LIBRARIES}
+)
+endif (MSVC)
+install(
+    TARGETS
+        e57unpack
+    RUNTIME DESTINATION
+        bin
+)
+
+install(
+    FILES
+        CHANGES.TXT
+        README.TXT
+    DESTINATION
+        .
+)
+
 
