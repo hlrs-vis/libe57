@@ -28,7 +28,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 # Private Xerces find module
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../../cmake/Modules/")
 
 include(CMakeGenerateDocumentation)
 
@@ -103,8 +103,8 @@ Please set the the XERCES_ROOT to point to the root of the xerces directory."
 endif (NOT Xerces_FOUND)
 
 include_directories(
-    ../include
-    ../src/refimpl
+    ../../include
+    ../../src/refimpl
     ${Xerces_INCLUDE_DIR}
     ${Boost_INCLUDE_DIR}
 )
@@ -114,10 +114,10 @@ include_directories(
 #
 
 add_library( E57RefImpl STATIC
-    ../src/refimpl/E57Foundation.cpp
-    ../src/refimpl/E57FoundationImpl.cpp
-    ../src/refimpl/E57FoundationImpl.h
-    ../include/E57Foundation.h
+    ../../src/refimpl/E57Foundation.cpp
+    ../../src/refimpl/E57FoundationImpl.cpp
+    ../../src/refimpl/E57FoundationImpl.h
+    ../../include/E57Foundation.h
 )
 set_target_properties( E57RefImpl
     PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
@@ -131,7 +131,7 @@ set_target_properties( E57RefImpl
 #
 
 add_executable( e57xmldump
-    ../src/tools/e57xmldump.cpp
+    ../../src/tools/e57xmldump.cpp
 )
 set_target_properties( e57xmldump
     PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
@@ -147,44 +147,44 @@ target_link_libraries( e57xmldump
 #
 
 set(DOC_EXAMPLES
-    FoundationAPI/examples/HelloWorld.cpp
-    FoundationAPI/examples/Cancel.cpp
-    FoundationAPI/examples/Extensions.cpp
-    FoundationAPI/examples/NameParse.cpp
-    FoundationAPI/examples/ImageFileDump.cpp
-    FoundationAPI/examples/NodeFunctions.cpp
-    FoundationAPI/examples/StructureCreate.cpp
-    FoundationAPI/examples/VectorCreate.cpp
-    FoundationAPI/examples/VectorFunctions.cpp
-    FoundationAPI/examples/IntegerCreate.cpp
-    FoundationAPI/examples/ScaledIntegerCreate.cpp
-    FoundationAPI/examples/FloatCreate.cpp
-    FoundationAPI/examples/StringCreate.cpp
-    FoundationAPI/examples/BlobCreate.cpp
-    FoundationAPI/examples/CompressedVectorCreate.cpp
-    FoundationAPI/examples/SourceDestBufferNumericCreate.cpp
-    FoundationAPI/examples/SourceDestBufferStringCreate.cpp
-    FoundationAPI/examples/E57ExceptionFunctions.cpp
-    FoundationAPI/examples/RawXML.cpp
-    FoundationAPI/examples/Versions.cpp
-    FoundationAPI/examples/SourceDestBufferFunctions.cpp
-    FoundationAPI/examples/CheckInvariant.cpp
+    examples/HelloWorld.cpp
+    examples/Cancel.cpp
+    examples/Extensions.cpp
+    examples/NameParse.cpp
+    examples/ImageFileDump.cpp
+    examples/NodeFunctions.cpp
+    examples/StructureCreate.cpp
+    examples/VectorCreate.cpp
+    examples/VectorFunctions.cpp
+    examples/IntegerCreate.cpp
+    examples/ScaledIntegerCreate.cpp
+    examples/FloatCreate.cpp
+    examples/StringCreate.cpp
+    examples/BlobCreate.cpp
+    examples/CompressedVectorCreate.cpp
+    examples/SourceDestBufferNumericCreate.cpp
+    examples/SourceDestBufferStringCreate.cpp
+    examples/E57ExceptionFunctions.cpp
+    examples/RawXML.cpp
+    examples/Versions.cpp
+    examples/SourceDestBufferFunctions.cpp
+    examples/CheckInvariant.cpp
 )
 
-file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/FoundationAPI/examples)
+file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/examples)
 
 generate_documentation(doc
-    FoundationAPI/Doxyfile
+    Doxyfile
     DOXYVAR_INPUT
-        ../src/refimpl/E57Foundation.cpp
-        ../include/E57Foundation.h
+        ../../src/refimpl/E57Foundation.cpp
+        ../../include/E57Foundation.h
         ${DOC_EXAMPLES}
     DOXYVAR_OUTPUT_DIRECTORY
         ${PROJECT_BINARY_DIR}
     DOXYVAR_EXAMPLE_PATH
-        FoundationAPI/examples
-        ${PROJECT_BINARY_DIR}/FoundationAPI/examples
-        ../src/refimpl
+        examples
+        ${PROJECT_BINARY_DIR}/examples
+        ../../src/refimpl
 )
 
 foreach(X ${DOC_EXAMPLES})
@@ -197,8 +197,8 @@ foreach(X ${DOC_EXAMPLES})
         optimized ${Xerces_LIBRARY_RELEASE}
     )
     add_custom_command(TARGET ${F} POST_BUILD
-        COMMAND ${F} > FoundationAPI/examples/${F}.out
-        COMMAND e57xmldump temp._e57 > FoundationAPI/examples/${F}.xml
+        COMMAND ${F} > examples/${F}.out
+        COMMAND e57xmldump temp._e57 > examples/${F}.xml
     )
     add_dependencies(doc ${F})
 endforeach()
@@ -212,10 +212,10 @@ install(
 
 install(
     FILES
-        libE57ReleaseNotes.doc
-        las2e57.doc
-        e57xmldump.doc
-        e57fields.doc
+        ../libE57ReleaseNotes.doc
+        ../las2e57.doc
+        ../e57xmldump.doc
+        ../e57fields.doc
     DESTINATION
         .
 )
