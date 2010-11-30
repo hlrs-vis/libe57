@@ -40,6 +40,7 @@
 //	V5		May 18, 2010	Stan Coleby		scoleby@intelisum.com
 //	V6		June 8, 2010	Stan Coleby		scoleby@intelisum.com
 //  V7		July 28,2010	Stan Coleby		scoleby@intelisum.com
+//  V8		Nov. 3, 2010	Stan Coleby		scoleby@intelisum.com  Added new intensityLimits and colorLimits
 //
 //////////////////////////////////////////////////////////////////////////
 /*================*/ /*!
@@ -128,9 +129,9 @@ An example of a typical use of this interface would be as follows:
 		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize);
 
 //Setup buffers
-		int32_t * isInvalidData = NULL;
+		int8_t * isInvalidData = NULL;
 		if(scanHeader.pointFields.cartesianInvalidStateField)
-			isInvalidData = new int32_t[nRow];
+			isInvalidData = new int8_t[nRow];
 
 //Setup Points
 		double * xData = NULL;
@@ -148,23 +149,41 @@ An example of a typical use of this interface would be as follows:
 //Setup intensity buffers if present
 		double * intData = NULL;
 		bool bIntensity = false;
+		double intRange = 0;
+		double intOffset = 0;
+
 		if(scanHeader.pointFields.intensityField)
 		{
 			bIntensity = true;
 			intData = new double[nRow];
+			intRange = scanHeader.intensityLimits.intensityMaximum - scanHeader.intensityLimits.intensityMinimum;
+			intOffset = scanHeader.intensityLimits.intensityMinimum;
 		}
 
 //Setup color buffers if present
-		double * redData = NULL;
-		double * greenData = NULL;
-		double * blueData = NULL;
+		uint16_t * redData = NULL;
+		uint16_t * greenData = NULL;
+		uint16_t * blueData = NULL;
 		bool bColor = false;
+		int32_t		colorRedRange = 1;
+		int32_t		colorRedOffset = 0;
+		int32_t		colorGreenRange = 1;
+		int32_t		colorGreenOffset = 0;
+		int32_t		colorBlueRange = 1;
+		int32_t		colorBlueOffset = 0;
+
 		if(header.pointFields.colorRedField)
 		{
 			bColor = true;
-			redData = new double[nRow];
-			greenData = new double[nRow];
-			blueData = new double[nRow];
+			redData = new uint16_t[nRow];
+			greenData = new uint16_t[nRow];
+			blueData = new uint16_t[nRow];
+			colorRedRange = header.colorLimits.colorRedMaximum - header.colorLimits.colorRedMinimum;
+			colorRedOffset = header.colorLimits.colorRedMinimum;
+			colorGreenRange = header.colorLimits.colorGreenMaximum - header.colorLimits.colorGreenMinimum;
+			colorGreenOffset = header.colorLimits.colorGreenMinimum;
+			colorBlueRange = header.colorLimits.colorBlueMaximum - header.colorLimits.colorBlueMinimum;
+			colorBlueOffset = header.colorLimits.colorBlueMinimum;
 		}
 
 //Read the group information
@@ -202,20 +221,43 @@ An example of a typical use of this interface would be as follows:
 
 //Read the point data
 
+		int64_t group = 0;
+		int64_t startPoint = 0;
+		int64_t count = 0;
+		unsigned size = 0;
+
 		for(long col = 0; col < nColumn; col++)
 		{
-//Read a column
-			unsigned size = dataReader.read();
-
-			for(long row = 0; row < nRow; row++)
+//Groups
+			if(nGroupsSize > 0)
 			{
-				pScan->SetPoint(row,col, xData[row], yData[row], zData[row]);
+				group = idElementValue[col];
+				startPoint = startPointIndex[col];
+				count = pointCount[col];
 
-				if(bIntensity)
-					pScan->SetIntensity(row, col, intData[row]);
+				dataReader.seek(startPoint);
+				size = dataReader.read(count);
+			}
+			else
+//Read a column
+				size = dataReader.read();
 
-				if(bColor)
-					pScan->SetColor(row, col, redData[row], greenData[row], blueData[row]);
+//Use the data
+			for(long row = 0; row < size; row++)
+			{
+				if(isInvalidData[row] == 0)
+					pScan->SetPoint(row,col, xData[row], yData[row], zData[row]);
+
+				if(bIntensity){	//Normalize intensity to 0 - 1.
+					double intensity = (intData[row] - intOffset)/intRange;
+					pScan->SetIntensity(row, col, intensity);
+				}
+
+				if(bColor){ //Normalize color to 0 - 255
+					int red = ((redData[row] - colorRedOffset) * 255)/colorRedRange;
+					int green = ((greenData[row] - colorGreenOffset) * 255)/colorBlueRange;
+					int blue = ((blueData[row] - colorBlueOffset) * 255)/colorBlueRange;
+					pScan->SetColor(row, col, red, green, blue);
 			}
 		}
 
@@ -343,6 +385,7 @@ An example of a typical use of this interface would be as follows:
 		OLECHAR wbuffer[64];
 		StringFromGUID2(guid,&wbuffer[0],64);
 		_bstr_t bstrScanGuid = &wbuffer[0];
+
 		scanHeader.guid = (char*) bstrScanGuid;
 
 		scanHeader.acquisitionStart.SetCurrentGPSTime();	//use real time
@@ -409,7 +452,7 @@ An example of a typical use of this interface would be as follows:
 
 //Setup Points
 		scanHeader.pointFields.cartesianInvalidStateField = true;
-		int32_t * isInvalidData = new int32_t[nRow];
+		int8_t * isInvalidData = new int8_t[nRow];
 
 		scanHeader.pointFields.cartesianXField = true;
 		double * xData = new double[nRow];
@@ -418,18 +461,29 @@ An example of a typical use of this interface would be as follows:
 		scanHeader.pointFields.cartesianZField = true;
 		double * zData = new double[nRow];
 
+		scanHeader.pointFields.pointRangeScaledInteger = .00001;
+		scanHeader.pointFields.pointRangeMinimum = ((double)-e57::E57_INT32_MAX) / .00001;
+		scanHeader.pointFields.pointRangeMaximum = ((double) e57::E57_INT32_MAX) / .00001;
+
 //Setup Color
-		double * redData = NULL;
-		double * greenData = NULL;
-		double * blueData = NULL;
+		uint16_t * redData = NULL;
+		uint16_t * greenData = NULL;
+		uint16_t * blueData = NULL;
 		if(exportColor)
 		{
 			scanHeader.pointFields.colorRedField = true;
-			redData = new double[nRow];
+			redData = new uint16_t[nRow];
 			scanHeader.pointFields.colorGreenField = true;
-			greenData = new double[nRow];
+			greenData = new uint16_t[nRow];
 			scanHeader.pointFields.colorBlueField = true;
-			blueData = new double[nRow];
+			blueData = new uint16_t[nRow];
+
+			scanheader.colorLimits.colorRedMinimum = e57::E57_UINT8_MIN;
+			scanheader.colorLimits.colorRedMaximum = e57::E57_UINT8_MAX;
+			scanheader.colorLimits.colorGreenMinimum = e57::E57_UINT8_MIN;
+			scanheader.colorLimits.colorGreenMaximum = e57::E57_UINT8_MAX;
+			scanheader.colorLimits.colorBlueMinimum = e57::E57_UINT8_MIN;
+			scanheader.colorLimits.colorBlueMaximum = e57::E57_UINT8_MAX;
 		}
 //Setup Intensity
 		double * intData = NULL;
@@ -437,6 +491,10 @@ An example of a typical use of this interface would be as follows:
 		{
 			scanHeader.pointFields.intensityField = true;
 			intData = new double[nRow];
+
+			header.intensityLimits.intensityMaximum = 1.;
+			headerintensityLimits.intensityMinimum = 0.;
+			header.pointFields.intensityScaledInteger = 0.;		//0. uses FloatNode, -1. uses IntegerNode, >0. uses ScaledIntegerNode
 		}
 
 //Write out a new scan header and receive back the index							
@@ -481,20 +539,21 @@ An example of a typical use of this interface would be as follows:
 				xData[count] = point.x();
 				yData[count] = point.y();
 				zData[count] = point.z();
-//Get the intensity
+
+//Get the intensity 0. to 1. range
 				if(exportIntensity)
 					intData[count] = pScan->GetIntensity(i, j);
 //Get the color
 				if(exportColor)
 				{
-					WORD red = 0;
-					WORD green = 0;
-					WORD blue = 0;
+					uint8_t red = 0;
+					uint8_t green = 0;
+					uint8_t blue = 0;
 					pScan->GetColor(i, j, &red, &green, &blue);
 						
-					redData[count] = (double) red;
-					greenData[count] = (double) green;
-					blueData[count] = (double) blue;
+					redData[count] = (uint8_t) red;
+					greenData[count] = (uint8_t) green;
+					blueData[count] = (uint8_t) blue;
 				}
 				count++;
 			}
@@ -749,9 +808,9 @@ void	DateTime::GetSystemTime(
 	Data3D::Data3D(void)
 {
 	originalGuids.clear();
-	temperature = 0.;
-	relativeHumidity = 0.;
-	atmosphericPressure = 0.;
+	temperature = E57_FLOAT_MAX;
+	relativeHumidity = E57_FLOAT_MAX;
+	atmosphericPressure = E57_FLOAT_MAX;
 
 	acquisitionStart.dateTimeValue = 0.;
 	acquisitionStart.isAtomicClockReferenced = 0;
@@ -787,13 +846,35 @@ void	DateTime::GetSystemTime(
 	indexBounds.returnMinimum = 0;
 	indexBounds.returnMaximum = 0;
 
-	pointGroupingSchemes.groupingByLine.groupsSize = 0;
-	pointGroupingSchemes.groupingByLine.idElementName = "columnIndex";
+	intensityLimits.intensityMinimum = 0.;
+	intensityLimits.intensityMaximum = 0.;
 
-	pointFields.sphericalAzimuthField = false;
+	colorLimits.colorRedMinimum = 0.;
+	colorLimits.colorRedMaximum = 0.;
+	colorLimits.colorGreenMinimum = 0.;
+	colorLimits.colorGreenMaximum = 0.;
+	colorLimits.colorBlueMinimum = 0.;
+	colorLimits.colorBlueMaximum = 0.;
+
+	pointGroupingSchemes.groupingByLine.groupsSize = 0;
+
+	pointFields.cartesianXField = false;
+	pointFields.cartesianYField = false;
+	pointFields.cartesianZField = false;
+	pointFields.cartesianInvalidStateField = false;
+
+	pointFields.pointRangeScaledInteger = 0.;
+	pointFields.pointRangeMinimum = E57_FLOAT_MIN;
+	pointFields.pointRangeMaximum = E57_FLOAT_MAX;
+
 	pointFields.sphericalRangeField = false;
+	pointFields.sphericalAzimuthField = false;
 	pointFields.sphericalElevationField = false;
 	pointFields.sphericalInvalidStateField = false;
+
+	pointFields.angleScaledInteger = 0.;
+	pointFields.angleMinimum = E57_FLOAT_MIN;
+	pointFields.angleMaximum = E57_FLOAT_MAX;
 
 	pointFields.colorBlueField = false;
 	pointFields.colorGreenField = false;
@@ -801,20 +882,22 @@ void	DateTime::GetSystemTime(
 	pointFields.isColorInvalidField = false;
 
 	pointFields.columnIndexField = false;
+	pointFields.rowIndexField = false;
+	pointFields.indexMaximum = E57_UINT32_MAX;
+
 	pointFields.returnCountField = false;
 	pointFields.returnIndexField = false;
-	pointFields.rowIndexField = false;
+	pointFields.returnMaximum = E57_UINT8_MAX;
 
 	pointFields.intensityField = false;
 	pointFields.isIntensityInvalidField = false;
+	pointFields.intensityScaledInteger = -1.;	//Default to -1 means IntegerNode, 0. means FloatNode, and >0. means ScaleIntegerNode
 
 	pointFields.timeStampField = false;
 	pointFields.isTimeStampInvalidField = false;
+	pointFields.timeMaximum = E57_DOUBLE_MAX;
 
-	pointFields.cartesianXField = false;
-	pointFields.cartesianYField = false;
-	pointFields.cartesianZField = false;
-	pointFields.cartesianInvalidStateField = false;
+
 
 	pointsSize = 0;
 };
@@ -1001,28 +1084,28 @@ CompressedVectorReader	Reader :: SetUpData3DPointsData(
 	double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
 	double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
 	double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
-	int32_t*	cartesianInvalidState,	//!< Value = 0 if the point is considered valid, 1 otherwise
+	int8_t*		cartesianInvalidState,	//!< Value = 0 if the point is considered valid, 1 otherwise
 
 	double*		intensity,			//!< pointer to a buffer with the Point response intensity. Unit is unspecified
-	int32_t*	isIntensityInvalid,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+	int8_t*		isIntensityInvalid,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
 
-	double*		colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
-	double*		colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
-	double*		colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
-	int32_t*	isColorInvalid,		//!< Value = 0 if the color is considered valid, 1 otherwise
+	uint16_t*	colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+	uint16_t*	colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+	uint16_t*	colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+	int8_t*		isColorInvalid,		//!< Value = 0 if the color is considered valid, 1 otherwise
 
 	double*		sphericalRange,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
 	double*		sphericalAzimuth,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
 	double*		sphericalElevation,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
-	int32_t*	sphericalInvalidState, //!< Value = 0 if the range is considered valid, 1 otherwise
+	int8_t*		sphericalInvalidState, //!< Value = 0 if the range is considered valid, 1 otherwise
 
-	int64_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
-	int64_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
-	int64_t*	returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
-	int64_t*	returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+	int32_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+	int32_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+	int8_t*		returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+	int8_t*		returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
 
 	double*		timeStamp,			//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
-	int32_t*	isTimeStampInvalid	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
+	int8_t*		isTimeStampInvalid	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 	) const
 {
 	return impl_->SetUpData3DPointsData( dataIndex, pointCount,
@@ -1106,28 +1189,28 @@ CompressedVectorWriter	Writer :: SetUpData3DPointsData(
 	double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
 	double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
 	double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
-	int32_t*	cartesianInvalidState,	//!< Value = 0 if the point is considered valid, 1 otherwise
+	int8_t*		cartesianInvalidState,	//!< Value = 0 if the point is considered valid, 1 otherwise
 
 	double*		intensity,			//!< pointer to a buffer with the Point response intensity. Unit is unspecified
-	int32_t*	isIntensityInvalid,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+	int8_t*		isIntensityInvalid,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
 
-	double*		colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
-	double*		colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
-	double*		colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
-	int32_t*	isColorInvalid,		//!< Value = 0 if the color is considered valid, 1 otherwise
+	uint16_t*	colorRed,			//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+	uint16_t*	colorGreen,			//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+	uint16_t*	colorBlue,			//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+	int8_t*		isColorInvalid,		//!< Value = 0 if the color is considered valid, 1 otherwise
 
 	double*		sphericalRange,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
 	double*		sphericalAzimuth,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
 	double*		sphericalElevation,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
-	int32_t*	sphericalInvalidState, //!< Value = 0 if the range is considered valid, 1 otherwise
+	int8_t*		sphericalInvalidState, //!< Value = 0 if the range is considered valid, 1 otherwise
 
-	int64_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
-	int64_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
-	int64_t*	returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
-	int64_t*	returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+	int32_t*	rowIndex,			//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
+	int32_t*	columnIndex,		//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
+	int8_t*		returnIndex,		//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+	int8_t*		returnCount,		//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
 
 	double*		timeStamp,			//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
-	int32_t*	isTimeStampInvalid	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
+	int8_t*		isTimeStampInvalid	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 	) const
 {
 		return impl_->SetUpData3DPointsData( dataIndex, pointCount,

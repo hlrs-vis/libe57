@@ -147,7 +147,7 @@ public:
 //
 //	e57::IndexBounds
 //
-//! @brief The e57::IndexBounds structure stores the minimum and maximum 669 of rowIndex, columnIndex, and returnIndex fields for a set of points.
+//! @brief The e57::IndexBounds structure stores the minimum and maximum of rowIndex, columnIndex, and returnIndex fields for a set of points.
 
 class IndexBounds {
 public:
@@ -157,6 +157,32 @@ public:
 	int64_t		columnMaximum;	//!< The maximum columnIndex value of any point represented by this IndexBounds object.
 	int64_t		returnMinimum;	//!< The minimum returnIndex value of any point represented by this IndexBounds object.
 	int64_t		returnMaximum;	//!< The maximum returnIndex value of any point represented by this IndexBounds object.
+};
+////////////////////////////////////////////////////////////////////
+//
+//	e57::IntensityLimits
+//
+//! @brief The e57::IntensityLimits Structure specifies the limits for the value of signal intensity that a sensor is capable of producing
+
+class IntensityLimits {
+public:
+	double		intensityMinimum;		//!< The minimum producible intensity value. Unit is unspecified.
+	double		intensityMaximum;		//!< The maximum producible intensity value. Unit is unspecified.
+};
+////////////////////////////////////////////////////////////////////
+//
+//	e57::ColorLimits
+//
+//! @brief The e57::ColorLimits Structure specifies the limits for the value of red, green, and blue color that a sensor is capable of producing.
+
+class ColorLimits {
+public:
+	double		colorRedMinimum;		//!< The minimum producible red color value. Unit is unspecified.
+	double		colorRedMaximum;		//!< The maximum producible red color value. Unit is unspecified.
+	double		colorGreenMinimum;		//!< The minimum producible green color value. Unit is unspecified.
+	double		colorGreenMaximum;		//!< The maximum producible green color value. Unit is unspecified.
+	double		colorBlueMinimum;		//!< The minimum producible blue color value. Unit is unspecified.
+	double		colorBlueMaximum;		//!< The maximum producible blue color value. Unit is unspecified.
 };
 ////////////////////////////////////////////////////////////////////
 //
@@ -281,39 +307,52 @@ public:
 
 class PointStandardizedFieldsAvailable {
 public:
-	bool	cartesianXField;			//!< indicates that the PointRecord cartesianX field is active
-	bool	cartesianYField;			//!< indicates that the PointRecord cartesianY field is active
-	bool	cartesianZField;			//!< indicates that the PointRecord cartesianZ field is active
-	bool	cartesianInvalidStateField; //!< Indicates that the PointRecord cartesianInvalidState field is active
+	bool		cartesianXField;			//!< Indicates that the PointRecord cartesianX field is active
+	bool		cartesianYField;			//!< Indicates that the PointRecord cartesianY field is active
+	bool		cartesianZField;			//!< Indicates that the PointRecord cartesianZ field is active
+	bool		cartesianInvalidStateField; //!< Indicates that the PointRecord cartesianInvalidState field is active
 
-	bool	sphericalRangeField;		//!< indicates that the PointRecord sphericalRange field is active
-	bool	sphericalAzimuthField;		//!< indicates that the PointRecord sphericalAzimuth field is active
-	bool	sphericalElevationField;	//!< indicates that the PointRecord sphericalElevation field is active
-	bool	sphericalInvalidStateField; //!< Indicates that the PointRecord sphericalInvalidState field is active
+	bool		sphericalRangeField;		//!< Indicates that the PointRecord sphericalRange field is active
+	bool		sphericalAzimuthField;		//!< Indicates that the PointRecord sphericalAzimuth field is active
+	bool		sphericalElevationField;	//!< Indicates that the PointRecord sphericalElevation field is active
+	bool		sphericalInvalidStateField; //!< Indicates that the PointRecord sphericalInvalidState field is active
 
-	bool	rowIndexField;				//!< indicates that the PointRecord rowIndex field is active
-	bool	columnIndexField;			//!< indicates that the PointRecord columnIndex field is active
-	bool	returnIndexField;			//!< indicates that the PointRecord returnIndex field is active
-	bool	returnCountField;			//!< indicates that the PointRecord returnCount field is active
+	double		pointRangeMinimum;			//!< Indicates that the PointRecord cartesian and range fields should be configured with this minimum value -E57_FLOAT_MAX or -E57_DOUBLE_MAX. If using a ScaledIntegerNode then this needs to be a minimum range value.
+	double		pointRangeMaximum;			//!< Indicates that the PointRecord cartesian and range fields should be configured with this maximum value E57_FLOAT_MAX or E57_DOUBLE_MAX. If using a ScaledIntegerNode then this needs to be a maximum range value.
+	double		pointRangeScaledInteger;	//!< Indicates that the PointRecord cartesain and range fields should be configured as a ScaledIntegerNode with this scale setting. If 0. then use FloatNode.
 
-	bool	timeStampField;				//!< indicates that the PointRecord timeStamp field is active
-	bool	isTimeStampInvalidField;	//!< Indicates that the PointRecord isTimeStampInvalid field is active
+	double		angleMinimum;				//!< Indicates that the PointRecord angle fields should be configured with this minimum value -E57_FLOAT_MAX or -E57_DOUBLE_MAX. If using a ScaledIntegerNode then this needs to be a minimum angle value.
+	double		angleMaximum;				//!< Indicates that the PointRecord angle fields should be configured with this maximum value E57_FLOAT_MAX or E57_DOUBLE_MAX. If using a ScaledIntegerNode then this needs to be a maximum angle value.
+	double		angleScaledInteger;			//!< Indicates that the PointRecord angle fields should be configured as a ScaledIntegerNode with this scale setting. If 0. then use FloatNode.
 
-	bool	intensityField;				//!< indicates that the PointRecord intensity field is active
-	bool	isIntensityInvalidField;	//!< Indicates that the PointRecord isIntensityInvalid field is active
+	bool		rowIndexField;				//!< Indicates that the PointRecord rowIndex field is active
+	bool		columnIndexField;			//!< Indicates that the PointRecord columnIndex field is active
+	uint32_t	indexMaximum;				//!< Indicates that the PointRecord index fields should be configured with this maximum value where the minimum will be set to 0.
 
-	bool	colorRedField;				//!< indicates that the PointRecord colorRed field is active
-	bool	colorGreenField;			//!< indicates that the PointRecord colorGreen field is active
-	bool	colorBlueField;				//!< indicates that the PointRecord colorBlue field is active
-	bool	isColorInvalidField;		//!< Indicates that the PointRecord isColorInvalid field is active
+	bool		returnIndexField;			//!< Indicates that the PointRecord returnIndex field is active
+	bool		returnCountField;			//!< Indicates that the PointRecord returnCount field is active
+	uint8_t		returnMaximum;				//!< Indicates that the PointRecord return fields should be configured with this maximum value where the minimum will be set to 0.
+
+	bool		timeStampField;				//!< Indicates that the PointRecord timeStamp field is active
+	bool		isTimeStampInvalidField;	//!< Indicates that the PointRecord isTimeStampInvalid field is active
+	double		timeMaximum;				//!< Indicates that the PointRecord timeStamp fields should be configured with this maximum value. like E57_UINT32_MAX, E57_FLOAT_MAX or E57_DOUBLE_MAX
+
+	bool		intensityField;				//!< Indicates that the PointRecord intensity field is active
+	bool		isIntensityInvalidField;	//!< Indicates that the PointRecord isIntensityInvalid field is active
+	double		intensityScaledInteger;		//!< Indicates that the PointRecord intensity fields should be configured as a ScaledIntegerNode with this setting. If 0. then use FloatNode, if -1. use IntegerNode
+
+	bool		colorRedField;				//!< indicates that the PointRecord colorRed field is active
+	bool		colorGreenField;			//!< indicates that the PointRecord colorGreen field is active
+	bool		colorBlueField;				//!< indicates that the PointRecord colorBlue field is active
+	bool		isColorInvalidField;		//!< Indicates that the PointRecord isColorInvalid field is active
 };
 
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::PointRecord
 //
-//! @brief The e57::PointRecord is a structure that stores the information for an individual 3D imaging system point measurement.
-/*! @details This structure is not actually used by is here for completeness.
+//! @brief The e57::PointRecord is a pseudo structure that shows the possible information for an individual 3D imaging system point measurement.
+/*! @details This structure is not actually used but is here for completeness.  The size and type of each element of the PointRecord can be configure in E57.  This is the configuration used by the SimpleAPI.
 */
 
 class PointRecord {
@@ -321,28 +360,29 @@ public:
 	double		cartesianX;		//!< The X coordinate (in meters) of the point in Cartesian coordinates
 	double		cartesianY;		//!< The Y coordinate (in meters) of the point in Cartesian coordinates
 	double		cartesianZ;		//!< The Z coordinate (in meters) of the point in Cartesian coordinates
-	bool		cartesianInvalidState;	//!< Indicates whether the Cartesian coordinate vector or its magnitude is meaningful. Shall be in the interval [0, 2].
+	bool		cartesianInvalidState;	//!< Indicates whether the Cartesian coordinate vector or its magnitude is meaningful. Value = 0 if the point is considered valid, 1 otherwise.  Shall be in the interval [0, 1].
 
 	double		sphericalRange;	//!< The range (in meters) of points in spherical coordinates. Shall be non-negative
 	double		sphericalAzimuth; //!< Azimuth angle (in radians) of point in spherical coordinates
 	double		sphericalElevation;	//!< Elevation angle (in radians) of point in spherical coordinates
-	bool		sphericalInvalidState;  //!< Indicates whether the spherical coordinate vector or its range value are meaningful. Shall be in the interval [0, 2].
+	bool		sphericalInvalidState;  //!< Indicates whether the spherical coordinate vector or its range value are meaningful. Value = 0 if the point is considered valid, 1 otherwise. Shall be in the interval [0, 1].
 
-	int32_t		rowIndex;		//!< The row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval [0, 2^63).
-	int32_t		columnIndex;	//!< The column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval [0, 2^63)
-	int32_t		returnIndex;	//!< Only for multi-return sensors. The number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval [0, returnCount).
-	int32_t		returnCount;	//!< Only for multi-return sensors. The total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63).
+	uint32_t	rowIndex;		//!< The row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval [0, 2^31).
+	uint32_t	columnIndex;	//!< The column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval [0, 2^31)
+
+	uint8_t		returnIndex;	//!< Only for multi-return sensors. The number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval [0, returnCount).
+	uint8_t		returnCount;	//!< Only for multi-return sensors. The total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^7).
 
 	double		timeStamp;		//!< The time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
-	bool		isTimeStampInvalid;	//!< Indicates whether the timeStamp element is meaningful. Shall be in the interval [0, 1].
+	bool		isTimeStampInvalid;	//!< Indicates whether the timeStamp element is meaningful. Value = 0 if the timestamp is considered valid, 1 otherwise. Shall be in the interval [0, 1].
 
 	double		intensity;		//!< Point response intensity. Unit is unspecified
-	bool		isIntensityInvalid;	//!< Indicates whether the intensity element is meaningful. Shall be in the interval [0, 1].
+	bool		isIntensityInvalid;	//!< Indicates whether the intensity element is meaningful. Value = 0 if the intensity is considered valid, 1 otherwise. Shall be in the interval [0, 1].
 
-	uint8_t		colorRed;		//!< Red color coefficient. Unit is unspecified.
-	uint8_t		colorGreen;		//!< Green color coefficient. Unit is unspecified
-	uint8_t		colorBlue;		//!< Blue color coefficient. Unit is unspecified
-	bool		isColorInvalid;		//!< Indicates whether the colorRed, colorBlue, and colorGreen elements are meaningful. Shall be in the interval [0, 1].
+	uint16_t	colorRed;		//!< Red color coefficient. Unit is unspecified.
+	uint16_t	colorGreen;		//!< Green color coefficient. Unit is unspecified
+	uint16_t	colorBlue;		//!< Blue color coefficient. Unit is unspecified
+	bool		isColorInvalid;		//!< Indicates whether the colorRed, colorBlue, and colorGreen elements are meaningful. Value = 0 if the color is considered valid, 1 otherwise. Shall be in the interval [0, 1].
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -377,10 +417,12 @@ public:
 	e57::DateTime	acquisitionStart;		//!< The start date and time that the data was acquired.
 	e57::DateTime	acquisitionEnd;			//!< The end date and time that the data was acquired.
 
-	e57::RigidBodyTransform		pose;		//!< A rigid body transform that describes the coordinate frame of the 3D imaging system origin in the file-level coordinate system.
-	e57::IndexBounds			indexBounds;	//!< The bounds of the row, column, and return number of all the points in this Data3D.
-	e57::CartesianBounds		cartesianBounds; //!< The bounding region (in cartesian coordinates) of all the points in this Data3D (in the local coordinate system of the points).
-	e57::SphericalBounds		sphericalBounds; //!< The bounding region (in spherical coordinates) of all the points in this Data3D (in the local coordinate system of the points).
+	e57::RigidBodyTransform		pose;				//!< A rigid body transform that describes the coordinate frame of the 3D imaging system origin in the file-level coordinate system.
+	e57::IndexBounds			indexBounds;		//!< The bounds of the row, column, and return number of all the points in this Data3D.
+	e57::CartesianBounds		cartesianBounds;	//!< The bounding region (in cartesian coordinates) of all the points in this Data3D (in the local coordinate system of the points).
+	e57::SphericalBounds		sphericalBounds;	//!< The bounding region (in spherical coordinates) of all the points in this Data3D (in the local coordinate system of the points).
+	e57::IntensityLimits		intensityLimits;	//!< The limits for the value of signal intensity that the sensor is capable of producing.
+	e57::ColorLimits			colorLimits;		//!< The limits for the value of red, green, and blue color that the sensor is capable of producing.
 
 	e57::PointGroupingSchemes	pointGroupingSchemes;	//!< The defined schemes that group points in different ways
 	e57::PointStandardizedFieldsAvailable pointFields;	//!< This defines the active fields used in the WritePoints function.
@@ -537,7 +579,6 @@ public:
 				Reader(
 					const ustring & filePath		//!< file path string
 					);
-
 //! @brief This function returns true if the file is open
 	bool		IsOpen(void) const;
 
@@ -651,28 +692,28 @@ Call the CompressedVectorReader::read() until all data is read.
 						double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
-						int32_t*	cartesianInvalidState = NULL,	//!< Value = 0 if the point is considered valid, 1 otherwise
+						int8_t*		cartesianInvalidState = NULL,	//!< Value = 0 if the point is considered valid, 1 otherwise
 
 						double*		intensity = NULL,	//!< pointer to a buffer with the Point response intensity. Unit is unspecified
-						int32_t*	isIntensityInvalid = NULL,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+						int8_t*		isIntensityInvalid = NULL,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
 
-						double*		colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
-						double*		colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
-						double*		colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
-						int32_t*	isColorInvalid = NULL,	//!< Value = 0 if the color is considered valid, 1 otherwise
+						uint16_t*	colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+						uint16_t*	colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+						uint16_t*	colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+						int8_t*		isColorInvalid = NULL,	//!< Value = 0 if the color is considered valid, 1 otherwise
 
 						double*		sphericalRange = NULL,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
 						double*		sphericalAzimuth = NULL,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
 						double*		sphericalElevation = NULL,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
-						int32_t*	sphericalInvalidState = NULL, //!< Value = 0 if the range is considered valid, 1 otherwise
+						int8_t*		sphericalInvalidState = NULL, //!< Value = 0 if the range is considered valid, 1 otherwise
 
-						int64_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
-						int64_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
-						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
-						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+						int32_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.  Shall be in the interval (0, 2^31).
+						int32_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^31).
+						int8_t*		returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+						int8_t*		returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^7). Only for multi-return sensors. 
 
 						double*		timeStamp = NULL,	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
-						int32_t*	isTimeStampInvalid = NULL	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
+						int8_t*		isTimeStampInvalid = NULL	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 						) const;					//!< @return Return true if sucessful, false otherwise
 
 ////////////////////////////////////////////////////////////////////
@@ -753,28 +794,28 @@ public:
 						double*		cartesianX,			//!< pointer to a buffer with the X coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianY,			//!< pointer to a buffer with the Y coordinate (in meters) of the point in Cartesian coordinates
 						double*		cartesianZ,			//!< pointer to a buffer with the Z coordinate (in meters) of the point in Cartesian coordinates
-						int32_t*	cartesianInvalidState = NULL,	//!< Value = 0 if the point is considered valid, 1 otherwise
+						int8_t*		cartesianInvalidState = NULL,	//!< Value = 0 if the point is considered valid, 1 otherwise
 
 						double*		intensity = NULL,	//!< pointer to a buffer with the Point response intensity. Unit is unspecified
-						int32_t*	isIntensityInvalid = NULL,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
+						int8_t*		isIntensityInvalid = NULL,	//!< Value = 0 if the intensity is considered valid, 1 otherwise
 
-						double*		colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
-						double*		colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
-						double*		colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
-						int32_t*	isColorInvalid = NULL,	//!< Value = 0 if the color is considered valid, 1 otherwise
+						uint16_t*	colorRed = NULL,	//!< pointer to a buffer with the Red color coefficient. Unit is unspecified
+						uint16_t*	colorGreen = NULL,	//!< pointer to a buffer with the Green color coefficient. Unit is unspecified
+						uint16_t*	colorBlue = NULL,	//!< pointer to a buffer with the Blue color coefficient. Unit is unspecified
+						int8_t*		isColorInvalid = NULL,	//!< Value = 0 if the color is considered valid, 1 otherwise
 
 						double*		sphericalRange = NULL,		//!< pointer to a buffer with the range (in meters) of points in spherical coordinates. Shall be non-negative
 						double*		sphericalAzimuth = NULL,	//!< pointer to a buffer with the Azimuth angle (in radians) of point in spherical coordinates
 						double*		sphericalElevation = NULL,	//!< pointer to a buffer with the Elevation angle (in radians) of point in spherical coordinates
-						int32_t*	sphericalInvalidState = NULL, //!< Value = 0 if the range is considered valid, 1 otherwise
+						int8_t*		sphericalInvalidState = NULL, //!< Value = 0 if the range is considered valid, 1 otherwise
 
-						int64_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^63).
-						int64_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^63).
-						int64_t*	returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
-						int64_t*	returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^63). Only for multi-return sensors. 
+						int32_t*	rowIndex = NULL,	//!< pointer to a buffer with the row number of point (zero based). This is useful for data that is stored in a regular grid.Shall be in the interval (0, 2^31).
+						int32_t*	columnIndex = NULL,	//!< pointer to a buffer with the column number of point (zero based). This is useful for data that is stored in a regular grid. Shall be in the interval (0, 2^31).
+						int8_t*		returnIndex = NULL,	//!< pointer to a buffer with the number of this return (zero based). That is, 0 is the first return, 1 is the second, and so on. Shall be in the interval (0, returnCount). Only for multi-return sensors. 
+						int8_t*		returnCount = NULL,	//!< pointer to a buffer with the total number of returns for the pulse that this corresponds to. Shall be in the interval (0, 2^7). Only for multi-return sensors. 
 
 						double*		timeStamp = NULL,	//!< pointer to a buffer with the time (in seconds) since the start time for the data, which is given by acquisitionStart in the parent Data3D Structure. Shall be non-negative
-						int32_t*	isTimeStampInvalid = NULL	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
+						int8_t*		isTimeStampInvalid = NULL	//!< Value = 0 if the timeStamp is considered valid, 1 otherwise
 						) const ;		//!< @return Return true if sucessful, false otherwise
 
 
