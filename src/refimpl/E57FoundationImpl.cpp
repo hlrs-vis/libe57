@@ -2202,7 +2202,26 @@ ScaledIntegerNodeImpl::ScaledIntegerNodeImpl(weak_ptr<ImageFileImpl> destImageFi
                              + " maximum=" + toString(maximum));
     }
 }
+//=============================================================================		Added by SC
+ScaledIntegerNodeImpl::ScaledIntegerNodeImpl(weak_ptr<ImageFileImpl> destImageFile, double scaledValue, double scaledMinimum, double scaledMaximum, double scale, double offset)
+: NodeImpl(destImageFile),
+  value_((int64_t)floor((scaledValue - offset)/scale +.5)),
+  minimum_((int64_t)floor((scaledMinimum - offset)/scale +.5)),
+  maximum_((int64_t)floor((scaledMaximum - offset)/scale +.5)),
+  scale_(scale),
+  offset_(offset)
+{
+    // don't checkImageFileOpen, NodeImpl() will do it
 
+    /// Enforce the given bounds on raw value
+    if (scaledValue < scaledMinimum || scaledMaximum < scaledValue) {
+        throw E57_EXCEPTION2(E57_ERROR_VALUE_OUT_OF_BOUNDS,
+                             "this->pathName=" + this->pathName()
+                             + " scaledValue=" + toString(scaledValue)
+                             + " scaledMinimum=" + toString(scaledMinimum)
+                             + " scaledMaximum=" + toString(scaledMaximum));
+    }
+}
 NodeType ScaledIntegerNodeImpl::type()
 {
     // don't checkImageFileOpen
@@ -2269,11 +2288,21 @@ int64_t ScaledIntegerNodeImpl::minimum()
     checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     return(minimum_);
 }
+double ScaledIntegerNodeImpl::scaledMinimum()	//Added by SC
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(minimum_ * scale_ + offset_);
+}
 
 int64_t ScaledIntegerNodeImpl::maximum()
 {
     checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
     return(maximum_);
+}
+double ScaledIntegerNodeImpl::scaledMaximum()	//Added by SC
+{
+    checkImageFileOpen(__FILE__, __LINE__, __FUNCTION__);
+    return(maximum_ * scale_ + offset_);
 }
 
 double ScaledIntegerNodeImpl::scale()
@@ -3773,6 +3802,9 @@ void ImageFileImpl::construct2(const ustring& fileName, const ustring& mode, con
             throw;  // rethrow
         }
         delete xmlReader;
+
+		XMLPlatformUtils::Terminate();	//Added by SC
+
     } else { /// open for writing (start empty)
         try {
             /// Open file for writing, truncate if already exists.

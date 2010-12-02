@@ -108,7 +108,7 @@ const int E57_FOUNDATION_API_MINOR = 51;
 //! @brief The URI of ASTM E57 v1.0 standard XML namespace
 // Used to identify the standard field names and the grammar that relates them.
 // Will typically be associated with the default namespace in an E57 file.
-#define E57_V1_0_URI "http://www.astm.org/COMMIT/E57/2010-e57-v0.6" //??? change to v1.0 before final release
+#define E57_V1_0_URI "http://www.astm.org/COMMIT/E57/2010-e57-v1.0"
 
 //! @cond documentNonPublic   The following aren't documented
 // Minimum and maximum values for integers
@@ -463,10 +463,15 @@ public:
     explicit    ScaledIntegerNode(ImageFile destImageFile, int64_t value = 0, int64_t minimum = E57_INT64_MIN, int64_t maximum = E57_INT64_MAX,
                                   double scale = 1.0, double offset = 0.0);
 
+    explicit    ScaledIntegerNode(ImageFile destImageFile, double scaledValue = 0., double scaledMinimum = (double) E57_INT64_MIN, double scaledMaximum = (double) E57_INT64_MAX,
+                                  double scale = 1.0, double offset = 0.0);		//Added by SC
+
     int64_t     rawValue() const;
     double      scaledValue() const;
     int64_t     minimum() const;
+	double		scaledMinimum() const;	//Added by SC
     int64_t     maximum() const;
+	double		scaledMaximum() const;	//Added by SC
     double      scale() const;
     double      offset() const;
 

@@ -169,7 +169,7 @@ const uint32_t E57_FORMAT_MINOR = 0;			//Changed from 6 to 0 by SC
 /// All this macro trickery because E57_REFIMPL_REVISION_ID might not be numeric (e.g. 27M, or exported).
 
 #define E57_REFIMPL_MAJOR          1			//Changed from 0 to 1 by SC
-#define E57_REFIMPL_MINOR          0			//Changed from 0 to 1 by SC
+#define E57_REFIMPL_MINOR          0			//Changed from 1 to 0 by SC
 #ifndef E57_REFIMPL_REVISION_ID
 #  define E57_REFIMPL_REVISION_ID  unknown
 #endif
@@ -572,8 +572,14 @@ protected: //=================
 
 class ScaledIntegerNodeImpl : public NodeImpl {
 public:
-                        ScaledIntegerNodeImpl(boost::weak_ptr<ImageFileImpl> destImageFile, int64_t value = 0, int64_t minimum = 0, int64_t maximum = 0,
-                                              double scale = 1.0, double offset = 0.0);
+                        ScaledIntegerNodeImpl(boost::weak_ptr<ImageFileImpl> destImageFile,
+							int64_t value = 0, int64_t minimum = 0, int64_t maximum = 0,
+                            double scale = 1.0, double offset = 0.0);
+
+						ScaledIntegerNodeImpl(boost::weak_ptr<ImageFileImpl> destImageFile,		//Added by SC
+							double scaledValue = 0., double scaledMinimum = 0., double scaledMaximum = 0.,
+                            double scale = 1.0, double offset = 0.0);
+
     virtual             ~ScaledIntegerNodeImpl() {};
 
     virtual NodeType    type();
@@ -583,7 +589,9 @@ public:
     int64_t             rawValue();
     double              scaledValue();
     int64_t             minimum();
+	double				scaledMinimum();	//Added by SC
     int64_t             maximum();
+	double				scaledMaximum();	//Added by SC
     double              scale();
     double              offset();
 
