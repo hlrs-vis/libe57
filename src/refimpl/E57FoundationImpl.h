@@ -25,6 +25,12 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+//////////////////////////////////////////////////////////////////////////
+//
+//	V106	Dec 1, 2010		Stan Coleby	SC	scoleby@intelisum.com
+//								Added pageSize to E57FileHeader
+//								Changed Version to 1.0
+
 #ifndef E57FOUNDATIONIMPL_H_INCLUDED
 #define E57FOUNDATIONIMPL_H_INCLUDED
 
@@ -111,7 +117,7 @@ inline ustring exception_string(const char* errorName, const char* fileName, int
 // The URI of the LAS extension.    !!! should not be in E57Foundation.h, should be in separate file with names of fields
 // Used to identify the extended field names for encoding data from LAS files (LAS versions 1.0 to 1.3).
 // By convention, will typically be used with prefix "las".  ???"las13"?
-#define LAS_V1_0_URI "http://www.astm.org/COMMIT/E57/2010-las-v0.5" //??? change to v1.0 before final release
+#define LAS_V1_0_URI "http://www.astm.org/COMMIT/E57/2010-las-v1.0" //??? change to v1.0 before final release
 
 /// Create whitespace of given length, for indenting printouts in dump() functions
 inline std::string space(const size_t n) {return(std::string(n,' '));}
@@ -156,14 +162,14 @@ class E57XmlParser;
 class Encoder;
 
 /// Version numbers of ASTM standard that this library supports
-const uint32_t E57_FORMAT_MAJOR = 0;
-const uint32_t E57_FORMAT_MINOR = 6;
+const uint32_t E57_FORMAT_MAJOR = 1;			//Changed from 0 to 1 by SC
+const uint32_t E57_FORMAT_MINOR = 0;			//Changed from 6 to 0 by SC
 
 /// Version of Reference Implementation, E57_REFIMPL_REVISION_ID should be passed from compiler command line
 /// All this macro trickery because E57_REFIMPL_REVISION_ID might not be numeric (e.g. 27M, or exported).
 
-#define E57_REFIMPL_MAJOR          0
-#define E57_REFIMPL_MINOR          1
+#define E57_REFIMPL_MAJOR          1			//Changed from 0 to 1 by SC
+#define E57_REFIMPL_MINOR          0			//Changed from 0 to 1 by SC
 #ifndef E57_REFIMPL_REVISION_ID
 #  define E57_REFIMPL_REVISION_ID  unknown
 #endif
@@ -700,8 +706,9 @@ struct E57FileHeader {
     uint64_t    filePhysicalLength;
     uint64_t    xmlPhysicalOffset;
     uint64_t    xmlLogicalLength;
-//    char        e57LibraryVersion[8];
-//    uint32_t    pageSize;
+    uint64_t    pageSize;				//Added by SC
+//  char        e57LibraryVersion[8];	//Not in V1.0 Standard
+
 #ifdef E57_BIGENDIAN
     void        swab();
 #else

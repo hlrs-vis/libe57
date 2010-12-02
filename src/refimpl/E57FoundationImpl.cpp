@@ -26,6 +26,11 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+//////////////////////////////////////////////////////////////////////////
+//
+//	V106	Dec 1, 2010		Stan Coleby	SC	scoleby@intelisum.com
+//								Added pageSize to E57FileHeader
+//								Changed Version to 1.0
 
 #if defined(WIN32)
 #  if defined(_MSC_VER)
@@ -99,7 +104,7 @@ void E57FileHeader::swab()
     SWAB(&filePhysicalLength);
     SWAB(&xmlPhysicalOffset);
     SWAB(&xmlLogicalLength);
-//    SWAB(&pageSize);
+    SWAB(&pageSize);			//Added by SC
 };
 #endif
 
@@ -114,6 +119,7 @@ void E57FileHeader::dump(int indent, std::ostream& os)
     os << space(indent) << "filePhysicalLength: " << filePhysicalLength << endl;
     os << space(indent) << "xmlPhysicalOffset:  " << xmlPhysicalOffset << endl;
     os << space(indent) << "xmlLogicalLength:   " << xmlLogicalLength << endl;
+	os << space(indent) << "pageSize:           " << pageSize << endl;			//Added by SC
 }
 #endif
 
@@ -3788,7 +3794,7 @@ void ImageFileImpl::readFileHeader(CheckedFile* file, E57FileHeader& header)
 {
 #ifdef E57_DEBUG
     /// Double check that compiler thinks sizeof header is what it is supposed to be
-    if (sizeof(E57FileHeader) != 40)
+    if (sizeof(E57FileHeader) != 48)		//Changed from 40 to 48 by SC
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "headerSize=" + toString(sizeof(E57FileHeader)));
 #endif
 
@@ -3804,7 +3810,7 @@ void ImageFileImpl::readFileHeader(CheckedFile* file, E57FileHeader& header)
         throw E57_EXCEPTION2(E57_ERROR_BAD_FILE_SIGNATURE, "fileName="+file->fileName());
 
     /// Check file version compatibility
-    if (header.majorVersion != E57_FORMAT_MAJOR) {
+    if (header.majorVersion > E57_FORMAT_MAJOR) {		//Changed to > from != by SC so that V1.0 will work on a V2.0 release
         throw E57_EXCEPTION2(E57_ERROR_UNKNOWN_FILE_VERSION,
                              "fileName=" + file->fileName()
                              + " header.majorVersion=" + toString(header.majorVersion)
@@ -3812,8 +3818,9 @@ void ImageFileImpl::readFileHeader(CheckedFile* file, E57FileHeader& header)
     }
 
     /// If is a prototype version (majorVersion==0), then minorVersion has to match too.
-    /// In production versions (majorVersion>=1), should be able to handle any minor version.
-    if (header.majorVersion == 0 && header.minorVersion != E57_FORMAT_MINOR) {
+    /// In production versions (majorVersion==E57_FORMAT_MAJOR), should be able to handle any minor version.
+    if (header.majorVersion == E57_FORMAT_MAJOR &&		//Added by SC so that V1.0 will work on a V1.1 release
+		header.minorVersion > E57_FORMAT_MINOR) {		//Changed to > from != by SC
         throw E57_EXCEPTION2(E57_ERROR_UNKNOWN_FILE_VERSION,
                              "fileName=" + file->fileName()
                              + " header.majorVersion=" + toString(header.majorVersion)
@@ -3828,10 +3835,10 @@ void ImageFileImpl::readFileHeader(CheckedFile* file, E57FileHeader& header)
                              + " file->length=" + toString(file->length(CheckedFile::physical)));
     }
 
-// May be defined in later version of standard:
-//    /// Check that page size is correct constant
-//    if (header.pageSize != CheckedFile::physicalPageSize)
-//        throw E57_EXCEPTION2(E57_ERROR_BAD_FILE_LENGTH, "fileName=" + file->fileName());
+    /// Check that page size is correct constant
+    if (header.majorVersion != 0 &&
+		header.pageSize != CheckedFile::physicalPageSize)		//Added by SC
+        throw E57_EXCEPTION2(E57_ERROR_BAD_FILE_LENGTH, "fileName=" + file->fileName());
 }
 
 void ImageFileImpl::incrWriterCount()
@@ -3914,6 +3921,7 @@ void ImageFileImpl::close()
         header.filePhysicalLength = file_->length(CheckedFile::physical);
         header.xmlPhysicalOffset  = xmlPhysicalOffset;
         header.xmlLogicalLength   = xmlLogicalLength_;
+		header.pageSize           = CheckedFile::physicalPageSize;		//Added by SC
 #ifdef E57_MAX_VERBOSE
         header.dump(); //???
 #endif
