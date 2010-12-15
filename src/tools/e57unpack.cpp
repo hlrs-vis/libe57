@@ -282,7 +282,7 @@ main(
                     CompressedVectorReader rd(points.reader(sdb));
                     path csvname(StringNode(scan.get("guid")).value()+".csv");
                     ofstream ocsv(dst/csvname);
-					ostream& out(ocsv); // needed to fix ambiguity for << operator on msvc
+                    ostream& out(ocsv); // needed to fix ambiguity for << operator on msvc
                     cout << "unpacking: " << dst/csvname << " ... ";
                     unsigned count;
                     uint64_t total_count(0);
@@ -294,7 +294,7 @@ main(
                         for (size_t i=0; i<count; ++i) {
                             for (size_t j=0; j<buf.size(); ++j)
                                 tfmt = tfmt % apply_visitor(get_at(i),buf.at(j));
-                            out << tfmt;// << endl;
+                            out << tfmt << endl;
                         }
                     }
                     cout << " total points: " << total_count << endl;
