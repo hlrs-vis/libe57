@@ -1429,72 +1429,83 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 	CompressedVectorNode points(scan.get("points"));
 	StructureNode proto(points.prototype());
 
+	int64_t protoCount = proto.childCount();
+	int64_t protoIndex;
+
 	vector<SourceDestBuffer> destBuffers;
-	if(proto.isDefined("cartesianX") && (cartesianX != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianX",
-			cartesianX,  (unsigned) count, true, true));
-	if(proto.isDefined("cartesianY") && (cartesianY != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianY",
-			cartesianY,  (unsigned) count, true, true));
-	if(proto.isDefined("cartesianZ") && (cartesianZ != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianZ",
-			cartesianZ,  (unsigned) count, true, true));
-	if(proto.isDefined("cartesianInvalidState") && (cartesianInvalidState != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "cartesianInvalidState",
-			cartesianInvalidState,       (unsigned) count, true));
 
-	if(proto.isDefined("sphericalRange") && (sphericalRange != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",
-			sphericalRange,  (unsigned) count, true, true));
-	if(proto.isDefined("spherialAzimuth") && (sphericalAzimuth != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",
-			sphericalAzimuth,  (unsigned) count, true, true));
-	if(proto.isDefined("sphericalElevation") && (sphericalElevation != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",
-			sphericalElevation,  (unsigned) count, true, true));
-	if(proto.isDefined("sphericalInvalidState") && (sphericalInvalidState != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "sphericalInvalidState",
-			sphericalInvalidState,       (unsigned) count, true));
+	for( protoIndex = 0; protoIndex < protoCount; protoIndex++)
+	{
+		ustring		name = proto.get(protoIndex).elementName();
+		NodeType	type = proto.get(protoIndex).type();
+		bool		scaled = type == E57_SCALED_INTEGER ? true : false;
 
-	if(proto.isDefined("rowIndex") && (rowIndex != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "rowIndex",
-			rowIndex,    (unsigned) count, true));
-	if(proto.isDefined("columnIndex") && (columnIndex != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "columnIndex",
-			columnIndex, (unsigned) count, true));
-	if(proto.isDefined("returnIndex") && (returnIndex != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "returnIndex",
-			returnIndex, (unsigned) count, true));
-	if(proto.isDefined("returnCount") && (returnCount != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "returnCount",
-			returnCount, (unsigned) count, true));
+		if((name.compare("cartesianX") == 0) && proto.isDefined("cartesianX") && (cartesianX != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "cartesianX",
+				cartesianX,  (unsigned) count, true, scaled));
+		else if((name.compare("cartesianY") == 0) && proto.isDefined("cartesianY") && (cartesianY != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "cartesianY",
+				cartesianY,  (unsigned) count, true,scaled));
+		else if((name.compare("cartesianZ") == 0) && proto.isDefined("cartesianZ") && (cartesianZ != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "cartesianZ",
+				cartesianZ,  (unsigned) count, true, scaled));
+		else if((name.compare("cartesianInvalidState") == 0) && proto.isDefined("cartesianInvalidState") && (cartesianInvalidState != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "cartesianInvalidState",
+				cartesianInvalidState,       (unsigned) count, true));
 
-	if(proto.isDefined("timeStamp") && (timeStamp != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "timeStamp",
-			timeStamp,   (unsigned) count, true));
-	if(proto.isDefined("isTimeStampInvalid") && (isTimeStampInvalid != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "isTimeStampInvalid",
-			isTimeStampInvalid,       (unsigned) count, true));
+		else if((name.compare("sphericalRange") == 0) && proto.isDefined("sphericalRange") && (sphericalRange != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",
+				sphericalRange,  (unsigned) count, true, scaled));
+		else if((name.compare("spherialAzimuth") == 0) && proto.isDefined("spherialAzimuth") && (sphericalAzimuth != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",
+				sphericalAzimuth,  (unsigned) count, true, scaled));
+		else if((name.compare("sphericalElevation") == 0) && proto.isDefined("sphericalElevation") && (sphericalElevation != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",
+				sphericalElevation,  (unsigned) count, true, scaled));
+		else if((name.compare("sphericalInvalidState") == 0) && proto.isDefined("sphericalInvalidState") && (sphericalInvalidState != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "sphericalInvalidState",
+				sphericalInvalidState,       (unsigned) count, true));
 
-	if(proto.isDefined("intensity") && (intensity != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "intensity",   intensity,
-			(unsigned) count, true));
-	if(proto.isDefined("isIntensityInvalid") && (isIntensityInvalid != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "isIntensityInvalid",
-			isIntensityInvalid,       (unsigned) count, true));
+		else if((name.compare("rowIndex") == 0) && proto.isDefined("rowIndex") && (rowIndex != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "rowIndex",
+				rowIndex,    (unsigned) count, true));
+		else if((name.compare("columnIndex") == 0) && proto.isDefined("columnIndex") && (columnIndex != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "columnIndex",
+				columnIndex, (unsigned) count, true));
+		else if((name.compare("returnIndex") == 0) && proto.isDefined("returnIndex") && (returnIndex != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "returnIndex",
+				returnIndex, (unsigned) count, true));
+		else if((name.compare("returnCount") == 0) && proto.isDefined("returnCount") && (returnCount != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "returnCount",
+				returnCount, (unsigned) count, true));
 
-	if(proto.isDefined("colorRed") && (colorRed != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "colorRed",
-			colorRed,    (unsigned) count, true));
-	if(proto.isDefined("colorGreen") && (colorGreen != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "colorGreen",
-			colorGreen,  (unsigned) count, true));
-	if(proto.isDefined("colorBlue") && (colorBlue != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "colorBlue",
-			colorBlue,   (unsigned) count, true));
-	if(proto.isDefined("isColorInvalid") && (isColorInvalid != NULL))
-		destBuffers.push_back(SourceDestBuffer(imf_, "isColorInvalid",
-			isColorInvalid,       (unsigned) count, true));
+		else if((name.compare("timeStamp") == 0) && proto.isDefined("timeStamp") && (timeStamp != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "timeStamp",
+				timeStamp,   (unsigned) count, true));
+		else if((name.compare("isTimeStampInvalid") == 0) && proto.isDefined("isTimeStampInvalid") && (isTimeStampInvalid != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "isTimeStampInvalid",
+				isTimeStampInvalid,       (unsigned) count, true));
+
+		else if((name.compare("intensity") == 0) && proto.isDefined("intensity") && (intensity != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "intensity",   intensity,
+				(unsigned) count, true, scaled));
+		else if((name.compare("isIntensityInvalid") == 0) && proto.isDefined("isIntensityInvalid") && (isIntensityInvalid != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "isIntensityInvalid",
+				isIntensityInvalid,       (unsigned) count, true));
+
+		else if((name.compare("colorRed") == 0) && proto.isDefined("colorRed") && (colorRed != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "colorRed",
+				colorRed,    (unsigned) count, true, scaled));
+		else if((name.compare("colorGreen") == 0) && proto.isDefined("colorGreen") && (colorGreen != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "colorGreen",
+				colorGreen,  (unsigned) count, true, scaled));
+		else if((name.compare("colorBlue") == 0) && proto.isDefined("colorBlue") && (colorBlue != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "colorBlue",
+				colorBlue,   (unsigned) count, true, scaled));
+		else if((name.compare("isColorInvalid") == 0) && proto.isDefined("isColorInvalid") && (isColorInvalid != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "isColorInvalid",
+				isColorInvalid,       (unsigned) count, true));
+	}
 
 	CompressedVectorReader reader = points.reader(destBuffers);
 
@@ -2394,8 +2405,6 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianY",  cartesianY,  (unsigned) count, true, true));
 	if(proto.isDefined("cartesianZ") && (cartesianZ != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianZ",  cartesianZ,  (unsigned) count, true, true));
-	if(proto.isDefined("cartesianInvalidState") && (cartesianInvalidState != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianInvalidState",       cartesianInvalidState,       (unsigned) count, true));
 
 	if(proto.isDefined("sphericalRange") && (sphericalRange != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",  sphericalRange,  (unsigned) count, true, true));
@@ -2403,27 +2412,9 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",  sphericalAzimuth,  (unsigned) count, true, true));
 	if(proto.isDefined("sphericalElevation") && (sphericalElevation != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",  sphericalElevation,  (unsigned) count, true, true));
-	if(proto.isDefined("sphericalInvalidState") && (sphericalInvalidState != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalInvalidState",       sphericalInvalidState,       (unsigned) count, true));
-
-	if(proto.isDefined("rowIndex") && (rowIndex != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "rowIndex",    rowIndex,    (unsigned) count, true));
-	if(proto.isDefined("columnIndex") && (columnIndex != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "columnIndex", columnIndex, (unsigned) count, true));
-	if(proto.isDefined("returnIndex") && (returnIndex != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "returnIndex", returnIndex, (unsigned) count, true));
-	if(proto.isDefined("returnCount") && (returnCount != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "returnCount", returnCount, (unsigned) count, true));
-
-	if(proto.isDefined("timeStamp") && (timeStamp != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "timeStamp",   timeStamp,   (unsigned) count, true));
-	if(proto.isDefined("isTimeStampInvalid") && (isTimeStampInvalid != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "isTimeStampInvalid",       isTimeStampInvalid,       (unsigned) count, true));
 
 	if(proto.isDefined("intensity") && (intensity != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "intensity",   intensity,   (unsigned) count, true));
-	if(proto.isDefined("isIntensityInvalid") && (isIntensityInvalid != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "isIntensityInvalid",       isIntensityInvalid,       (unsigned) count, true));
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "intensity",   intensity,   (unsigned) count, true, true));
 
 	if(proto.isDefined("colorRed") && (colorRed != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "colorRed",    colorRed,    (unsigned) count, true));
@@ -2431,8 +2422,30 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "colorGreen",  colorGreen,  (unsigned) count, true));
 	if(proto.isDefined("colorBlue") && (colorBlue != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "colorBlue",   colorBlue,   (unsigned) count, true));
+
+	if(proto.isDefined("returnIndex") && (returnIndex != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "returnIndex", returnIndex, (unsigned) count, true));
+	if(proto.isDefined("returnCount") && (returnCount != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "returnCount", returnCount, (unsigned) count, true));
+
+	if(proto.isDefined("rowIndex") && (rowIndex != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "rowIndex",    rowIndex,    (unsigned) count, true));
+	if(proto.isDefined("columnIndex") && (columnIndex != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "columnIndex", columnIndex, (unsigned) count, true));
+
+	if(proto.isDefined("timeStamp") && (timeStamp != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "timeStamp",   timeStamp,   (unsigned) count, true));
+
+	if(proto.isDefined("cartesianInvalidState") && (cartesianInvalidState != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianInvalidState",       cartesianInvalidState,       (unsigned) count, true));
+	if(proto.isDefined("sphericalInvalidState") && (sphericalInvalidState != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalInvalidState",       sphericalInvalidState,       (unsigned) count, true));
+	if(proto.isDefined("isIntensityInvalid") && (isIntensityInvalid != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "isIntensityInvalid",       isIntensityInvalid,       (unsigned) count, true));
 	if(proto.isDefined("isColorInvalid") && (isColorInvalid != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "isColorInvalid",       isColorInvalid,       (unsigned) count, true));
+	if(proto.isDefined("isTimeStampInvalid") && (isTimeStampInvalid != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "isTimeStampInvalid",       isTimeStampInvalid,       (unsigned) count, true));
 
 	CompressedVectorWriter writer = points.writer(sourceBuffers);
 
@@ -2452,8 +2465,17 @@ bool	WriterImpl :: WriteData3DGroupsData(
 		return false;
 
 	StructureNode scan(data3D_.get(dataIndex));
+
+	if(!scan.isDefined("pointGroupingSchemes"))
+		return false;
 	StructureNode pointGroupingSchemes(scan.get("pointGroupingSchemes"));
+
+	if(!pointGroupingSchemes.isDefined("groupingByLine"))
+		return false;
 	StructureNode groupingByLine(pointGroupingSchemes.get("groupingByLine"));
+
+	if(!groupingByLine.isDefined("groups"))
+		return false;
 	CompressedVectorNode groups(groupingByLine.get("groups"));
 
 	vector<SourceDestBuffer> groupSDBuffers;
