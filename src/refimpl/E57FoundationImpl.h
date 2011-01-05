@@ -189,13 +189,13 @@ const char E57_LIBRARY_ID[] = "ReferenceImplementation "      \
 const char E57_LIBRARY_ID[] = QUOTED_E57_REFIMPL_REVISION_ID;
 #endif
 /// Section types:
-#define E57_BLOB_SECTION                1
-#define E57_COMPRESSED_VECTOR_SECTION   2
+#define E57_BLOB_SECTION                0	//changed from 1 by SC to fit the standard
+#define E57_COMPRESSED_VECTOR_SECTION   1	//changed from 2 by SC to fit the standard
 
 /// Packet types (in a compressed vector section)
 #define E57_DATA_PACKET                 1
-#define E57_INDEX_PACKET                2
-#define E57_EMPTY_PACKET                3
+#define E57_INDEX_PACKET                0	//changed from 2 by SC to fit the standard
+#define E57_EMPTY_PACKET                2	//changed from 3 by SC to fit the standard
 
 #ifdef E57_BIGENDIAN
 #  define  SWAB(p)  swab(p)
