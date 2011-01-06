@@ -790,6 +790,15 @@ void	DateTime::GetSystemTime(
 //
 	E57Root::E57Root(void)
 {
+	Reset();
+};
+
+	E57Root::~E57Root(void)
+{
+};
+
+void E57Root::Reset(void)
+{
 	versionMajor = 1;
 	versionMinor = 0;
 	creationDateTime.dateTimeValue = 0.;
@@ -797,15 +806,19 @@ void	DateTime::GetSystemTime(
 	data3DSize = 0;
 	image2DSize = 0;
 };
-
-	E57Root::~E57Root(void)
-{
-};
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Data3D
 //
 	Data3D::Data3D(void)
+{
+	Reset();
+};
+
+	Data3D::~Data3D(void)
+{
+};
+void Data3D::Reset(void)
 {
 	originalGuids.clear();
 	temperature = E57_FLOAT_MAX;
@@ -896,20 +909,22 @@ void	DateTime::GetSystemTime(
 	pointFields.timeStampField = false;
 	pointFields.isTimeStampInvalidField = false;
 	pointFields.timeMaximum = E57_DOUBLE_MAX;
-
-
-
 	pointsSize = 0;
-};
-
-	Data3D::~Data3D(void)
-{
 };
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Image2D
 //
 	Image2D::Image2D(void)
+{
+	Reset();
+};
+
+	Image2D::~Image2D(void)
+{
+};
+
+void Image2D::Reset(void)
 {
 	acquisitionDateTime.dateTimeValue = 0.;
 	acquisitionDateTime.isAtomicClockReferenced = 0;
@@ -956,10 +971,6 @@ void	DateTime::GetSystemTime(
 	cylindricalRepresentation.pixelWidth = 0;
 	cylindricalRepresentation.principalPointY = 0;
 	cylindricalRepresentation.radius = 0;
-};
-
-	Image2D::~Image2D(void)
-{
 };
 ////////////////////////////////////////////////////////////////////
 //

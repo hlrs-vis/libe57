@@ -424,6 +424,8 @@ bool	ReaderImpl :: GetE57Root(
 {
 	if(IsOpen())
 	{
+		fileHeader.Reset();
+
 		fileHeader.formatName = StringNode(root_.get("formatName")).value();
 		fileHeader.versionMajor = (int32_t) IntegerNode(root_.get("versionMajor")).value();
 		fileHeader.versionMinor = (int32_t) IntegerNode(root_.get("versionMinor")).value();
@@ -470,6 +472,8 @@ bool	ReaderImpl :: ReadImage2D(
 	{
 		if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
 			return false;
+
+		image2DHeader.Reset();
 
 		StructureNode image(image2D_.get(imageIndex));
 
@@ -859,6 +863,8 @@ bool	ReaderImpl :: ReadData3D(
 	{
 		if( (dataIndex < 0) || (dataIndex >= data3D_.childCount()))
 			return false;
+
+		data3DHeader.Reset();
 
 		StructureNode scan(data3D_.get(dataIndex));
 		CompressedVectorNode points(scan.get("points"));

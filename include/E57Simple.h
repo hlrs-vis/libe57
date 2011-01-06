@@ -249,6 +249,8 @@ public:
 					E57Root(void);
 //! @brief This function is the destructor for the reader class
 					~E57Root(void);
+//! @brief This function clears all the data members of the E57Root class
+	void			Reset(void);
 
 	ustring			formatName;			//!< Contains the string “ASTM E57 3D Image File”
 	ustring			guid;				//!< A globally unique identification string for the current version of the file
@@ -397,6 +399,8 @@ public:
 					Data3D(void);
 //! @brief This function is the destructor for the Data3D class
 					~Data3D(void);
+//! @brief This function clears all the data members of the Data3D class
+	void			Reset(void);
 
 	ustring			name;					//!< A user-defined name for the Data3D.
 	ustring			guid;					//!< A globally unique identification string for the current version of the Data3D object
@@ -520,6 +524,8 @@ public:
 					Image2D(void);
 //! @brief This function is the destructor for the Image2D class
 					~Image2D(void);
+//! @brief This function clears all the data members of the Image2D class
+	void			Reset(void);
 
 	ustring			name;					//!< A user-defined name for the Image2D.
 	ustring			guid;					//!< A globally unique identification string for the current version of the Image2D object
