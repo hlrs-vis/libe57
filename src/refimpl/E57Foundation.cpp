@@ -3601,6 +3601,16 @@ ScaledIntegerNode::ScaledIntegerNode(ImageFile destImageFile, int64_t rawValue, 
 {
     CHECK_THIS_INVARIANCE()
 }
+ScaledIntegerNode::ScaledIntegerNode(ImageFile destImageFile, int rawValue, int64_t  minimum, int64_t  maximum, double scale, double offset)
+: impl_(new ScaledIntegerNodeImpl(destImageFile.impl(), (int64_t) rawValue, minimum, maximum, scale, offset))
+{
+    CHECK_THIS_INVARIANCE()
+}
+ScaledIntegerNode::ScaledIntegerNode(ImageFile destImageFile, int rawValue, int  minimum, int  maximum, double scale, double offset)
+: impl_(new ScaledIntegerNodeImpl(destImageFile.impl(), (int64_t) rawValue, (int64_t) minimum, (int64_t) maximum, scale, offset))
+{
+    CHECK_THIS_INVARIANCE()
+}
 /*================*/ /*!
 @brief   This second constructor create an E57 element for storing a fixed point number but does the scaling for you.
 @param   [in] destImageFile   The ImageFile where the new node will eventually be stored.

@@ -462,8 +462,11 @@ class ScaledIntegerNode {
 public:
     explicit    ScaledIntegerNode(ImageFile destImageFile, int64_t value = 0, int64_t minimum = E57_INT64_MIN, int64_t maximum = E57_INT64_MAX,
                                   double scale = 1.0, double offset = 0.0);
-
-    explicit    ScaledIntegerNode(ImageFile destImageFile, double scaledValue = 0., double scaledMinimum = (double) E57_INT64_MIN, double scaledMaximum = (double) E57_INT64_MAX,
+	explicit    ScaledIntegerNode(ImageFile destImageFile, int value = 0, int64_t minimum = E57_INT64_MIN, int64_t maximum = E57_INT64_MAX,
+                                  double scale = 1.0, double offset = 0.0);
+    explicit    ScaledIntegerNode(ImageFile destImageFile, int value = 0, int minimum = E57_INT32_MIN, int maximum = E57_INT32_MAX,
+                                  double scale = 1.0, double offset = 0.0);
+    explicit    ScaledIntegerNode(ImageFile destImageFile, double scaledValue = 0., double scaledMinimum = (double) E57_DOUBLE_MIN, double scaledMaximum = (double) E57_DOUBLE_MAX,
                                   double scale = 1.0, double offset = 0.0);		//Added by SC
 
     int64_t     rawValue() const;
