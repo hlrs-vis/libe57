@@ -112,7 +112,7 @@ private:
 
 	VectorNode		data3D_;
 
-	VectorNode		image2D_;
+	VectorNode		images2D_;
 
 public:
 
@@ -263,7 +263,7 @@ virtual	StructureNode		GetRawE57Root(void);	//!< /return Returns the E57Root Str
 //! This function returns the raw Data3D Vector Node
 virtual VectorNode			GetRawData3D(void);		//!< /return Returns the raw Data3D VectorNode
 //! This function returns the raw Image2D Vector Node
-virtual VectorNode			GetRawImage2D(void);	//!< /return Returns the raw Image2D VectorNode
+virtual VectorNode			GetRawImages2D(void);	//!< /return Returns the raw Image2D VectorNode
 
 }; //end Reader class
 
@@ -283,7 +283,7 @@ private:
 
 	VectorNode				data3D_;
 
-	VectorNode				image2D_;
+	VectorNode				images2D_;
 
 public:
 
@@ -385,7 +385,7 @@ virtual	StructureNode		GetRawE57Root(void);	//!< /return Returns the E57Root Str
 //! This function returns the raw Data3D Vector Node
 virtual VectorNode			GetRawData3D(void);		//!< /return Returns the raw Data3D VectorNode
 //! This function returns the raw Image2D Vector Node
-virtual VectorNode			GetRawImage2D(void);	//!< /return Returns the raw Image2D VectorNode
+virtual VectorNode			GetRawImages2D(void);	//!< /return Returns the raw Image2D VectorNode
 
 }; //end Writer class
 

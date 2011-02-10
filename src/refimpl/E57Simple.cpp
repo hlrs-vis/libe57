@@ -405,18 +405,19 @@ An example of a typical use of this interface would be as follows:
 //Set up total number of points
 		scanHeader.pointsSize = (nColumn * nRow);	
 
+#define DATA_SCALE_FACTOR	(.00001)
 //Setup bounds
 		if(exportStatistics)			
-		{
-			scanHeader.cartesianBounds.xMaximum = pStat->GetMaxX();
-			scanHeader.cartesianBounds.xMinimum = pStat->GetMinX();
-			scanHeader.cartesianBounds.yMaximum = pStat->GetMaxY();
-			scanHeader.cartesianBounds.yMinimum = pStat->GetMinY();
-			scanHeader.cartesianBounds.zMaximum = pStat->GetMaxZ();
-			scanHeader.cartesianBounds.zMinimum = pStat->GetMinZ();
+		{	//because we are using scaled integers for the data, we must adjust our bounds
+			scanHeader.cartesianBounds.xMaximum = floor(pStat->GetMaxX()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
+			scanHeader.cartesianBounds.xMinimum = floor(pStat->GetMinX()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
+			scanHeader.cartesianBounds.yMaximum = floor(pStat->GetMaxY()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
+			scanHeader.cartesianBounds.yMinimum = floor(pStat->GetMinY()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
+			scanHeader.cartesianBounds.zMaximum = floor(pStat->GetMaxZ()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
+			scanHeader.cartesianBounds.zMinimum = floor(pStat->GetMinZ()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
 
-			scanHeader.sphericalBounds.rangeMaximum = pStat->GetMaxRange();
-			scanHeader.sphericalBounds.rangeMinimum = pStat->GetMinRange();
+			scanHeader.sphericalBounds.rangeMaximum = floor(pStat->GetMaxRange()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
+			scanHeader.sphericalBounds.rangeMinimum = floor(pStat->GetMinRange()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
 			scanHeader.sphericalBounds.azimuthEnd = pStat->GetMaxAzimuth();
 			scanHeader.sphericalBounds.azimuthStart = pStat->GetMinAzimuth();
 			scanHeader.sphericalBounds.elevationMaximum = pStat->GetMaxPolar();
@@ -461,9 +462,9 @@ An example of a typical use of this interface would be as follows:
 		scanHeader.pointFields.cartesianZField = true;
 		double * zData = new double[nRow];
 
-		scanHeader.pointFields.pointRangeScaledInteger = .00001;
-		scanHeader.pointFields.pointRangeMinimum = ((double)-e57::E57_INT32_MAX) / .00001;
-		scanHeader.pointFields.pointRangeMaximum = ((double) e57::E57_INT32_MAX) / .00001;
+		scanHeader.pointFields.pointRangeScaledInteger = DATA_SCALE_FACTOR;
+		scanHeader.pointFields.pointRangeMinimum = ((double)-e57::E57_INT32_MAX) / DATA_SCALE_FACTOR;
+		scanHeader.pointFields.pointRangeMaximum = ((double) e57::E57_INT32_MAX) / DATA_SCALE_FACTOR;
 
 //Setup Color
 		uint16_t * redData = NULL;
@@ -804,7 +805,7 @@ void E57Root::Reset(void)
 	creationDateTime.dateTimeValue = 0.;
 	creationDateTime.isAtomicClockReferenced = 0;
 	data3DSize = 0;
-	image2DSize = 0;
+	images2DSize = 0;
 };
 ////////////////////////////////////////////////////////////////////
 //
@@ -1053,10 +1054,10 @@ VectorNode		Reader :: GetRawData3D(void)
 	return impl_->GetRawData3D();
 };// /return Returns the raw Data3D VectorNode
 
-// This function returns the raw Image2D Vector Node
-VectorNode		Reader :: GetRawImage2D(void)
+// This function returns the raw Images2D Vector Node
+VectorNode		Reader :: GetRawImages2D(void)
 {
-	return impl_->GetRawImage2D();
+	return impl_->GetRawImages2D();
 };	// /return Returns the raw Image2D VectorNode
 
 bool		Reader :: ReadData3D( 
@@ -1160,10 +1161,10 @@ VectorNode		Writer :: GetRawData3D(void)
 	return impl_->GetRawData3D();
 };// /return Returns the raw Data3D VectorNode
 
-// This function returns the raw Image2D Vector Node
-VectorNode		Writer :: GetRawImage2D(void)
+// This function returns the raw Images2D Vector Node
+VectorNode		Writer :: GetRawImages2D(void)
 {
-	return impl_->GetRawImage2D();
+	return impl_->GetRawImages2D();
 };	// /return Returns the raw Image2D VectorNode
 
 int32_t		Writer :: NewImage2D( 

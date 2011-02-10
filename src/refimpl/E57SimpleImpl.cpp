@@ -384,7 +384,7 @@ char * e57::GetNewGuid(void)
 	: imf_(filePath,"r")
 	, root_(imf_.root())
 	, data3D_(root_.get("/data3D"))
-	, image2D_(root_.get("/image2D"))
+	, images2D_(root_.get("/images2D"))
 {
 };
 
@@ -430,7 +430,7 @@ bool	ReaderImpl :: GetE57Root(
 		fileHeader.versionMajor = (int32_t) IntegerNode(root_.get("versionMajor")).value();
 		fileHeader.versionMinor = (int32_t) IntegerNode(root_.get("versionMinor")).value();
 		fileHeader.guid = StringNode(root_.get("guid")).value();
-		fileHeader.e57libraryVersion = StringNode(root_.get("e57libraryVersion")).value();
+		fileHeader.e57LibraryVersion = StringNode(root_.get("e57LibraryVersion")).value();
 
 		if(root_.isDefined("coordinateMetadata"))
 			fileHeader.coordinateMetadata = StringNode(root_.get("coordinateMetadata")).value();
@@ -445,7 +445,7 @@ bool	ReaderImpl :: GetE57Root(
 		}
 
 		fileHeader.data3DSize = (int32_t) data3D_.childCount();
-		fileHeader.image2DSize = (int32_t) image2D_.childCount();
+		fileHeader.images2DSize = (int32_t) images2D_.childCount();
 
 		return true;
 	}
@@ -459,7 +459,7 @@ bool	ReaderImpl :: GetE57Root(
 //! This function returns the total number of Picture Blocks
 int32_t	ReaderImpl :: GetImage2DCount( void)
 {
-	return (int32_t) image2D_.childCount();
+	return (int32_t) images2D_.childCount();
 };
 
 //! This function returns the Image2Ds header and positions the cursor
@@ -470,12 +470,12 @@ bool	ReaderImpl :: ReadImage2D(
 {
 	if(IsOpen())
 	{
-		if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
+		if( (imageIndex < 0) || (imageIndex >= images2D_.childCount()))
 			return false;
 
 		image2DHeader.Reset();
 
-		StructureNode image(image2D_.get(imageIndex));
+		StructureNode image(images2D_.get(imageIndex));
 
 		image2DHeader.guid = StringNode(image.get("guid")).value();
 
@@ -733,7 +733,7 @@ bool		ReaderImpl :: GetImage2DSizes(
 	e57::Image2DType &		imageVisualType	//!< This is image type of the VisualReferenceRepresentation if given.
 	)
 {
-	if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
+	if( (imageIndex < 0) || (imageIndex >= images2D_.childCount()))
 		return 0;
 
 	imageProjection = E57_NO_PROJECTION;
@@ -742,7 +742,7 @@ bool		ReaderImpl :: GetImage2DSizes(
 	imageVisualType = E57_NO_IMAGE;
 
 	bool ret = false;
-	StructureNode image(image2D_.get(imageIndex));
+	StructureNode image(images2D_.get(imageIndex));
 
 	if(image.isDefined("visualReferenceRepresentation"))
 	{
@@ -782,11 +782,11 @@ int64_t	ReaderImpl :: ReadImage2DData(
 	int64_t					count			//!< size of desired chuck or buffer size
 	)										//!< /return Returns the number of bytes transferred.
 {
-	if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
+	if( (imageIndex < 0) || (imageIndex >= images2D_.childCount()))
 		return 0;
 
 	int64_t transferred = 0;
-	StructureNode image(image2D_.get(imageIndex));
+	StructureNode image(images2D_.get(imageIndex));
 
 	switch(imageProjection)
 	{
@@ -847,10 +847,10 @@ VectorNode		ReaderImpl :: GetRawData3D(void)
 	return data3D_;
 };//!< /return Returns the raw Data3D VectorNode
 
-//! This function returns the raw Image2D Vector Node
-VectorNode		ReaderImpl :: GetRawImage2D(void)
+//! This function returns the raw Images2D Vector Node
+VectorNode		ReaderImpl :: GetRawImages2D(void)
 {
-	return image2D_;
+	return images2D_;
 };	//!< /return Returns the raw Image2D VectorNode
 
 //! This function returns the Data3D header and positions the cursor
@@ -1529,7 +1529,7 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 	: imf_(filePath,"w")
 	, root_(imf_.root())
 	, data3D_(imf_,true)
-	, image2D_(imf_,true)
+	, images2D_(imf_,true)
 {
 
 // Set per-file properties.
@@ -1545,7 +1545,7 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 
 	root_.set("versionMajor", IntegerNode(imf_, astmMajor));
 	root_.set("versionMinor", IntegerNode(imf_, astmMinor));
-	root_.set("e57libraryVersion", StringNode(imf_,libraryId));
+	root_.set("e57LibraryVersion", StringNode(imf_,libraryId));
 
 // Save a dummy string for coordinate system.
 /// Really should be a valid WKT string identifying the coordinate reference system (CRS).
@@ -1559,7 +1559,7 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
     root_.set("creationDateTime", creationDateTime);
 
 	root_.set("data3D", data3D_);
-	root_.set("image2D", image2D_);
+	root_.set("images2D", images2D_);
 };
 //! This function is the destructor for the writer class
 	WriterImpl::~WriterImpl(void)
@@ -1597,10 +1597,10 @@ VectorNode		WriterImpl :: GetRawData3D(void)
 	return data3D_;
 };//!< /return Returns the raw Data3D VectorNode
 
-//! This function returns the raw Image2D Vector Node
-VectorNode		WriterImpl :: GetRawImage2D(void)
+//! This function returns the raw Images2D Vector Node
+VectorNode		WriterImpl :: GetRawImages2D(void)
 {
-	return image2D_;
+	return images2D_;
 };	//!< /return Returns the raw Image2D VectorNode
 ////////////////////////////////////////////////////////////////////
 //
@@ -1616,8 +1616,8 @@ int32_t	WriterImpl :: NewImage2D(
 	int32_t pos = -1;
 
 	StructureNode image = StructureNode(imf_);
-	image2D_.append(image);
-	pos = (int32_t) image2D_.childCount() - 1;
+	images2D_.append(image);
+	pos = (int32_t) images2D_.childCount() - 1;
 
 	image.set("guid", StringNode(imf_, image2DHeader.guid));	//required
 
@@ -1661,29 +1661,18 @@ int32_t	WriterImpl :: NewImage2D(
 		StructureNode pose = StructureNode(imf_);
 		image.set("pose", pose);
 
-		if( (image2DHeader.pose.rotation.w != 1.) ||
-			(image2DHeader.pose.rotation.x != 0.) ||
-			(image2DHeader.pose.rotation.y != 0.) ||
-			(image2DHeader.pose.rotation.z != 0.))
-		{
-			StructureNode rotation = StructureNode(imf_);
-			pose.set("rotation", rotation);
-			rotation.set("w", FloatNode(imf_, image2DHeader.pose.rotation.w));
-			rotation.set("x", FloatNode(imf_, image2DHeader.pose.rotation.x));
-			rotation.set("y", FloatNode(imf_, image2DHeader.pose.rotation.y));
-			rotation.set("z", FloatNode(imf_, image2DHeader.pose.rotation.z));
-		}
+		StructureNode rotation = StructureNode(imf_);
+		pose.set("rotation", rotation);
+		rotation.set("w", FloatNode(imf_, image2DHeader.pose.rotation.w));
+		rotation.set("x", FloatNode(imf_, image2DHeader.pose.rotation.x));
+		rotation.set("y", FloatNode(imf_, image2DHeader.pose.rotation.y));
+		rotation.set("z", FloatNode(imf_, image2DHeader.pose.rotation.z));
 
-		if( (image2DHeader.pose.translation.x != 0.) ||
-			(image2DHeader.pose.translation.y != 0.) ||
-			(image2DHeader.pose.translation.z != 0.) )
-		{
-			StructureNode translation = StructureNode(imf_);
-			pose.set("translation", translation);
-			translation.set("x", FloatNode(imf_, image2DHeader.pose.translation.x));
-			translation.set("y", FloatNode(imf_, image2DHeader.pose.translation.y));
-			translation.set("z", FloatNode(imf_, image2DHeader.pose.translation.z));
-		}
+		StructureNode translation = StructureNode(imf_);
+		pose.set("translation", translation);
+		translation.set("x", FloatNode(imf_, image2DHeader.pose.translation.x));
+		translation.set("y", FloatNode(imf_, image2DHeader.pose.translation.y));
+		translation.set("z", FloatNode(imf_, image2DHeader.pose.translation.z));
 	}
 
 	if( image2DHeader.visualReferenceRepresentation.jpegImageSize > 0 ||
@@ -1849,11 +1838,11 @@ int64_t	WriterImpl :: WriteImage2DData(
 	int64_t					count			//!< size of desired chuck or buffer size
 	)										//!< /return Returns the number of bytes written
 {
-	if( (imageIndex < 0) || (imageIndex >= image2D_.childCount()))
+	if( (imageIndex < 0) || (imageIndex >= images2D_.childCount()))
 		return 0;
 
 	int64_t transferred = 0;
-	StructureNode image(image2D_.get(imageIndex));
+	StructureNode image(images2D_.get(imageIndex));
 
 	switch(imageProjection)
 	{

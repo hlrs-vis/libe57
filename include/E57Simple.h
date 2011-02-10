@@ -256,10 +256,10 @@ public:
 	ustring			guid;				//!< A globally unique identification string for the current version of the file
 	uint32_t		versionMajor;		//!< Major version number, should be 1
 	uint32_t		versionMinor;		//!< Minor version number, should be 0
-	ustring			e57libraryVersion;	//!< The version identifier for the E57 file format library that wrote the file.
+	ustring			e57LibraryVersion;	//!< The version identifier for the E57 file format library that wrote the file.
 	e57::DateTime	creationDateTime;	//!< Date/time that the file was created
 	int32_t			data3DSize;			//!< Size of the Data3D vector for storing 3D imaging data
-	int32_t			image2DSize;		//!< Size of the A heterogeneous Vector of Image2D Structures for storing 2D images from a camera or similar device.
+	int32_t			images2DSize;		//!< Size of the A heterogeneous Vector of Images2D Structures for storing 2D images from a camera or similar device.
 	ustring			coordinateMetadata;	//!< Information describing the Coordinate Reference System to be used for the file
 };
 
@@ -731,7 +731,7 @@ Call the CompressedVectorReader::read() until all data is read.
 //! @brief This function returns the raw Data3D Vector Node
 	VectorNode			GetRawData3D(void);		//!< @return Returns the raw Data3D VectorNode
 //! @brief This function returns the raw Image2D Vector Node
-	VectorNode			GetRawImage2D(void);	//!< @return Returns the raw Image2D VectorNode
+	VectorNode			GetRawImages2D(void);	//!< @return Returns the raw Image2D VectorNode
 
 private:   //=================
 					Reader();                 // No default constructor is defined for Node
@@ -843,7 +843,7 @@ public:
 //! @brief This function returns the raw Data3D Vector Node
 	VectorNode			GetRawData3D(void);		//!< @return Returns the raw Data3D VectorNode
 //! @brief This function returns the raw Image2D Vector Node
-	VectorNode			GetRawImage2D(void);	//!< @return Returns the raw Image2D VectorNode
+	VectorNode			GetRawImages2D(void);	//!< @return Returns the raw Image2D VectorNode
 
 private:   //=================
 					Writer();                 // No default constructor is defined for Node
