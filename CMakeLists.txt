@@ -1,7 +1,7 @@
 # $Id$
 # This is the CMake project file for the libe57 reference implementation
 #
-# Copyright 2010 Roland Schwarz, Riegl LMS GmbH
+# Copyright 2010-2011 Roland Schwarz, Riegl LMS GmbH
 #
 # Permission is hereby granted, free of charge, to any person or organization
 # obtaining a copy of the software and accompanying documentation covered by
