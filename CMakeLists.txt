@@ -316,6 +316,25 @@ install(
         bin
 )
 
+add_executable( e57validate
+    src/tools/e57validate.cpp
+)
+set_target_properties( e57validate
+    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
+    COMPILE_FLAGS ${CFLAGS}
+)
+target_link_libraries( e57validate
+    E57RefImpl
+    debug ${Xerces_LIBRARY_DEBUG}
+    optimized ${Xerces_LIBRARY_RELEASE}
+)
+install(
+    TARGETS
+        e57validate
+    RUNTIME DESTINATION
+        bin
+)
+
 add_executable( e57unpack
     src/tools/e57unpack.cpp
 )
