@@ -1,4 +1,5 @@
-2011-03-03
+2011-03-10
+    E57RefImplConfig.cmake added
     e57validate tool added to cmake
 2010-10-16 roland_schwarz
     e57unpack tool added

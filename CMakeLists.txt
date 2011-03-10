@@ -279,7 +279,7 @@ install(
 )
 
 add_executable( e57fields
-    src/tools/e57fields.cpp
+    src/refimpl/tools/e57fields.cpp
 )
 set_target_properties( e57fields
     PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
@@ -367,6 +367,7 @@ install(
     FILES
         CHANGES.TXT
         README.TXT
+        src/E57RefImplConfig.cmake
     DESTINATION
         .
 )
