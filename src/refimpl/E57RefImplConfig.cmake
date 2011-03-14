@@ -119,8 +119,9 @@ ELSE(E57RefImpl_LIBRARY)
 ENDIF(E57RefImpl_LIBRARY)
 
 IF (E57RefIml_FOUND)
-    SET(E57RefIml_INCLUDE_DIRS ${E57RefIml_DIR}/include FILEPATH "E57RefIml include directory")
-    SET(E57RefIml_ROOT_DIR ${E57RefIml_DIR})
+    SET(E57RefImpl_INCLUDE_DIR ${E57RefIml_DIR}/include FILEPATH "E57RefImpl include directory")
+    SET(E57RefImpl_INCLUDE_DIRS ${E57RefImpl_INCLUDE_DIR})
+    SET(E57RefImpl_ROOT_DIR ${E57RefIml_DIR})
 ENDIF()
 
 
