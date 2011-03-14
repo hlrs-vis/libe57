@@ -41,8 +41,8 @@
 # E57RefImpl_LIBRARY_DEBUG
 # E57RefImpl_LIBRARY_RELEASE
 # E57RefImpl_LIBRARY
-#
 # E57RefImpl_LIBRARIES
+# E57RefImpl_INCLUDE_DIR
 # E57RefImpl_INCLUDE_DIRS
 # E57RefImpl_LIBRARY_DIRS
 #
@@ -52,28 +52,30 @@
 SET(E57RefImpl_FOUND TRUE)
 
 FIND_PATH(E57RefImpl_INCLUDE_DIR
-    e57/E57Foundation.h
-    ${E57RefImpl_DIR}/include
+    NAMES e57/E57Foundation.h
+    PATHS ${E57RefImpl_DIR}/include
+    DOC "E57 include directory"
 )
 
 FIND_LIBRARY(E57RefImpl_LIBRARY_RELEASE
     NAMES   libE57RefImpl
             E57RefImpl
     HINTS  ${E57RefImpl_DIR}/lib
+    DOC "E57 release library"
 )
 
 FIND_LIBRARY(E57RefImpl_LIBRARY_DEBUG
     NAMES   libE57RefImpl-d
             E57RefImpl-d
     HINTS  ${E57RefImpl_DIR}/lib
+    DOC "E57 debug library"
 )
 
 MARK_AS_ADVANCED(
+    E57RefImpl_INCLUDE_DIR
     E57RefImpl_LIBRARY_RELEASE
     E57RefImpl_LIBRARY_DEBUG
     E57RefImpl_LIBRARY
-    E57RefImpl_INCLUDE_DIR
-    E57RefImpl_INCLUDE_DIRS
 )
 
 IF (E57RefImpl_LIBRARY_DEBUG AND E57RefImpl_LIBRARY_RELEASE)
@@ -122,8 +124,7 @@ ELSE(E57RefImpl_LIBRARY)
 ENDIF(E57RefImpl_LIBRARY)
 
 IF (E57RefImpl_FOUND)
-    SET(E57RefImpl_INCLUDE_DIR ${E57RefImpl_DIR}/include CACHE FILEPATH "E57RefImpl include directory")
-    SET(E57RefImpl_INCLUDE_DIRS ${E57RefImpl_INCLUDE_DIR} CACHE FILEPATH "E57RefImpl include directory")
+    SET(E57RefImpl_INCLUDE_DIRS ${E57RefImpl_INCLUDE_DIR} "E57RefImpl include directory")
 ENDIF()
 
 
