@@ -1724,17 +1724,17 @@ void E57Validator::validatePointRecordContents(CompressedVectorNode cv, Structur
             if (pbufs.sphericalRange && pbufs.sphericalAzimuth && pbufs.sphericalElevation) {
                 if (!pbufs.sphericalInvalidState || pbufs.sphericalInvalidState[i] == 0) {  /// This point coordinate is valid
                     /// Calc cartesian coords from spherical using formulas from 5.5 of ASTM E57 standard
-                    double x = pbufs.sphericalRange[i] * cos(pbufs.sphericalAzimuth[i]) * cos(pbufs.sphericalElevation[i]);
-                    double y = pbufs.sphericalRange[i] * cos(pbufs.sphericalAzimuth[i]) * sin(pbufs.sphericalElevation[i]);
+                    double x = pbufs.sphericalRange[i] * cos(pbufs.sphericalElevation[i]) * cos(pbufs.sphericalAzimuth[i]);
+                    double y = pbufs.sphericalRange[i] * cos(pbufs.sphericalElevation[i]) * sin(pbufs.sphericalAzimuth[i]);
                     double z = pbufs.sphericalRange[i] * sin(pbufs.sphericalElevation[i]);
 
                     /// Check each coordinate in Spherical bounds
                     if (sphericalBoundsDefined && sphericalBounds.notEmpty) {
-                        if (pbufs.sphericalRange[i] < cartesianBounds.minimum[0] || cartesianBounds.maximum[0] < pbufs.sphericalRange[i])
+                        if (pbufs.sphericalRange[i] < sphericalBounds.minimum[0] || sphericalBounds.maximum[0] < pbufs.sphericalRange[i])
                             PRINT_MESSAGE(1000/*???*/, proto.get("sphericalRange"), "value " + toString(pbufs.sphericalRange[i]) + " is out of spherical bounds", &cv, blockStart+i);
-                        if (pbufs.sphericalAzimuth[i] < cartesianBounds.minimum[1] || cartesianBounds.maximum[1] < pbufs.sphericalAzimuth[i])
+                        if (pbufs.sphericalAzimuth[i] < sphericalBounds.minimum[1] || sphericalBounds.maximum[1] < pbufs.sphericalAzimuth[i])
                             PRINT_MESSAGE(1000/*???*/, proto.get("sphericalAzimuth"), "value " + toString(pbufs.sphericalAzimuth[i]) + " is out of spherical bounds", &cv, blockStart+i);
-                        if (pbufs.sphericalElevation[i] < cartesianBounds.minimum[2] || cartesianBounds.maximum[2] < pbufs.sphericalElevation[i])
+                        if (pbufs.sphericalElevation[i] < sphericalBounds.minimum[2] || sphericalBounds.maximum[2] < pbufs.sphericalElevation[i])
                             PRINT_MESSAGE(1000/*???*/, proto.get("sphericalElevation"), "value " + toString(pbufs.sphericalElevation[i]) + " is out of spherical bounds", &cv, blockStart+i);
                     }
 

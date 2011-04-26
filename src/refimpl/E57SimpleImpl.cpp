@@ -1064,7 +1064,7 @@ bool	ReaderImpl :: ReadData3D(
 		}
 
 		data3DHeader.pointFields.sphericalRangeField = proto.isDefined("sphericalRange");
-		data3DHeader.pointFields.sphericalAzimuthField = proto.isDefined("spherialAzimuth");
+		data3DHeader.pointFields.sphericalAzimuthField = proto.isDefined("sphericalAzimuth");
 		data3DHeader.pointFields.sphericalElevationField = proto.isDefined("sphericalElevation");
 		data3DHeader.pointFields.sphericalInvalidStateField = proto.isDefined("sphericalInvalidState");
 
@@ -1072,23 +1072,23 @@ bool	ReaderImpl :: ReadData3D(
 		data3DHeader.pointFields.angleMinimum = 0.;
 		data3DHeader.pointFields.angleMaximum = 0.;
 
-		if(proto.isDefined("spherialAzimuth")) {
-			if( proto.get("spherialAzimuth").type() == E57_SCALED_INTEGER) {
-				double scale = ScaledIntegerNode(proto.get("spherialAzimuth")).scale();
-				double offset = ScaledIntegerNode(proto.get("spherialAzimuth")).offset();
-				int64_t minimum = ScaledIntegerNode(proto.get("spherialAzimuth")).minimum();
-				int64_t maximum = ScaledIntegerNode(proto.get("spherialAzimuth")).maximum();
+		if(proto.isDefined("sphericalAzimuth")) {
+			if( proto.get("sphericalAzimuth").type() == E57_SCALED_INTEGER) {
+				double scale = ScaledIntegerNode(proto.get("sphericalAzimuth")).scale();
+				double offset = ScaledIntegerNode(proto.get("sphericalAzimuth")).offset();
+				int64_t minimum = ScaledIntegerNode(proto.get("sphericalAzimuth")).minimum();
+				int64_t maximum = ScaledIntegerNode(proto.get("sphericalAzimuth")).maximum();
 				data3DHeader.pointFields.angleMinimum = (double)
 					minimum * scale + offset;	
 				data3DHeader.pointFields.angleMaximum = (double)
 					maximum * scale + offset;
 				data3DHeader.pointFields.angleScaledInteger = scale;
 
-			} else if( proto.get("spherialAzimuth").type() == E57_FLOAT ){
+			} else if( proto.get("sphericalAzimuth").type() == E57_FLOAT ){
 				data3DHeader.pointFields.angleMinimum =
-					FloatNode(proto.get("spherialAzimuth")).minimum();
+					FloatNode(proto.get("sphericalAzimuth")).minimum();
 				data3DHeader.pointFields.angleMaximum =
-					FloatNode(proto.get("spherialAzimuth")).maximum();
+					FloatNode(proto.get("sphericalAzimuth")).maximum();
 			}
 		}
 
@@ -1462,8 +1462,8 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 		else if((name.compare("sphericalRange") == 0) && proto.isDefined("sphericalRange") && (sphericalRange != NULL))
 			destBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",
 				sphericalRange,  (unsigned) count, true, scaled));
-		else if((name.compare("spherialAzimuth") == 0) && proto.isDefined("spherialAzimuth") && (sphericalAzimuth != NULL))
-			destBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",
+		else if((name.compare("sphericalAzimuth") == 0) && proto.isDefined("sphericalAzimuth") && (sphericalAzimuth != NULL))
+			destBuffers.push_back(SourceDestBuffer(imf_, "sphericalAzimuth",
 				sphericalAzimuth,  (unsigned) count, true, scaled));
 		else if((name.compare("sphericalElevation") == 0) && proto.isDefined("sphericalElevation") && (sphericalElevation != NULL))
 			destBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",
@@ -1890,13 +1890,16 @@ int32_t	WriterImpl :: NewData3D(
 	int32_t row = (int32_t) data3DHeader.indexBounds.rowMaximum;
 	int32_t col = (int32_t) data3DHeader.indexBounds.columnMaximum;
 
+	if(data3DHeader.guid.empty())
+		return -1;
+
 	StructureNode scan = StructureNode(imf_);
 	data3D_.append(scan);
 	pos = (int32_t) data3D_.childCount() - 1;
 
 	scan.set("guid", StringNode(imf_, data3DHeader.guid));	//required
 
-	if(!data3DHeader.guid.empty())
+	if(!data3DHeader.name.empty())
 		scan.set("name", StringNode(imf_, data3DHeader.name));
 
 	if(!data3DHeader.description.empty())
@@ -2212,7 +2215,7 @@ int32_t	WriterImpl :: NewData3D(
 				pointRangeMinimum, pointRangeMaximum, pointRangeScale, pointRangeOffset));
 		else
 			proto.set("cartesianX",  FloatNode(imf_, 0.,
-				(data3DHeader.pointFields.pointRangeMaximum > (double) E57_FLOAT_MAX) ? E57_DOUBLE : E57_SINGLE,
+				(data3DHeader.pointFields.pointRangeScaledInteger < 0.) ? E57_DOUBLE : E57_SINGLE,
 				data3DHeader.pointFields.pointRangeMinimum,
 				data3DHeader.pointFields.pointRangeMaximum));
 	}
@@ -2222,7 +2225,7 @@ int32_t	WriterImpl :: NewData3D(
 				pointRangeMinimum, pointRangeMaximum, pointRangeScale, pointRangeOffset));
 		else
 			proto.set("cartesianY",  FloatNode(imf_, 0.,
-				(data3DHeader.pointFields.pointRangeMaximum > (double) E57_FLOAT_MAX) ? E57_DOUBLE : E57_SINGLE,
+				(data3DHeader.pointFields.pointRangeScaledInteger < 0.) ? E57_DOUBLE : E57_SINGLE,
 				data3DHeader.pointFields.pointRangeMinimum,
 				data3DHeader.pointFields.pointRangeMaximum));
 	}
@@ -2232,7 +2235,7 @@ int32_t	WriterImpl :: NewData3D(
 				pointRangeMinimum, pointRangeMaximum, pointRangeScale, pointRangeOffset));
 		else
 			proto.set("cartesianZ",  FloatNode(imf_, 0.,
-				(data3DHeader.pointFields.pointRangeMaximum > (double) E57_FLOAT_MAX) ? E57_DOUBLE : E57_SINGLE,
+				(data3DHeader.pointFields.pointRangeScaledInteger < 0.) ? E57_DOUBLE : E57_SINGLE,
 				data3DHeader.pointFields.pointRangeMinimum,
 				data3DHeader.pointFields.pointRangeMaximum));
 	}
@@ -2243,7 +2246,7 @@ int32_t	WriterImpl :: NewData3D(
 				pointRangeMinimum, pointRangeMaximum, pointRangeScale, pointRangeOffset));
 		else
 			proto.set("sphericalRange",  FloatNode(imf_, 0.,
-				(data3DHeader.pointFields.pointRangeMaximum > (double) E57_FLOAT_MAX) ? E57_DOUBLE : E57_SINGLE,
+				(data3DHeader.pointFields.pointRangeScaledInteger < 0.) ? E57_DOUBLE : E57_SINGLE,
 				data3DHeader.pointFields.pointRangeMinimum,
 				data3DHeader.pointFields.pointRangeMaximum));
 	    }
@@ -2259,7 +2262,7 @@ int32_t	WriterImpl :: NewData3D(
 				angleMinimum, angleMaximum, angleScale, angleOffset));
 		else
 			proto.set("sphericalAzimuth",  FloatNode(imf_, 0.,
-				(data3DHeader.pointFields.angleMaximum > (double) E57_FLOAT_MAX) ? E57_DOUBLE : E57_SINGLE,
+				(data3DHeader.pointFields.angleScaledInteger < 0.) ? E57_DOUBLE : E57_SINGLE,
 				data3DHeader.pointFields.angleMinimum,
 				data3DHeader.pointFields.angleMaximum));
 	}
@@ -2270,7 +2273,7 @@ int32_t	WriterImpl :: NewData3D(
 				angleMinimum, angleMaximum, angleScale, angleOffset));
 		else
 			proto.set("sphericalElevation",  FloatNode(imf_, 0.,
-				(data3DHeader.pointFields.angleMaximum > (double) E57_FLOAT_MAX) ? E57_DOUBLE : E57_SINGLE,
+				(data3DHeader.pointFields.angleScaledInteger < 0.) ? E57_DOUBLE : E57_SINGLE,
 				data3DHeader.pointFields.angleMinimum,
 				data3DHeader.pointFields.angleMaximum));
 	}
@@ -2334,9 +2337,9 @@ int32_t	WriterImpl :: NewData3D(
 	}
 
 	if(data3DHeader.pointFields.cartesianInvalidStateField)
-		proto.set("cartesianInvalidState",  IntegerNode(imf_, 0, 0, 1));
+		proto.set("cartesianInvalidState",  IntegerNode(imf_, 0, 0, 2));
 	if(data3DHeader.pointFields.sphericalInvalidStateField)
-		proto.set("sphericalInvalidState", IntegerNode(imf_, 0, 0, 1));
+		proto.set("sphericalInvalidState", IntegerNode(imf_, 0, 0, 2));
 	if(data3DHeader.pointFields.isIntensityInvalidField)
 		proto.set("isIntensityInvalid", IntegerNode(imf_, 0, 0, 1));
 	if(data3DHeader.pointFields.isColorInvalidField)
@@ -2403,8 +2406,8 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 
 	if(proto.isDefined("sphericalRange") && (sphericalRange != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalRange",  sphericalRange,  (unsigned) count, true, true));
-	if(proto.isDefined("spherialAzimuth") && (sphericalAzimuth != NULL))
-		sourceBuffers.push_back(SourceDestBuffer(imf_, "spherialAzimuth",  sphericalAzimuth,  (unsigned) count, true, true));
+	if(proto.isDefined("sphericalAzimuth") && (sphericalAzimuth != NULL))
+		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalAzimuth",  sphericalAzimuth,  (unsigned) count, true, true));
 	if(proto.isDefined("sphericalElevation") && (sphericalElevation != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",  sphericalElevation,  (unsigned) count, true, true));
 
