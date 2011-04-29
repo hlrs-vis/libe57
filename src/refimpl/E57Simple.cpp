@@ -126,7 +126,15 @@ An example of a typical use of this interface would be as follows:
 		int64_t nRow = 0;
 		int64_t nPointsSize = 0;	//Number of points
 		int64_t nGroupsSize = 0;	//Number of groups
-		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize);
+		int64_t nCountSize = 0;		//Maximum point count per group
+		bool	bColumnIndex = false; //indicates that idElementName is "columnIndex"
+		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize, nCountSize, bColumnIndex);
+
+		if(nRow == 0)
+		{
+			nRow = 1024;	//choose a chunk size
+			nColumn = pointsSize / nRow;
+		}
 
 //Setup buffers
 		int8_t * isInvalidData = NULL;
@@ -190,16 +198,24 @@ An example of a typical use of this interface would be as follows:
 		int64_t * idElementValue = NULL;
 		int64_t * startPointIndex = NULL;
 		int64_t * pointCount = NULL;
+		int32_t * rowIndex = NULL;
+		int32_t * columnIndex = NULL;
 
 		if(nGroupsSize > 0)
 		{
 			idElementValue = new int64_t[nGroupsSize];
 			startPointIndex = new int64_t[nGroupsSize];
 			pointCount = new int64_t[nGroupsSize];
+			rowIndex = new int32_t[nRow];		//assumes "columnIndex" only
 
 			if(!eReader.ReadData3DGroupsData(scanIndex, nGroupsSize, idElementValue,
 				startPointIndex, pointCount))
 				nGroupsSize = 0;
+		}
+		if(scanHeader.pointFields.cartesianZField)if( nRow > 0)
+		{
+			rowIndex = new int32_t[nRow];
+			columnIndex = new int32_t[nRow];
 		}
 
 //Get dataReader object
@@ -216,35 +232,55 @@ An example of a typical use of this interface would be as follows:
 				redData,			//!< pointer to a buffer with the color red data
 				greenData,			//!< pointer to a buffer with the color green data
 				blueData,			//!< pointer to a buffer with the color blue data
-				NULL
+				NULL,
+				NULL,
+				NULL,
+				NULL,
+				rowIndex,			//!< pointer to a buffer with the rowIndex
+				columnIndex			//!< pointer to a buffer with the columnIndex
 				);
 
 //Read the point data
 
-		int64_t group = 0;
 		int64_t startPoint = 0;
 		int64_t count = 0;
 		unsigned size = 0;
+		int group = 0;
+		int	col = 0;
+		int row = 0;
 
-		for(long col = 0; col < nColumn; col++)
+		for(long j = 0; j < nColumn; j++)
 		{
 //Groups
 			if(nGroupsSize > 0)
 			{
-				group = idElementValue[col];
-				startPoint = startPointIndex[col];
-				count = pointCount[col];
+				group = idElementValue[j];
+				startPoint = startPointIndex[j];
+				count = pointCount[j];
 
-				dataReader.seek(startPoint);
+				dataReader.seek(startPoint);	//not working yet
 				size = dataReader.read(count);
 			}
 			else
+			{
 //Read a column
 				size = dataReader.read();
+				group = j;
+			}
 
 //Use the data
-			for(long row = 0; row < size; row++)
+			for(long i = 0; i < size; i++)
 			{
+				if(columnIndex)
+					col = columnIndex[i];
+				else
+					col = group;
+
+				if(rowIndex)
+					row = rowIndex[i];
+				else
+					row = i;
+
 				if(isInvalidData[row] == 0)
 					pScan->SetPoint(row,col, xData[row], yData[row], zData[row]);
 
@@ -392,14 +428,15 @@ An example of a typical use of this interface would be as follows:
 		scanHeader.acquisitionEnd.SetCurrentGPSTime();
 	
 //Set up the scan size
-		scanHeader.indexBounds.rowMaximum = nRow;	
+		scanHeader.indexBounds.rowMaximum = nRow - 1;	
 		scanHeader.indexBounds.rowMinimum = 0;
-		scanHeader.indexBounds.columnMaximum = nColumn;
+		scanHeader.indexBounds.columnMaximum = nColumn - 1;
 		scanHeader.indexBounds.columnMinimum = 0;
-		scanHeader.indexBounds.returnMaximum = 1; 
+		scanHeader.indexBounds.returnMaximum = 0; 
 		scanHeader.indexBounds.returnMinimum = 0;
 
 		scanHeader.pointGroupingSchemes.groupingByLine.groupsSize = nColumn;
+		scanHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum = nRow;
 		scanHeader.pointGroupingSchemes.groupingByLine.idElementName = "columnIndex";
 
 //Set up total number of points
@@ -871,6 +908,8 @@ void Data3D::Reset(void)
 	colorLimits.colorBlueMaximum = 0.;
 
 	pointGroupingSchemes.groupingByLine.groupsSize = 0;
+	pointGroupingSchemes.groupingByLine.pointCountMaximum = 0;
+	pointGroupingSchemes.groupingByLine.idElementName = "";
 
 	pointFields.cartesianXField = false;
 	pointFields.cartesianYField = false;
@@ -1073,10 +1112,13 @@ bool		Reader :: GetData3DSizes(
 	int64_t &	rowMax,		// This is the maximum row size
 	int64_t &	columnMax,	// This is the maximum column size
 	int64_t &	pointsSize,	// This is the total number of point records
-	int64_t &	groupsSize	// This is the total number of group reocrds
+	int64_t &	groupsSize,	// This is the total number of group reocrds
+	int64_t &	countSize,	//!< This is the maximum point count per group
+	bool &		bColumnIndex	//!< This indicates that the idElementName is "columnIndex"
 	) const
 {
-	return impl_->GetData3DSizes( dataIndex, rowMax, columnMax, pointsSize, groupsSize);
+	return impl_->GetData3DSizes( dataIndex, rowMax, columnMax, pointsSize,
+		groupsSize, countSize, bColumnIndex);
 }
 
 bool		Reader :: ReadData3DGroupsData(

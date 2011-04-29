@@ -211,7 +211,9 @@ virtual	bool		GetData3DSizes(
 						int64_t &	rowMax,		//!< This is the maximum row size
 						int64_t &	columnMax,	//!< This is the maximum column size
 						int64_t &	pointsSize,	//!< This is the total number of point records
-						int64_t &	groupsSize	//!< This is the total number of group reocrds
+						int64_t &	groupsSize,	//!< This is the total number of group reocrds
+						int64_t &	countSize,	//!< This is the maximum point count per group
+						bool &		bColumnIndex	//!< This indicates that the idElementName is "columnIndex"
 						);
 
 //! This funtion writes out the group data

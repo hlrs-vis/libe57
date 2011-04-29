@@ -288,6 +288,7 @@ class GroupingByLine {
 public:
 	ustring		idElementName;		//!< The name of the PointRecord element that identifies which group the point is in. The value of this string must be “rowIndex” or “columnIndex”
 	int64_t		groupsSize;			//!< Size of the groups compressedVector of LineGroupRecord structures
+	int64_t		pointCountMaximum;	//!< This is the maximum value for the e57::LineGroupRecord::pointCount.
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -675,8 +676,10 @@ enum Image2DProjection {
 						int64_t &	rowMax,		//!< This is the maximum row size
 						int64_t &	columnMax,	//!< This is the maximum column size
 						int64_t &	pointsSize,	//!< This is the total number of point records
-						int64_t &	groupsSize	//!< This is the total number of group reocrds
-						) const;				//!< @return Return true if sucessful, false otherwise
+						int64_t &	groupsSize,	//!< This is the total number of group reocrds
+						int64_t &	countSize,	//!< This is the maximum point count per group
+						bool &		bColumnIndex	//!< This indicates that the idElementName is "columnIndex"
+						) const;					//!< @return Return true if sucessful, false otherwise
 
 //! @brief This funtion writes out the group data.
 	bool		ReadData3DGroupsData(
