@@ -1105,18 +1105,16 @@ bool	ReaderImpl :: ReadData3D(
 
 		data3DHeader.pointFields.rowIndexField = proto.isDefined("rowIndex");
 		data3DHeader.pointFields.columnIndexField = proto.isDefined("columnIndex");
-		data3DHeader.pointFields.indexMaximum = 0;
+		data3DHeader.pointFields.rowIndexMaximum = 0;
+		data3DHeader.pointFields.columnIndexMaximum = 0;
 
 		if( proto.isDefined("rowIndex"))
-			data3DHeader.pointFields.indexMaximum = (uint32_t)
+			data3DHeader.pointFields.rowIndexMaximum = (uint32_t)
 				IntegerNode(proto.get("rowIndex")).maximum();
 
 		if( proto.isDefined("columnIndex"))
-		{
-			uint32_t colMax = (uint32_t) IntegerNode(proto.get("columnIndex")).maximum();
-			if( colMax > data3DHeader.pointFields.indexMaximum)
-				data3DHeader.pointFields.indexMaximum = colMax;
-		}
+			data3DHeader.pointFields.columnIndexMaximum = (uint32_t)
+				IntegerNode(proto.get("columnIndex")).maximum();
 
 		data3DHeader.pointFields.returnIndexField = proto.isDefined("returnIndex");
 		data3DHeader.pointFields.returnCountField = proto.isDefined("returnCount");
@@ -1354,12 +1352,12 @@ bool	ReaderImpl :: GetData3DSizes(
 		{
 			StructureNode indexBounds(scan.get("indexBounds"));
 			if(indexBounds.isDefined("columnMaximum"))
-				column = IntegerNode(indexBounds.get("columnMaximum")).value()
-				- IntegerNode(indexBounds.get("columnMinimum")).value() + 1;
+				column = IntegerNode(indexBounds.get("columnMaximum")).value() -
+						 IntegerNode(indexBounds.get("columnMinimum")).value() + 1;
 
 			if(indexBounds.isDefined("rowMaximum"))
-				row = IntegerNode(indexBounds.get("rowMaximum")).value()
-				- IntegerNode(indexBounds.get("rowMinimum")).value() + 1;
+				row = IntegerNode(indexBounds.get("rowMaximum")).value() -
+					  IntegerNode(indexBounds.get("rowMinimum")).value() + 1;
 		}
 
 		if(scan.isDefined("pointGroupingSchemes"))
@@ -1379,35 +1377,37 @@ bool	ReaderImpl :: GetData3DSizes(
 				StructureNode lineGroupRecord(groups.prototype());
 
 				if(lineGroupRecord.isDefined("idElementValue"))
-					elementSize = IntegerNode(lineGroupRecord.get("idElementValue")).maximum();
+					elementSize = IntegerNode(lineGroupRecord.get("idElementValue")).maximum() - 
+								  IntegerNode(lineGroupRecord.get("idElementValue")).minimum() + 1;
 				else if(bColumnIndex)
 					elementSize = column;
 				else
 					elementSize = row;
 
 				if(lineGroupRecord.isDefined("pointCount"))
-					countSize = IntegerNode(lineGroupRecord.get("pointCount")).maximum();
+					countSize = IntegerNode(lineGroupRecord.get("pointCount")).maximum() - 
+							    IntegerNode(lineGroupRecord.get("pointCount")).minimum() + 1;
 				else if(bColumnIndex)
 					countSize = row;
 				else
 					countSize = column;
 			}
 		}
-// This is not very clear. Should every groupingByLine have a indexBounds?
-//		if( row == 0)
-//		{
-//			if(bColumnIndex)
-//				row = countSize;
-//			else
-//				row = elementSize;
-//		}
-//		if( column == 0)
-//		{
-//			if(bColumnIndex)
-//				column = elementSize;
-//			else
-//				column = countSize;
-//		}
+// if indexBounds is not given
+		if( row == 0)
+		{
+			if(bColumnIndex)
+				row = countSize;
+			else
+				row = elementSize;
+		}
+		if( column == 0)
+		{
+			if(bColumnIndex)
+				column = elementSize;
+			else
+				column = countSize;
+		}
 		return true;
 	}
 	return false;
@@ -2038,30 +2038,30 @@ int32_t	WriterImpl :: NewData3D(
 		{
 		StructureNode ibox = StructureNode(imf_);
 
-		if( (data3DHeader.indexBounds.rowMinimum != 0) ||
-			(data3DHeader.indexBounds.rowMaximum != 0) )
-		{
+//		if( (data3DHeader.indexBounds.rowMinimum != 0) ||
+//			(data3DHeader.indexBounds.rowMaximum != 0) )
+//		{
 			ibox.set("rowMinimum", IntegerNode(imf_,
 				data3DHeader.indexBounds.rowMinimum));
 			ibox.set("rowMaximum", IntegerNode(imf_,
 				data3DHeader.indexBounds.rowMaximum));
-		}
-		if( (data3DHeader.indexBounds.columnMinimum != 0) ||
-			(data3DHeader.indexBounds.columnMaximum != 0) )
-		{
+//		}
+//		if( (data3DHeader.indexBounds.columnMinimum != 0) ||
+//			(data3DHeader.indexBounds.columnMaximum != 0) )
+//		{
 			ibox.set("columnMinimum", IntegerNode(imf_
 				, data3DHeader.indexBounds.columnMinimum));
 			ibox.set("columnMaximum", IntegerNode(imf_,
 				data3DHeader.indexBounds.columnMaximum));
-		}
-		if( (data3DHeader.indexBounds.returnMinimum != 0) ||
-			(data3DHeader.indexBounds.returnMaximum != 0) )
-		{
+//		}
+//		if( (data3DHeader.indexBounds.returnMinimum != 0) ||
+//			(data3DHeader.indexBounds.returnMaximum != 0) )
+//		{
 			ibox.set("returnMinimum", IntegerNode(imf_
 				, data3DHeader.indexBounds.returnMinimum));
 			ibox.set("returnMaximum", IntegerNode(imf_,
 				data3DHeader.indexBounds.returnMaximum));
-		}
+//		}
 		scan.set("indexBounds", ibox);
 	}
 
@@ -2254,9 +2254,9 @@ int32_t	WriterImpl :: NewData3D(
 		int64_t pointsSize = data3DHeader.pointsSize;
 
 		StructureNode lineGroupProto = StructureNode(imf_);
-		lineGroupProto.set("startPointIndex",   IntegerNode(imf_, 0, 0, pointsSize));
-		lineGroupProto.set("idElementValue",    IntegerNode(imf_, 0, 0, groupsSize));
-		lineGroupProto.set("pointCount",        IntegerNode(imf_, 0, 0, countSize));
+		lineGroupProto.set("startPointIndex",   IntegerNode(imf_, 0, 0, pointsSize - 1));
+		lineGroupProto.set("idElementValue",    IntegerNode(imf_, 0, 0, groupsSize - 1));
+		lineGroupProto.set("pointCount",        IntegerNode(imf_, 0, 0, countSize - 1));
 
 		//Not supported in this Simple API for now
 /*
@@ -2425,10 +2425,10 @@ int32_t	WriterImpl :: NewData3D(
 
 	if(data3DHeader.pointFields.rowIndexField)
 		proto.set("rowIndex",    IntegerNode(imf_, 0, E57_UINT32_MIN,
-			data3DHeader.pointFields.indexMaximum));
+			data3DHeader.pointFields.rowIndexMaximum));
 	if(data3DHeader.pointFields.columnIndexField)
 		proto.set("columnIndex", IntegerNode(imf_, 0, E57_UINT32_MIN,
-			data3DHeader.pointFields.indexMaximum));
+			data3DHeader.pointFields.columnIndexMaximum));
 
 	if(data3DHeader.pointFields.timeStampField){
 		if(data3DHeader.pointFields.timeMaximum == E57_FLOAT_MAX)

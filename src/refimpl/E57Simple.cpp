@@ -935,8 +935,9 @@ void Data3D::Reset(void)
 	pointFields.isColorInvalidField = false;
 
 	pointFields.columnIndexField = false;
+	pointFields.columnIndexMaximum = E57_UINT32_MAX;
 	pointFields.rowIndexField = false;
-	pointFields.indexMaximum = E57_UINT32_MAX;
+	pointFields.rowIndexMaximum = E57_UINT32_MAX;
 
 	pointFields.returnCountField = false;
 	pointFields.returnIndexField = false;

@@ -329,8 +329,9 @@ public:
 	double		angleScaledInteger;			//!< Indicates that the PointRecord angle fields should be configured as a ScaledIntegerNode with this scale setting. If 0. then use FloatNode.
 
 	bool		rowIndexField;				//!< Indicates that the PointRecord rowIndex field is active
+	uint32_t	rowIndexMaximum;			//!< Indicates that the PointRecord index fields should be configured with this maximum value where the minimum will be set to 0.
 	bool		columnIndexField;			//!< Indicates that the PointRecord columnIndex field is active
-	uint32_t	indexMaximum;				//!< Indicates that the PointRecord index fields should be configured with this maximum value where the minimum will be set to 0.
+	uint32_t	columnIndexMaximum;			//!< Indicates that the PointRecord index fields should be configured with this maximum value where the minimum will be set to 0.
 
 	bool		returnIndexField;			//!< Indicates that the PointRecord returnIndex field is active
 	bool		returnCountField;			//!< Indicates that the PointRecord returnCount field is active
