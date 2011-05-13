@@ -288,7 +288,7 @@ class GroupingByLine {
 public:
 	ustring		idElementName;		//!< The name of the PointRecord element that identifies which group the point is in. The value of this string must be “rowIndex” or “columnIndex”
 	int64_t		groupsSize;			//!< Size of the groups compressedVector of LineGroupRecord structures
-	int64_t		pointCountMaximum;	//!< This is the maximum value for the e57::LineGroupRecord::pointCount.
+	int64_t		pointCountSize;		//!< This is the size value for the e57::LineGroupRecord::pointCount.
 };
 
 ////////////////////////////////////////////////////////////////////

@@ -953,7 +953,7 @@ bool	ReaderImpl :: ReadData3D(
 
 				StructureNode lineGroupRecord(groups.prototype());
 				if(lineGroupRecord.isDefined("pointCount"))
-					data3DHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum =
+					data3DHeader.pointGroupingSchemes.groupingByLine.pointCountSize =
 						IntegerNode(lineGroupRecord.get("pointCount")).maximum();
 			}
 		}
@@ -1385,8 +1385,7 @@ bool	ReaderImpl :: GetData3DSizes(
 					elementSize = row;
 
 				if(lineGroupRecord.isDefined("pointCount"))
-					countSize = IntegerNode(lineGroupRecord.get("pointCount")).maximum() - 
-							    IntegerNode(lineGroupRecord.get("pointCount")).minimum() + 1;
+					countSize = IntegerNode(lineGroupRecord.get("pointCount")).maximum();
 				else if(bColumnIndex)
 					countSize = row;
 				else
@@ -2250,13 +2249,13 @@ int32_t	WriterImpl :: NewData3D(
     ///     "/data3D/0/pointGroupingSchemes/groupingByLine/groups/0/idElementValue"
 
 		int64_t groupsSize = data3DHeader.pointGroupingSchemes.groupingByLine.groupsSize;
-		int64_t countMaximum = data3DHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum;
+		int64_t countSize = data3DHeader.pointGroupingSchemes.groupingByLine.pointCountSize;
 		int64_t pointsSize = data3DHeader.pointsSize;
 
 		StructureNode lineGroupProto = StructureNode(imf_);
 		lineGroupProto.set("startPointIndex",   IntegerNode(imf_, 0, 0, pointsSize - 1));
 		lineGroupProto.set("idElementValue",    IntegerNode(imf_, 0, 0, groupsSize - 1));
-		lineGroupProto.set("pointCount",        IntegerNode(imf_, 0, 0, countMaximum));
+		lineGroupProto.set("pointCount",        IntegerNode(imf_, 0, 0, countSize));
 
 		//Not supported in this Simple API for now
 /*

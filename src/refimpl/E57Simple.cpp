@@ -55,6 +55,7 @@ An example of a typical use of this interface would be as follows:
 	try
 	{
 // Create a ReaderImpl
+
 		_bstr_t bsFile = sFile;			//converts Unicode to UTF-8
 		e57::Reader	eReader( (char*) bsFile);
 
@@ -62,10 +63,12 @@ An example of a typical use of this interface would be as follows:
 // ACCESSING ROOT DATA
 
 // Read the root
+
 		e57::E57Root	rootHeader;
 		eReader.GetE57Root( rootHeader);		
 
 //Access all the root information like
+
 		char* fileGuid = rootHeader.guid.c_str();
 		double fileGPSTime = rootHeader.creationDateTime;
 		...
@@ -74,16 +77,20 @@ An example of a typical use of this interface would be as follows:
 // ACCESSING SCAN DATA3D
 
 //Get the number of scan images available
+
 		int data3DCount = eReader.GetData3DCount();
 
 //selecting the first scan
+
 		int scanIndex = 0;
 
 //Read the scan 0 header.
+
 		e57::Data3D		scanHeader;
 		eReader.ReadData3D( scanIndex, scanHeader);
 
 //Access all the header information
+
 		_bstr_t bstrName = scanHeader.name.c_str();
 		_bstr_t bstrGuid = scanHeader.guid.c_str();
 		_bstr_t bstrDesc = scanHeader.description.c_str();
@@ -92,6 +99,7 @@ An example of a typical use of this interface would be as follows:
 		double endGPSTime = rootHeader.acquisitionEnd;
 
 //Get pose information
+
 		ISI::Point translation;
 		translation.x(scanHeader.pose.translation.x);
 		translation.y(scanHeader.pose.translation.y);
@@ -104,6 +112,7 @@ An example of a typical use of this interface would be as follows:
 		rotation.z(scanHeader.pose.rotation.z);
 
 //Get scanner information
+
 		_bstr_t bstrSerial = scanHeader.sensorSerialNumber.c_str();
 		_bstr_t bstrVendor = scanHeader.sensorVendor.c_str();
 		_bstr_t bstrModel = scanHeader.sensorModel.c_str();
@@ -112,6 +121,7 @@ An example of a typical use of this interface would be as follows:
 		_bstr_t bstrHardware = scanHeader.sensorHardwareVersion.c_str();
 
 //Get environment information
+
 		double temperature = scanHeader.temperature;
 		double humidity = scanHeader.relativeHumidity;
 		double airPressure = scanHeader.atmosphericPressure;
@@ -124,55 +134,59 @@ An example of a typical use of this interface would be as follows:
 //Get the Size of the Scan
 		int64_t nColumn = 0;	
 		int64_t nRow = 0;
+
 		int64_t nPointsSize = 0;	//Number of points
+
 		int64_t nGroupsSize = 0;	//Number of groups
-		int64_t nCountSize = 0;		//Maximum point count per group
+		int64_t nCountSize = 0;		//Number of points per group
 		bool	bColumnIndex = false; //indicates that idElementName is "columnIndex"
+
 		eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize, nCountSize, bColumnIndex);
 
-		if(nRow == 0)
-		{
-			nRow = 1024;	//choose a chunk size
-			nColumn = pointsSize / nRow;
-		}
+		int64_t nSize = nRow;
+		if(nSize == 0) nSize = 1024;	// choose a chunk size
 
 //Setup buffers
+
 		int8_t * isInvalidData = NULL;
 		if(scanHeader.pointFields.cartesianInvalidStateField)
-			isInvalidData = new int8_t[nRow];
+			isInvalidData = new int8_t[nSize];
 
-//Setup Points
+//Setup Points Buffers
+
 		double * xData = NULL;
 		if(scanHeader.pointFields.cartesianXField)
-			xData = new double[nRow];
+			xData = new double[nSize];
 
 		double * yData = NULL;
 		if(scanHeader.pointFields.cartesianYField)
-			yData = new double[nRow];
+			yData = new double[nSize];
 
 		double * zData = NULL;
 		if(scanHeader.pointFields.cartesianZField)
-			zData = new double[nRow];
+			zData = new double[nSize];
 
 //Setup intensity buffers if present
-		double * intData = NULL;
-		bool bIntensity = false;
-		double intRange = 0;
-		double intOffset = 0;
+
+		double *	intData = NULL;
+		bool		bIntensity = false;
+		double		intRange = 0;
+		double		intOffset = 0;
 
 		if(scanHeader.pointFields.intensityField)
 		{
 			bIntensity = true;
-			intData = new double[nRow];
+			intData = new double[nSize];
 			intRange = scanHeader.intensityLimits.intensityMaximum - scanHeader.intensityLimits.intensityMinimum;
 			intOffset = scanHeader.intensityLimits.intensityMinimum;
 		}
 
 //Setup color buffers if present
-		uint16_t * redData = NULL;
-		uint16_t * greenData = NULL;
-		uint16_t * blueData = NULL;
-		bool bColor = false;
+
+		uint16_t *	redData = NULL;
+		uint16_t *	greenData = NULL;
+		uint16_t *	blueData = NULL;
+		bool		bColor = false;
 		int32_t		colorRedRange = 1;
 		int32_t		colorRedOffset = 0;
 		int32_t		colorGreenRange = 1;
@@ -183,9 +197,9 @@ An example of a typical use of this interface would be as follows:
 		if(header.pointFields.colorRedField)
 		{
 			bColor = true;
-			redData = new uint16_t[nRow];
-			greenData = new uint16_t[nRow];
-			blueData = new uint16_t[nRow];
+			redData = new uint16_t[nSize];
+			greenData = new uint16_t[nSize];
+			blueData = new uint16_t[nSize];
 			colorRedRange = header.colorLimits.colorRedMaximum - header.colorLimits.colorRedMinimum;
 			colorRedOffset = header.colorLimits.colorRedMinimum;
 			colorGreenRange = header.colorLimits.colorGreenMaximum - header.colorLimits.colorGreenMinimum;
@@ -194,29 +208,30 @@ An example of a typical use of this interface would be as follows:
 			colorBlueOffset = header.colorLimits.colorBlueMinimum;
 		}
 
-//Read the group information
+//Setup the GroupByLine buffers information
+
 		int64_t * idElementValue = NULL;
 		int64_t * startPointIndex = NULL;
 		int64_t * pointCount = NULL;
-		int32_t * rowIndex = NULL;
-		int32_t * columnIndex = NULL;
-
 		if(nGroupsSize > 0)
 		{
 			idElementValue = new int64_t[nGroupsSize];
 			startPointIndex = new int64_t[nGroupsSize];
 			pointCount = new int64_t[nGroupsSize];
-			rowIndex = new int32_t[nRow];		//assumes "columnIndex" only
 
 			if(!eReader.ReadData3DGroupsData(scanIndex, nGroupsSize, idElementValue,
 				startPointIndex, pointCount))
 				nGroupsSize = 0;
 		}
-		if(scanHeader.pointFields.cartesianZField)if( nRow > 0)
-		{
-			rowIndex = new int32_t[nRow];
+
+//Setup row/column index information
+
+		int32_t * rowIndex = NULL;
+		int32_t * columnIndex = NULL;
+		if(scanHeader.pointFields.rowIndexField)
+			rowIndex = new int32_t[nSize];
+		if(scanHeader.pointFields.columnIndexField)
 			columnIndex = new int32_t[nRow];
-		}
 
 //Get dataReader object
 
@@ -242,68 +257,53 @@ An example of a typical use of this interface would be as follows:
 
 //Read the point data
 
-		int64_t startPoint = 0;
-		int64_t count = 0;
-		unsigned size = 0;
-		int group = 0;
-		int	col = 0;
-		int row = 0;
+		int64_t		count = 0;
+		unsigned	size = 0;
+		int			col = 0;
+		int			row = 0;
 
-		for(long j = 0; j < nColumn; j++)
+		while(size = dataReader.read())
 		{
-//Groups
-			if(nGroupsSize > 0)
-			{
-				group = idElementValue[j];
-				startPoint = startPointIndex[j];
-				count = pointCount[j];
-
-				dataReader.seek(startPoint);	//not working yet
-				size = dataReader.read(count);
-			}
-			else
-			{
-//Read a column
-				size = dataReader.read();
-				group = j;
-			}
 
 //Use the data
+
 			for(long i = 0; i < size; i++)
 			{
 				if(columnIndex)
 					col = columnIndex[i];
 				else
-					col = group;
+					col = 0;	//point cloud case
 
 				if(rowIndex)
 					row = rowIndex[i];
 				else
-					row = i;
+					row = count;	//point cloud case
 
-				if(isInvalidData[row] == 0)
-					pScan->SetPoint(row,col, xData[row], yData[row], zData[row]);
+				if(isInvalidData[i] == 0)
+					pScan->SetPoint(row, col, xData[i], yData[i], zData[i]);
 
-				if(bIntensity){	//Normalize intensity to 0 - 1.
-					double intensity = (intData[row] - intOffset)/intRange;
+				if(bIntensity){		//Normalize intensity to 0 - 1.
+					double intensity = (intData[i] - intOffset)/intRange;
 					pScan->SetIntensity(row, col, intensity);
 				}
 
-				if(bColor){ //Normalize color to 0 - 255
-					int red = ((redData[row] - colorRedOffset) * 255)/colorRedRange;
-					int green = ((greenData[row] - colorGreenOffset) * 255)/colorBlueRange;
-					int blue = ((blueData[row] - colorBlueOffset) * 255)/colorBlueRange;
+				if(bColor){			//Normalize color to 0 - 255
+					int red = ((redData[i] - colorRedOffset) * 255)/colorRedRange;
+					int green = ((greenData[i] - colorGreenOffset) * 255)/colorBlueRange;
+					int blue = ((blueData[i] - colorBlueOffset) * 255)/colorBlueRange;
 					pScan->SetColor(row, col, red, green, blue);
+
+				count++;
 			}
 		}
 
 //Close and clean up
 		dataReader.close();
 
-		delete isInvalidData;
-		delete xData;
-		delete yData;
-		delete zData;
+		if(isInvalidData) delete isInvalidData;
+		if(xData) delete xData;
+		if(yData) delete yData;
+		if(zData) delete zData;
 		if(intData) delete intData;
 		if(redData) delete redData;
 		if(greenData) delete greenData;
@@ -313,12 +313,15 @@ An example of a typical use of this interface would be as follows:
 // ACCESSING PICTURE IMAGE2D
 
 //Get the number of picture images available
+
 		int image2DCount = eReader.GetImage2DCount();
 
 //selecting the first picture image
+
 		int imageIndex = 0;
 
 //Read the picture 0 header.
+
 		e57::Image2D	imageHeader;
 		eReader.ReadData3D( imageIndex, imageHeader);
 
@@ -327,10 +330,10 @@ An example of a typical use of this interface would be as follows:
 		_bstr_t bstrName = imageHeader.name.c_str();
 		_bstr_t bstrGuid = imageHeader.guid.c_str();
 		_bstr_t bstrDesc = imageHeader.description.c_str();
-
 		double imageGPSTime = rootHeader.acquisitionDateTime;
 
 //Get pose information
+
 		ISI::Point translation;
 		translation.x(imageHeader.pose.translation.x);
 		translation.y(imageHeader.pose.translation.y);
@@ -343,6 +346,7 @@ An example of a typical use of this interface would be as follows:
 		rotation.z(imageHeader.pose.rotation.z);
 
 		//Get camera information
+
 		_bstr_t bstrSerial = imageHeader.sensorSerialNumber.c_str();
 		_bstr_t bstrVendor = imageHeader.sensorVendor.c_str();
 		_bstr_t bstrModel = imageHeader.sensorModel.c_str();
@@ -352,13 +356,14 @@ An example of a typical use of this interface would be as follows:
 // ACCESSING PICTURE IMAGE
 
 //Get the Size of the Picture
+
 		e57::Image2DProjection	imageProjection;	//like E57_SPHERICAL
-		e57::Image2DType	imageType;		//like E57_JPEG_IMAGE
-		int64_t			nImageWidth = 0;	
-		int64_t			nImageHeight = 0;
-		int64_t			nImagesSize = 0;	//Number of bytes in the image
-		e57::Image2DType	imageMaskType;		//like E57_PNG_IMAGE_MASK if present
-		e57::Image2dType	imageVisualType;	//like E57_JPEG_IMAGE if present
+		e57::Image2DType		imageType;			//like E57_JPEG_IMAGE
+		int64_t					nImageWidth = 0;	
+		int64_t					nImageHeight = 0;
+		int64_t					nImagesSize = 0;	//Number of bytes in the image
+		e57::Image2DType		imageMaskType;		//like E57_PNG_IMAGE_MASK if present
+		e57::Image2dType		imageVisualType;	//like E57_JPEG_IMAGE if present
 
 		eReader.GetImage2DSizes( imageIndex, imageProjection, imageType,
 			nImageWidth, nImageHeight, nImagesSize, imageMaskType, imageVisualType);
@@ -371,14 +376,17 @@ An example of a typical use of this interface would be as follows:
 		double pixelWidth = imageHeader.sphericalRepresentation.pixelWidth;
 
 //Set up buffers
+
 		void* jpegBuffer = new char[nImagesSize];
 
 //Read the picture data
+
 		eReader.ReadImage2DData(imageIndex, imageProjection, imageType, jpegBuffer, 0, nImagesSizw);
 
 // ... access the picture and decode ...
 
 //Close and clean up
+
 		delete jpegBuffer;
 
 		eReaer.Close();	
@@ -399,7 +407,9 @@ An example of a typical use of this interface would be as follows:
 <tt><PRE>
 	try
 	{
+
 // Create a WriterImpl
+
 		_bstr_t bsFile = sFile;			//converts Unicode to UTF-8
 		e57::Writer	eWriter( (char*) bsFile);
 
@@ -411,12 +421,14 @@ An example of a typical use of this interface would be as follows:
 
 		e57::Data3D	scanHeader;
 
-//Setup the Name and Description											
+//Setup the Name and Description
+
 		scanHeader.name = (char*) bstrName;
 		scanHeader.description = (char*) bstrDesc;
 
 //Setup the GUID
-		GUID	guid;						
+
+		GUID	guid;					//Window's GUID	
 		pScan->GetGuid(&guid);
 		OLECHAR wbuffer[64];
 		StringFromGUID2(guid,&wbuffer[0],64);
@@ -427,7 +439,8 @@ An example of a typical use of this interface would be as follows:
 		scanHeader.acquisitionStart.SetCurrentGPSTime();	//use real time
 		scanHeader.acquisitionEnd.SetCurrentGPSTime();
 	
-//Set up the scan size
+//Setup the scan size
+
 		scanHeader.indexBounds.rowMaximum = nRow - 1;	
 		scanHeader.indexBounds.rowMinimum = 0;
 		scanHeader.indexBounds.columnMaximum = nColumn - 1;
@@ -435,15 +448,19 @@ An example of a typical use of this interface would be as follows:
 		scanHeader.indexBounds.returnMaximum = 0; 
 		scanHeader.indexBounds.returnMinimum = 0;
 
+//Setup GroupByLine information
+
 		scanHeader.pointGroupingSchemes.groupingByLine.groupsSize = nColumn;
-		scanHeader.pointGroupingSchemes.groupingByLine.pointCountMaximum = nRow;
+		scanHeader.pointGroupingSchemes.groupingByLine.pointCountSize = nRow;
 		scanHeader.pointGroupingSchemes.groupingByLine.idElementName = "columnIndex";
 
 //Set up total number of points
+
 		scanHeader.pointsSize = (nColumn * nRow);	
 
-#define DATA_SCALE_FACTOR	(.00001)
 //Setup bounds
+
+#define DATA_SCALE_FACTOR	(.00001)
 		if(exportStatistics)			
 		{	//because we are using scaled integers for the data, we must adjust our bounds
 			scanHeader.cartesianBounds.xMaximum = floor(pStat->GetMaxX()/DATA_SCALE_FACTOR +0.5) * DATA_SCALE_FACTOR;
@@ -460,7 +477,9 @@ An example of a typical use of this interface would be as follows:
 			scanHeader.sphericalBounds.elevationMaximum = pStat->GetMaxPolar();
 			scanHeader.sphericalBounds.elevationMinimum = pStat->GetMinPolar();
 		}
+
 //Setup pose rotation and transformation
+
 		if(exportMatrix)				
 		{
 			scanHeader.pose.rotation.w = rotation.w();
@@ -471,7 +490,9 @@ An example of a typical use of this interface would be as follows:
 			scanHeader.pose.translation.y = translation.y();
 			scanHeader.pose.translation.z = translation.z();
 		}
+
 //Setup scanner information
+
 		if(exportScanner)
 		{
 			scanHeader.sensorSerialNumber = (char*) bstrSerial;
@@ -489,6 +510,7 @@ An example of a typical use of this interface would be as follows:
 // SETTING UP PointRecord Fields
 
 //Setup Points
+
 		scanHeader.pointFields.cartesianInvalidStateField = true;
 		int8_t * isInvalidData = new int8_t[nRow];
 
@@ -504,6 +526,7 @@ An example of a typical use of this interface would be as follows:
 		scanHeader.pointFields.pointRangeMaximum = ((double) e57::E57_INT32_MAX) / DATA_SCALE_FACTOR;
 
 //Setup Color
+
 		uint16_t * redData = NULL;
 		uint16_t * greenData = NULL;
 		uint16_t * blueData = NULL;
@@ -523,7 +546,9 @@ An example of a typical use of this interface would be as follows:
 			scanheader.colorLimits.colorBlueMinimum = e57::E57_UINT8_MIN;
 			scanheader.colorLimits.colorBlueMaximum = e57::E57_UINT8_MAX;
 		}
+
 //Setup Intensity
+
 		double * intData = NULL;
 		if(exportIntensity)
 		{
@@ -536,9 +561,11 @@ An example of a typical use of this interface would be as follows:
 		}
 
 //Write out a new scan header and receive back the index							
+
 		int scanIndex = eWriter.NewData3D(scanHeader);
 
 //Setup the data buffers
+
 		e57::CompressedVectorWriter dataWriter = eWriter.SetUpData3DPointsData(
 				scanIndex,			//!< data block index given by the NewData3D
 				nRow,				//!< size of each of the buffers given
@@ -564,24 +591,32 @@ An example of a typical use of this interface would be as follows:
 		int startPoint = 0;
 
 //Access the point data
+
 		for(long j = 0; j < nColumn; j++)
 		{
 			int count = 0;
 
 			for(long i = 0; i < nRow; i++)
 			{
+
 //Get the invalid status
-				isInvalidData[count] = (pScan->GetStatus(i,j) & INVALID) ? 1 : 0;
+
+				isInvalidData[count] = (pScan->GetStatus(i,j) & INVALID) ? 2 : 0;
+
 //Get the point
+
 				ISI::Point point = pScan->GetPoint(i, j);
 				xData[count] = point.x();
 				yData[count] = point.y();
 				zData[count] = point.z();
 
 //Get the intensity 0. to 1. range
+
 				if(exportIntensity)
 					intData[count] = pScan->GetIntensity(i, j);
+
 //Get the color
+
 				if(exportColor)
 				{
 					uint8_t red = 0;
@@ -596,9 +631,11 @@ An example of a typical use of this interface would be as follows:
 				count++;
 			}
 //Write out the buffers
+
 			dataWriter.write(count);
 
 //Collect the group information
+
 			idElementValue.push_back((int64_t) j);
 			startPointIndex.push_back((int64_t) startPoint);
 			pointCount.push_back((int64_t) count);
@@ -606,16 +643,20 @@ An example of a typical use of this interface would be as follows:
 
 			startPoint += count;
 		}
+
 //Finish the scan data write
+
 		dataWriter.close();
 
 //Write out the group information
+
 		eWriter.WriteData3DGroupsData(scanIndex, group,
 			(int64_t*) &idElementValue[0],
 			(int64_t*) &startPointIndex[0],
 			(int64_t*) &pointCount[0]);
 
 //Clean up
+
 		if(isInvalidData) delete isInvalidData;
 		if(xData) delete xData;
 		if(yData) delete yData;
@@ -631,22 +672,27 @@ An example of a typical use of this interface would be as follows:
 		e57::Image2D	imageHeader;
 
 //Setup the Name and Description											
+
 		imageHeader.name = (char*) bstrName;
 		imageHeader.description = (char*) bstrDesc;
 
 //Setup the GUID
+
 		imageHeader.guid = (char*) bstrImageGuid;
 		imageHeader.associatedData3DGuid = (char*) bstrScanGuid;
 
 //Setup the DateTime
+
 		imageHeader.acquisitionDateTime.SetCurrentGPSTime() //set current time.
 
 //Setup camera information
+
 		imageHeader.sensorSerialNumber = (char*) bstrSerial;
 		imageHeader.sensorVendor = (char*) bstrVendor;
 		imageHeader.sensorModel = (char*) bstrModel;
 
 //Setup image orientation
+
 		imageHeader.pose.rotation.w = rotation.w();
 		imageHeader.pose.rotation.x = rotation.x();
 		imageHeader.pose.rotation.y = rotation.y();
@@ -656,12 +702,14 @@ An example of a typical use of this interface would be as follows:
 		imageHeader.pose.translation.z = translation.z();
 
 //Setup image size
+
 		imageHeader.sphericalRepresentation.imageHeight = imageHeight;
 		imageHeader.sphericalRepresentation.imageWidth = imageWidth;
 		imageHeader.sphericalRepresentation.pixelHeight = pixelHeight;
 		imageHeader.sphericalRepresentation.pixelWidth = pixelWidth;
 
 //Open jpeg file
+
 		CFile jpegFile;
 		CFileException fileError;
 		jpegFile.Open(imagePath, CFile::modeRead | CFile::typeBinary, &fileError);
@@ -670,18 +718,22 @@ An example of a typical use of this interface would be as follows:
 		imageHeader.sphericalRepresentation.jpegImageSize = dwLength; //Real Size before newing image header
 
 //Write the image header
+
 		int imageIndex = eWriter.NewImage2D(header);
 
 //Access the jpeg image data
+
 		void * pBuffer = new char[dwLength];
 		jpegFile.SeekToBegin();
 		jpegFile.Read(pBuffer,dwLength);
 
 //Write the jpeg data 
+
 		eWriter.WriteImage2DData(imageIndex, e57::E57_JPEG_IMAGE, e57::E57_SPHERICAL,
 					pBuffer,0,dwLength);
 
 //Finish the E57 file
+
 		eWriter.Close();	
 
 ///////////////////////////////////////////////////////////////////////
@@ -885,8 +937,8 @@ void Data3D::Reset(void)
 
 	sphericalBounds.rangeMinimum = 0.;
 	sphericalBounds.rangeMaximum = E57_DOUBLE_MAX;
-	sphericalBounds.azimuthStart = 0.;
-	sphericalBounds.azimuthEnd = 2 * PI;
+	sphericalBounds.azimuthStart = -PI;
+	sphericalBounds.azimuthEnd = PI;
 	sphericalBounds.elevationMinimum = -PI/2.;
 	sphericalBounds.elevationMaximum = PI/2.;
 
@@ -908,7 +960,7 @@ void Data3D::Reset(void)
 	colorLimits.colorBlueMaximum = 0.;
 
 	pointGroupingSchemes.groupingByLine.groupsSize = 0;
-	pointGroupingSchemes.groupingByLine.pointCountMaximum = 0;
+	pointGroupingSchemes.groupingByLine.pointCountSize = 0;
 	pointGroupingSchemes.groupingByLine.idElementName = "";
 
 	pointFields.cartesianXField = false;
