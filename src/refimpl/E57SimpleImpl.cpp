@@ -55,6 +55,9 @@
 #  define __LARGE64_FILES
 #  include <sys/types.h>
 #  include <unistd.h>
+#  include <boost/uuid/uuid.hpp>
+#  include <boost/uuid/uuid_generators.hpp>
+#  include <boost/uuid/uuid_io.hpp>
 
 #    include <fcntl.h>
 #    include <sys\stat.h>
@@ -66,6 +69,9 @@
 #  define __LARGE64_FILES
 #  include <sys/types.h>
 #  include <unistd.h>
+#  include <boost/uuid/uuid.hpp>
+#  include <boost/uuid/uuid_generators.hpp>
+#  include <boost/uuid/uuid_io.hpp>
 #else
 #  error "no supported OS platform defined"
 #endif
@@ -370,8 +376,16 @@ char * e57::GetNewGuid(void)
 	size_t	converted = 0;
 	wcstombs_s(&converted, fileGuid,wbuffer,64);
 
-#else	//TODO need a way to gen a guid for other OS
-	strcpy(fileGuid,"{4179C162-49A8-4fba-ADC6-527543D26D86}");
+#else
+	boost::uuids::random_generator gen;
+	boost::uuids::uuid u = gen();
+	std::stringstream s;
+	s << u;
+	std::string c = s.str();
+	fileGuid[0] = '{';
+	memcpy(&fileGuid[1],&c[0],36);
+	fileGuid[37] = '}';
+	fileGuid[38] = 0;
 #endif
 	return fileGuid;
 };
