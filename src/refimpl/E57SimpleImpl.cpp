@@ -50,6 +50,9 @@
 #    include <fcntl.h>
 #    include <sys\stat.h>
 #    include <windows.h>
+#  include <boost/uuid/uuid.hpp>
+#  include <boost/uuid/uuid_generators.hpp>
+#  include <boost/uuid/uuid_io.hpp>
 #  elif defined(__GNUC__)
 #  define _LARGEFILE64_SOURCE
 #  define __LARGE64_FILES
@@ -58,7 +61,6 @@
 #  include <boost/uuid/uuid.hpp>
 #  include <boost/uuid/uuid_generators.hpp>
 #  include <boost/uuid/uuid_io.hpp>
-
 #    include <fcntl.h>
 #    include <sys\stat.h>
 #  else
@@ -367,7 +369,6 @@ void	e57::GetUTCFromGPSDateTime(
 char * e57::GetNewGuid(void)
 {
 	static char	fileGuid[64];
-
 #if defined(_MSC_VER)
 	GUID		guid;
 	CoCreateGuid((GUID*)&guid);
@@ -382,6 +383,7 @@ char * e57::GetNewGuid(void)
 	std::stringstream s;
 	s << u;
 	std::string c = s.str();
+
 	fileGuid[0] = '{';
 	memcpy(&fileGuid[1],&c[0],36);
 	fileGuid[37] = '}';
@@ -977,23 +979,53 @@ bool	ReaderImpl :: ReadData3D(
 		if(scan.isDefined("cartesianBounds"))
 		{
 			StructureNode bbox(scan.get("cartesianBounds"));
-			data3DHeader.cartesianBounds.xMinimum = FloatNode(bbox.get("xMinimum")).value();
-			data3DHeader.cartesianBounds.xMaximum = FloatNode(bbox.get("xMaximum")).value();
-			data3DHeader.cartesianBounds.yMinimum = FloatNode(bbox.get("yMinimum")).value();
-			data3DHeader.cartesianBounds.yMaximum = FloatNode(bbox.get("yMaximum")).value();
-			data3DHeader.cartesianBounds.zMinimum = FloatNode(bbox.get("zMinimum")).value();
-			data3DHeader.cartesianBounds.zMaximum = FloatNode(bbox.get("zMaximum")).value();
+			if( bbox.get("xMinimum").type() == E57_SCALED_INTEGER ) {
+				data3DHeader.cartesianBounds.xMinimum = (double) ScaledIntegerNode(bbox.get("xMinimum")).scaledValue();
+				data3DHeader.cartesianBounds.xMaximum = (double) ScaledIntegerNode(bbox.get("xMaximum")).scaledValue();
+				data3DHeader.cartesianBounds.yMinimum = (double) ScaledIntegerNode(bbox.get("yMinimum")).scaledValue();
+				data3DHeader.cartesianBounds.yMaximum = (double) ScaledIntegerNode(bbox.get("yMaximum")).scaledValue();
+				data3DHeader.cartesianBounds.zMinimum = (double) ScaledIntegerNode(bbox.get("zMinimum")).scaledValue();
+				data3DHeader.cartesianBounds.zMaximum = (double) ScaledIntegerNode(bbox.get("zMaximum")).scaledValue();
+			}
+			else if( bbox.get("xMinimum").type() == E57_FLOAT ){
+				data3DHeader.cartesianBounds.xMinimum = FloatNode(bbox.get("xMinimum")).value();
+				data3DHeader.cartesianBounds.xMaximum = FloatNode(bbox.get("xMaximum")).value();
+				data3DHeader.cartesianBounds.yMinimum = FloatNode(bbox.get("yMinimum")).value();
+				data3DHeader.cartesianBounds.yMaximum = FloatNode(bbox.get("yMaximum")).value();
+				data3DHeader.cartesianBounds.zMinimum = FloatNode(bbox.get("zMinimum")).value();
+				data3DHeader.cartesianBounds.zMaximum = FloatNode(bbox.get("zMaximum")).value();
+			}
 		}
 
 		if(scan.isDefined("sphericalBounds"))
 		{
 			StructureNode sbox(scan.get("sphericalBounds"));
-			data3DHeader.sphericalBounds.rangeMinimum = FloatNode(sbox.get("rangeMinimum")).value();
-			data3DHeader.sphericalBounds.rangeMaximum = FloatNode(sbox.get("rangeMaximum")).value();
-			data3DHeader.sphericalBounds.elevationMinimum = FloatNode(sbox.get("elevationMinimum")).value();
-			data3DHeader.sphericalBounds.elevationMaximum = FloatNode(sbox.get("elevationMaximum")).value();
-			data3DHeader.sphericalBounds.azimuthStart = FloatNode(sbox.get("azimuthStart")).value();
-			data3DHeader.sphericalBounds.azimuthEnd = FloatNode(sbox.get("azimuthEnd")).value();
+			if( sbox.get("rangeMinimum").type() == E57_SCALED_INTEGER ) {
+				data3DHeader.sphericalBounds.rangeMinimum = (double) ScaledIntegerNode(sbox.get("rangeMinimum")).scaledValue();
+				data3DHeader.sphericalBounds.rangeMaximum = (double) ScaledIntegerNode(sbox.get("rangeMaximum")).scaledValue();
+			}
+			else if( sbox.get("rangeMinimum").type() == E57_FLOAT ){
+				data3DHeader.sphericalBounds.rangeMinimum = FloatNode(sbox.get("rangeMinimum")).value();
+				data3DHeader.sphericalBounds.rangeMaximum = FloatNode(sbox.get("rangeMaximum")).value();
+			}
+
+			if( sbox.get("elevationMinimum").type() == E57_SCALED_INTEGER ) {
+				data3DHeader.sphericalBounds.elevationMinimum = (double) ScaledIntegerNode(sbox.get("elevationMinimum")).scaledValue();
+				data3DHeader.sphericalBounds.elevationMaximum = (double) ScaledIntegerNode(sbox.get("elevationMaximum")).scaledValue();
+			}
+			else if( sbox.get("elevationMinimum").type() == E57_FLOAT ){
+				data3DHeader.sphericalBounds.elevationMinimum = FloatNode(sbox.get("elevationMinimum")).value();
+				data3DHeader.sphericalBounds.elevationMaximum = FloatNode(sbox.get("elevationMaximum")).value();
+			}
+
+			if( sbox.get("azimuthStart").type() == E57_SCALED_INTEGER ) {
+				data3DHeader.sphericalBounds.azimuthStart = (double) ScaledIntegerNode(sbox.get("azimuthStart")).scaledValue();
+				data3DHeader.sphericalBounds.azimuthEnd = (double) ScaledIntegerNode(sbox.get("azimuthEnd")).scaledValue();
+			}
+			else if( sbox.get("azimuthStart").type() == E57_FLOAT ){
+				data3DHeader.sphericalBounds.azimuthStart = FloatNode(sbox.get("azimuthStart")).value();
+				data3DHeader.sphericalBounds.azimuthEnd = FloatNode(sbox.get("azimuthEnd")).value();
+			}
 		}
 
 // Get pose structure for scan.
