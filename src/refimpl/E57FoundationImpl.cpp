@@ -3716,18 +3716,19 @@ void ImageFileImpl::construct2(const ustring& fileName, const ustring& mode, con
 #ifdef E57_MAX_VERBOSE
     cout << "ImageFileImpl() called, fileName=" << fileName << " mode=" << mode << endl;
 #endif
-
+	unusedLogicalStart_ = sizeof(E57FileHeader);	//Added by SC
     fileName_ = fileName;
 
     /// Get shared_ptr to this object
     shared_ptr<ImageFileImpl> imf=shared_from_this();
-    file_ = reinterpret_cast<CheckedFile*>(-1); // yes, really! Work around a strange invariant check <rs 2010-06-16> //todo: FIXME
-    shared_ptr<StructureNodeImpl> root(new StructureNodeImpl(imf));
-    file_ = 0;
-    root_ = root; //??? ok?
 
-    /// Mark the root as attached to an ImageFile (this one)
-    root_->setAttachedRecursive();
+// Removed by SC
+//    file_ = reinterpret_cast<CheckedFile*>(-1); // yes, really! Work around a strange invariant check <rs 2010-06-16> //todo: FIXME
+//    shared_ptr<StructureNodeImpl> root(new StructureNodeImpl(imf));
+//    file_ = 0;
+//    root_ = root; //??? ok?
+/// Mark the root as attached to an ImageFile (this one)
+//    root_->setAttachedRecursive();
 
     //??? allow "rw" or "a"?
     if (mode == "w")
@@ -3743,6 +3744,10 @@ void ImageFileImpl::construct2(const ustring& fileName, const ustring& mode, con
         try { //??? should one try block cover whole function?
             /// Open file for reading.
             file_ = new CheckedFile(fileName_, CheckedFile::readOnly);
+
+			shared_ptr<StructureNodeImpl> root(new StructureNodeImpl(imf));	//Added by SC
+			root_ = root;
+			root_->setAttachedRecursive();
 
             E57FileHeader header;
             readFileHeader(file_, header);
@@ -3788,8 +3793,11 @@ void ImageFileImpl::construct2(const ustring& fileName, const ustring& mode, con
             /// Create input source (XML section of E57 file turned into a stream).
             E57FileInputSource xmlSection(file_, xmlLogicalOffset_, xmlLogicalLength_);
 
+			unusedLogicalStart_ = sizeof(E57FileHeader);	//Added by SC
+
             /// Do the parse, building up the node tree
             xmlReader->parse(xmlSection);
+
         } catch (...) {
             if (xmlReader != NULL) {
                 delete xmlReader;
@@ -3810,7 +3818,14 @@ void ImageFileImpl::construct2(const ustring& fileName, const ustring& mode, con
             /// Open file for writing, truncate if already exists.
             file_ = new CheckedFile(fileName_, CheckedFile::writeCreate);
 
+			shared_ptr<StructureNodeImpl> root(new StructureNodeImpl(imf));	//Added by SC
+			root_ = root;
+			root_->setAttachedRecursive();
+
             unusedLogicalStart_ = sizeof(E57FileHeader);
+			xmlLogicalOffset_ = 0;		//Added by SC
+			xmlLogicalLength_ = 0;
+
         } catch (...) {
             /// Remember to close file if got any exception
             if (file_ != NULL) {

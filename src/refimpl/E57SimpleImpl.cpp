@@ -1635,6 +1635,7 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 	return reader;
 };
 
+//#define TEST_EXTENSIONS
 ////////////////////////////////////////////////////////////////////
 //
 //	e57::Writer
@@ -1653,6 +1654,11 @@ CompressedVectorReader	ReaderImpl :: SetUpData3DPointsData(
 /// We explicitly register it for completeness (the reference implementaion would do it for us, if we didn't).
     imf_.extensionsAdd("", E57_V1_0_URI);
 
+#ifdef TEST_EXTENSIONS
+	imf_.extensionsAdd("ext","http://www.libe57.org/extensions.html");
+
+	root_.set("ext:extDesc", StringNode(imf_, "This is a test string"));
+#endif
 // Set per-file properties.
 /// Path names: "/formatName", "/majorVersion", "/minorVersion", "/coordinateMetadata"
 	root_.set("formatName", StringNode(imf_, "ASTM E57 3D Imaging Data File"));
@@ -1795,6 +1801,15 @@ int32_t	WriterImpl :: NewImage2D(
 		translation.set("y", FloatNode(imf_, image2DHeader.pose.translation.y));
 		translation.set("z", FloatNode(imf_, image2DHeader.pose.translation.z));
 	}
+
+#ifdef TEST_EXTENSIONS
+	StructureNode extbox = StructureNode(imf_);
+	extbox.set("ext:imageHeight", IntegerNode(imf_, image2DHeader.visualReferenceRepresentation.imageHeight));
+	extbox.set("ext:imageWidth", IntegerNode(imf_,	image2DHeader.visualReferenceRepresentation.imageWidth));
+	image.set("ext:imageSize", extbox);
+	image.set("ext:extraStr", StringNode(imf_, "This is another extra string"));
+	image.set("ext:extraFloat", FloatNode(imf_, 3.14159));
+#endif
 
 	if( image2DHeader.visualReferenceRepresentation.jpegImageSize > 0 ||
 		image2DHeader.visualReferenceRepresentation.pngImageSize > 0)
@@ -2110,6 +2125,15 @@ int32_t	WriterImpl :: NewData3D(
 		scan.set("indexBounds", ibox);
 	}
 
+#ifdef TEST_EXTENSIONS
+	StructureNode extbox = StructureNode(imf_);
+	extbox.set("ext:rows", IntegerNode(imf_, data3DHeader.indexBounds.rowMaximum + 1));
+	extbox.set("ext:columns", IntegerNode(imf_,	data3DHeader.indexBounds.columnMaximum + 1));
+	scan.set("ext:indexSize", extbox);
+	scan.set("ext:extraStr", StringNode(imf_, "This is another extra string"));
+	scan.set("ext:extraFloat", FloatNode(imf_, 3.14159));
+#endif
+
 	if( (data3DHeader.intensityLimits.intensityMaximum != 0.) ||
 		(data3DHeader.intensityLimits.intensityMinimum != 0.) ){
 
@@ -2379,6 +2403,9 @@ int32_t	WriterImpl :: NewData3D(
 				data3DHeader.pointFields.pointRangeMinimum,
 				data3DHeader.pointFields.pointRangeMaximum));
 	}
+#ifdef TEST_EXTENSIONS
+	proto.set("ext:extraField1", IntegerNode(imf_, 0, 0, 255));
+#endif
 	if(data3DHeader.pointFields.cartesianZField){
 		if(data3DHeader.pointFields.pointRangeScaledInteger > 0.)
 			proto.set("cartesianZ",  ScaledIntegerNode(imf_, 0,
@@ -2427,6 +2454,10 @@ int32_t	WriterImpl :: NewData3D(
 				data3DHeader.pointFields.angleMinimum,
 				data3DHeader.pointFields.angleMaximum));
 	}
+
+#ifdef TEST_EXTENSIONS
+	proto.set("ext:extraField2", IntegerNode(imf_, 0, 0, 255));
+#endif
 
 	if(data3DHeader.pointFields.intensityField){
 		if(data3DHeader.pointFields.intensityScaledInteger > 0.)
@@ -2485,7 +2516,9 @@ int32_t	WriterImpl :: NewData3D(
 				(int64_t) -data3DHeader.pointFields.timeMaximum,
 				(int64_t) data3DHeader.pointFields.timeMaximum));
 	}
-
+#ifdef TEST_EXTENSIONS
+	proto.set("ext:extraField3", IntegerNode(imf_, 0, 0, 255));
+#endif
 	if(data3DHeader.pointFields.cartesianInvalidStateField)
 		proto.set("cartesianInvalidState",  IntegerNode(imf_, 0, 0, 2));
 	if(data3DHeader.pointFields.sphericalInvalidStateField)
@@ -2542,6 +2575,17 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 
 	)
 {
+#ifdef TEST_EXTENSIONS
+	uint8_t*		extraField1 = new uint8_t[(unsigned) count];
+	uint8_t*		extraField2 = new uint8_t[(unsigned) count];
+	uint8_t*		extraField3 = new uint8_t[(unsigned) count];
+
+	for( int i = 0; i < count; i++) {
+		extraField1[i] = i % 256;
+		extraField2[i] = i % 256;
+		extraField3[i] = i % 256;
+	}
+#endif
 	StructureNode scan(data3D_.get(dataIndex));
 	CompressedVectorNode points(scan.get("points"));
 	StructureNode proto(points.prototype());
@@ -2551,6 +2595,10 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianX",  cartesianX,  (unsigned) count, true, true));
 	if(proto.isDefined("cartesianY") && (cartesianY != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianY",  cartesianY,  (unsigned) count, true, true));
+#ifdef TEST_EXTENSIONS
+	if(proto.isDefined("ext:extraField1"))
+		sourceBuffers.push_back(SourceDestBuffer(imf_,"ext:extraField1", extraField1, (unsigned) count, true));
+#endif
 	if(proto.isDefined("cartesianZ") && (cartesianZ != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianZ",  cartesianZ,  (unsigned) count, true, true));
 
@@ -2560,6 +2608,11 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalAzimuth",  sphericalAzimuth,  (unsigned) count, true, true));
 	if(proto.isDefined("sphericalElevation") && (sphericalElevation != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "sphericalElevation",  sphericalElevation,  (unsigned) count, true, true));
+
+#ifdef TEST_EXTENSIONS
+	if(proto.isDefined("ext:extraField2"))
+		sourceBuffers.push_back(SourceDestBuffer(imf_,"ext:extraField2", extraField2, (unsigned) count, true));
+#endif
 
 	if(proto.isDefined("intensity") && (intensity != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "intensity",   intensity,   (unsigned) count, true, true));
@@ -2584,6 +2637,10 @@ CompressedVectorWriter	WriterImpl :: SetUpData3DPointsData(
 	if(proto.isDefined("timeStamp") && (timeStamp != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "timeStamp",   timeStamp,   (unsigned) count, true));
 
+#ifdef TEST_EXTENSIONS
+	if(proto.isDefined("ext:extraField3"))
+		sourceBuffers.push_back(SourceDestBuffer(imf_,"ext:extraField3", extraField3, (unsigned) count, true));
+#endif
 	if(proto.isDefined("cartesianInvalidState") && (cartesianInvalidState != NULL))
 		sourceBuffers.push_back(SourceDestBuffer(imf_, "cartesianInvalidState",       cartesianInvalidState,       (unsigned) count, true));
 	if(proto.isDefined("sphericalInvalidState") && (sphericalInvalidState != NULL))
