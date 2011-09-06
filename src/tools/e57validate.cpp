@@ -1086,7 +1086,8 @@ bool E57Validator::validateDoubleFloat(Node n, CompressedVectorNode* cvp, uint64
         return(false);
 
     FloatNode fn = FloatNode(n);
-    if (fn.precision() != E57_DOUBLE) {
+	double value = fn.value();		//Added by SC
+    if (value != 0.0 && fn.precision() != E57_DOUBLE) {
         PRINT_MESSAGE(1000/*???*/, n, "expecting E57_DOUBLE precision for Float", cvp, index);
         return(false);
     }
