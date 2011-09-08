@@ -35,8 +35,8 @@ include(CMakeGenerateDocumentation)
 project(E57SimpleImpl-doc)
 
 # developer adjustable version numbers
-set(${PROJECT_NAME}_MAJOR_VERSION 0)
-set(${PROJECT_NAME}_MINOR_VERSION 3)
+set(${PROJECT_NAME}_MAJOR_VERSION 1)
+set(${PROJECT_NAME}_MINOR_VERSION 0)
 
 # try to find subversion revision number
 execute_process(
