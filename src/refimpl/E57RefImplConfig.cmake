@@ -49,7 +49,7 @@
 # NOTE: You will also need to include the boost and xerces libraries to your
 # project.
 
-IF (NOT ${E57RefImpl_DIR}/include EQUAL ${E57RefImpl_INCLUDE_DIR})
+IF (NOT "${E57RefImpl_DIR}/include" EQUAL "${E57RefImpl_INCLUDE_DIR}")
     SET(E57RefImpl_LIBRARY_DEBUG E57RefImpl_LIBRARY_DEBUG-NOTFOUND)
     SET(E57RefImpl_LIBRARY_RELEASE E57RefImpl_LIBRARY_RELEASE-NOTFOUND)
     SET(E57RefImpl_LIBRARY E57RefImpl_LIBRARY-NOTFOUND)

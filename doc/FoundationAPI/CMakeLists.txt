@@ -25,7 +25,7 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.5)
 
 # Private Xerces find module
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../../cmake/Modules/")
@@ -50,17 +50,27 @@ if (NOT ${PROJECT_NAME}_BUILD_VERSION)
 endif ()
 
 if (MSVC)
-    # Compiler switches for C++
-    set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1")
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG")
+    # Compiler switches for C++, needed for static runtime linking
+    set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1" CACHE STRING "msvc C++ build flags" FORCE)
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
     # Compiler switches for C
-    set(CMAKE_C_FLAGS_DEBUG "/MTd /D_DEBUG /Zi  /Ob0 /Od /RTC1")
-    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG")
-    set(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG")
+    set(CMAKE_C_FLAGS_DEBUG "/MTd /D_DEBUG /Zi  /Ob0 /Od /RTC1" CACHE STRING "msvc C build flags" FORCE)
+    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
+    set(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
+    #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /VERBOSE" CACHE STRING "msvc C build flags" FORCE)
 endif (MSVC)
+
+if (MINGW)
+    # GCC Linker switches for static runtime linking
+    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc" CACHE STRING "gcc link flags" FORCE)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+    if (GCC_VERSION VERSION_GREATER 4.5 OR GCC_VERSION VERSION_EQUAL 4.5)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++" CACHE STRING "gcc link flags" FORCE)
+    endif()
+endif (MINGW)
 
 # calculate the library name tag
 set(T_ ${PROJECT_NAME})
@@ -83,12 +93,23 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 # Find the Boost and Xerces libraries
-find_package(Boost QUIET)
+
+set(Boost_USE_STATIC_LIBS   ON)
+set(Boost_USE_STATIC_RUNTIME ON)
+set(Boost_USE_MULTITHREADED ON)
+find_package(Boost
+    COMPONENTS
+        program_options
+        system
+        thread
+        filesystem
+    QUIET
+)
 if (NOT Boost_FOUND)
-    set(BOOST_INCLUDEDIR CACHE PATH  "Location of the boost include directory" )
+    set(BOOST_ROOT CACHE PATH  "Location of the boost root directory" )
     message(FATAL_ERROR
 "Unable to find boost library.
-Please set the BOOST_INCLUDEDIR to point to the boost header files."
+Please set the BOOST_ROOT to point to the boost distribution files."
 )
 endif(NOT Boost_FOUND)
 

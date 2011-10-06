@@ -123,6 +123,9 @@ inline ustring exception_string(const char* errorName, const char* fileName, int
 inline std::string space(const size_t n) {return(std::string(n,' '));}
 
 /// Convert number to decimal, hexadecimal, and binary strings  (Note hex strings don't have leading zeros).
+template <class T>
+std::string toString(T x) {std::ostringstream ss; ss << x; return(ss.str());}
+#if 0 // <rs> 2011-10-03 below definition gives problems if intXX_t type equal to native type
 inline std::string toString(uint64_t x) {std::ostringstream ss; ss << x; return(ss.str());}
 inline std::string toString(uint32_t x) {std::ostringstream ss; ss << x; return(ss.str());}
 inline std::string toString(uint16_t x) {std::ostringstream ss; ss << x; return(ss.str());}
@@ -138,6 +141,7 @@ inline std::string toString(unsigned x) {std::ostringstream ss; ss << x; return(
 inline std::string toString(float x)    {std::ostringstream ss; ss << x; return(ss.str());}
 inline std::string toString(double x)   {std::ostringstream ss; ss << x; return(ss.str());}
 inline std::string toString(bool x)     {std::ostringstream ss; ss << x; return(ss.str());}
+#endif
 inline std::string hexString(uint64_t x) {std::ostringstream ss; ss << "0x" << std::hex << std::setw(16)<< std::setfill('0') << x; return(ss.str());}
 inline std::string hexString(uint32_t x) {std::ostringstream ss; ss << "0x" << std::hex << std::setw(8) << std::setfill('0') << x; return(ss.str());}
 inline std::string hexString(uint16_t x) {std::ostringstream ss; ss << "0x" << std::hex << std::setw(4) << std::setfill('0') << x; return(ss.str());}

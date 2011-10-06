@@ -25,7 +25,7 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.5)
 
 # Private Xerces find module
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
@@ -51,17 +51,26 @@ endif ()
 set(E57_REFIMPL_REVISION_ID ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION}.${${PROJECT_NAME}_BUILD_VERSION})
 
 if (MSVC)
-    # Compiler switches for C++
-    set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1")
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG")
+    # Compiler switches for C++, needed for static runtime linking
+    set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1" CACHE STRING "msvc C++ build flags" FORCE)
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
     # Compiler switches for C
-    set(CMAKE_C_FLAGS_DEBUG "/MTd /D_DEBUG /Zi  /Ob0 /Od /RTC1")
-    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG")
-    set(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG")
+    set(CMAKE_C_FLAGS_DEBUG "/MTd /D_DEBUG /Zi  /Ob0 /Od /RTC1" CACHE STRING "msvc C build flags" FORCE)
+    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
+    set(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
 endif (MSVC)
+
+if (MINGW)
+    # GCC Linker switches for static runtime linking
+    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc" CACHE STRING "gcc link flags" FORCE)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+    if (GCC_VERSION VERSION_GREATER 4.5 OR GCC_VERSION VERSION_EQUAL 4.5)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++" CACHE STRING "gcc link flags" FORCE)
+    endif()
+endif (MINGW)
 
 # calculate the library name tag
 set(T_ ${PROJECT_NAME})
@@ -112,19 +121,10 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 # Find the Boost and Xerces libraries
+
 set(Boost_USE_STATIC_LIBS   ON)
+set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_USE_MULTITHREADED ON)
-set(Boost_ADDITIONAL_VERSIONS "1.42" "1.42.0" "1.43" "1.43.0" "1.46")
-
-#find_package(Boost QUIET)
-#if (NOT Boost_FOUND)
-#    set(BOOST_INCLUDEDIR CACHE PATH  "Location of the boost include directory" )
-#    message(FATAL_ERROR
-#"Unable to find boost library.
-#Please set the BOOST_INCLUDEDIR to point to the boost header files."
-#)
-#endif(NOT Boost_FOUND)
-
 find_package(Boost
     COMPONENTS
         program_options
@@ -164,6 +164,7 @@ link_directories(
 )
 
 add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
+add_definitions("/DBOOST_ALL_NO_LIB")
 set(CDEFS "XERCES_STATIC_LIBRARY\;E57_REFIMPL_REVISION_ID=${${PROJECT_NAME}_TAG}\;SVN_VERSION=${${PROJECT_NAME}_BUILD_VERSION}")
 set(CFLAGS " ")
 
@@ -342,20 +343,12 @@ set_target_properties( e57unpack
     PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
     COMPILE_FLAGS ${CFLAGS}
 )
-if (MSVC)
-target_link_libraries( e57unpack
-    E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${E57_LIBRARY_RELEASE} ${Xerces_LIBRARY_RELEASE}
-)
-else (MSVC)
 target_link_libraries( e57unpack
     E57RefImpl
     debug ${Xerces_LIBRARY_DEBUG}
     optimized ${E57_LIBRARY_RELEASE} ${Xerces_LIBRARY_RELEASE}
     ${Boost_LIBRARIES}
 )
-endif (MSVC)
 install(
     TARGETS
         e57unpack

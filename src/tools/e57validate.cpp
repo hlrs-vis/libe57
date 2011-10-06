@@ -87,6 +87,9 @@ inline std::string space(int n) {return(std::string(n,' '));}
 //???
 #include <sstream>
 /// Convert number to decimal strings
+template<class T>
+std::string toString(T x) {std::ostringstream ss; ss << x; return(ss.str());}
+#if 0 // <rs> 2011-10-03 below definition gives problems if intXX_t type equal to native type
 inline std::string toString(uint64_t x) {std::ostringstream ss; ss << x; return(ss.str());}
 inline std::string toString(uint32_t x) {std::ostringstream ss; ss << x; return(ss.str());}
 inline std::string toString(uint16_t x) {std::ostringstream ss; ss << x; return(ss.str());}
@@ -102,6 +105,7 @@ inline std::string toString(unsigned x) {std::ostringstream ss; ss << x; return(
 inline std::string toString(float x)    {std::ostringstream ss; ss << x; return(ss.str());}
 inline std::string toString(double x)   {std::ostringstream ss; ss << x; return(ss.str());}
 inline std::string toString(bool x)     {std::ostringstream ss; ss << x; return(ss.str());}
+#endif
 
 /// Don't do any work if past specified maximumum message count (including expanding arguments).
 /// Note: the do{}while(0) loop eats the trailing semicolon after macro expansion of "PRINT_MESSAGE(...);"

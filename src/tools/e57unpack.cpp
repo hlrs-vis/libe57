@@ -67,6 +67,7 @@ using boost::program_options::value;
 #include <boost/filesystem.hpp>
 using boost::filesystem::path;
 using boost::filesystem::create_directories;
+using boost::filesystem::portable_directory_name;
 
 #include <boost/filesystem/fstream.hpp>
 using boost::filesystem::ofstream;
@@ -130,6 +131,20 @@ public:
     }
 
 };
+
+path
+path_from_guid(
+    string guid
+) {
+    string name;
+    for (string::iterator s = guid.begin(); s != guid.end(); ++s) {
+        if (portable_directory_name(string(1,*s)))
+            name += *s;
+        else
+            name += "_";
+    }
+    return path(name);
+}
 
 int
 main(
@@ -199,9 +214,9 @@ main(
 
             path dst;
             if (opt.count("dst"))
-                dst = path(opt["dst"].as<string>());
+                dst = path_from_guid(opt["dst"].as<string>());
             else
-                dst = path(StringNode(root.get("guid")).value());
+                dst = path_from_guid(StringNode(root.get("guid")).value());
 
             create_directories(dst);
 
@@ -273,14 +288,14 @@ main(
                     }
 
                     ofstream inf(
-                        dst/path(StringNode(scan.get("guid")).value()+".inf")
+                        dst/path_from_guid(StringNode(scan.get("guid")).value()+".inf")
                     );
                     inf << "pointrecord: " << pointrecord << endl;
                     inf << "format:      " << fmt << endl;
                     inf.close();
 
                     CompressedVectorReader rd(points.reader(sdb));
-                    path csvname(StringNode(scan.get("guid")).value()+".csv");
+                    path csvname(path_from_guid(StringNode(scan.get("guid")).value()+".csv"));
                     ofstream ocsv(dst/csvname);
                     ostream& out(ocsv); // needed to fix ambiguity for << operator on msvc
                     cout << "unpacking: " << dst/csvname << " ... ";
