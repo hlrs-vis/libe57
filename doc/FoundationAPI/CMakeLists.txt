@@ -25,72 +25,39 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-cmake_minimum_required(VERSION 2.8.5)
+cmake_minimum_required(VERSION 2.8.2)
 
-# Private Xerces find module
+# Override flags to enable prepare for linking to static runtime
+set(CMAKE_USER_MAKE_RULES_OVERRIDE ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/c_flag_overrides.cmake)
+set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/cxx_flag_overrides.cmake)
+
+# Set a private module find path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../../cmake/Modules/")
 
 include(CMakeGenerateDocumentation)
 
-project(E57RefImpl-doc)
-
+project(E57RefImpl_doc)
 # developer adjustable version numbers
 set(${PROJECT_NAME}_MAJOR_VERSION 1)
-set(${PROJECT_NAME}_MINOR_VERSION 0)
+set(${PROJECT_NAME}_MINOR_VERSION 1)
 
-# try to find subversion revision number
-execute_process(
-    COMMAND svnversion
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE ${PROJECT_NAME}_BUILD_VERSION
-)
-string(STRIP ${${PROJECT_NAME}_BUILD_VERSION} ${PROJECT_NAME}_BUILD_VERSION)
-if (NOT ${PROJECT_NAME}_BUILD_VERSION)
-    set(${PROJECT_NAME}_BUILD_VERSION "unknown")
-endif ()
-
-if (MSVC)
-    # Compiler switches for C++, needed for static runtime linking
-    set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1" CACHE STRING "msvc C++ build flags" FORCE)
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
-    set(CMAKE_CXX_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
-    # Compiler switches for C
-    set(CMAKE_C_FLAGS_DEBUG "/MTd /D_DEBUG /Zi  /Ob0 /Od /RTC1" CACHE STRING "msvc C build flags" FORCE)
-    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
-    set(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
-    #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /VERBOSE" CACHE STRING "msvc C build flags" FORCE)
-endif (MSVC)
-
-if (MINGW)
-    # GCC Linker switches for static runtime linking
-    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc" CACHE STRING "gcc link flags" FORCE)
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-    if (GCC_VERSION VERSION_GREATER 4.5 OR GCC_VERSION VERSION_EQUAL 4.5)
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++" CACHE STRING "gcc link flags" FORCE)
-    endif()
-endif (MINGW)
-
-# calculate the library name tag
-set(T_ ${PROJECT_NAME})
-set(T_ ${T_}-${${PROJECT_NAME}_MAJOR_VERSION})
-set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
-set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
-set(${PROJECT_NAME}_TAG ${T_})
+include(Tags)
 
 # propose a default installation directory
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     string(REGEX REPLACE "/${PROJECT_NAME}" "" CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-    set(T_ -${${PROJECT_NAME}_MAJOR_VERSION})
-    set(T_ ${T_}-${${PROJECT_NAME}_MINOR_VERSION})
-    set(T_ ${T_}-${${PROJECT_NAME}_BUILD_VERSION})
-    set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/${${PROJECT_NAME}_TAG}
+    set(T_ ${PROJECT_NAME})
+    set(T_ ${T_}-${${PROJECT_NAME}_MAJOR_VERSION})
+    set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
+    set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
+    set(T_ ${T_}-${${PROJECT_NAME}_BUILD_TAG})
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/${T_}
         CACHE PATH
         "Install path prefix, prepended onto install directories."
         FORCE
     )
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+
 
 # Find the Boost and Xerces libraries
 
@@ -123,12 +90,25 @@ Please set the the XERCES_ROOT to point to the root of the xerces directory."
 )
 endif (NOT Xerces_FOUND)
 
+configure_file (
+  "${PROJECT_SOURCE_DIR}/../../include/config.h.in"
+  "${PROJECT_BINARY_DIR}/include/config.h"
+)
+
 include_directories(
+    ${PROJECT_BINARY_DIR}/include
     ../../include
     ../../src/refimpl
     ${Xerces_INCLUDE_DIR}
     ${Boost_INCLUDE_DIR}
 )
+
+link_directories(
+    ${Boost_LIBRARY_DIRS}
+)
+
+add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
+add_definitions(-DBOOST_ALL_NO_LIB -DXERCES_STATIC_LIBRARY)
 
 #
 # The reference implementation
@@ -140,9 +120,9 @@ add_library( E57RefImpl STATIC
     ../../src/refimpl/E57FoundationImpl.h
     ../../include/E57Foundation.h
 )
-set_target_properties( E57RefImpl
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-)
+#set_target_properties( E57RefImpl
+#    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+#)
 set_target_properties( E57RefImpl
     PROPERTIES DEBUG_POSTFIX "-d"
 )
@@ -154,9 +134,9 @@ set_target_properties( E57RefImpl
 add_executable( e57xmldump
     ../../src/tools/e57xmldump.cpp
 )
-set_target_properties( e57xmldump
-    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-)
+#set_target_properties( e57xmldump
+#    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
+#)
 target_link_libraries( e57xmldump
     E57RefImpl
     debug ${Xerces_LIBRARY_DEBUG}
@@ -211,7 +191,6 @@ generate_documentation(doc
 foreach(X ${DOC_EXAMPLES})
     get_filename_component(F ${X} NAME_WE)
     add_executable(${F} ${X})
-    set_target_properties(${F} PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY)
     target_link_libraries(${F}
         E57RefImpl
         debug ${Xerces_LIBRARY_DEBUG}

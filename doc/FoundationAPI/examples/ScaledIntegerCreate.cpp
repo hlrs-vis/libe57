@@ -35,12 +35,8 @@ int main(int /*argc*/, char** /*argv*/) {
         StructureNode root = imf.root();
 
         // Create 5 example ScaledIntegers
-        // The requirement for the explicit types for the first parameter
-        // are caused by a questionable definition of the ScaledIntegerNode
-        // ctors which pose a ambiguity because all parameters may be optional.
-        // <roland_schwarz, 2011-03-10>
-        root.set("si1", ScaledIntegerNode(imf, int64_t()));
-        root.set("si2", ScaledIntegerNode(imf, int64_t(123)));
+        root.set("si1", ScaledIntegerNode(imf, int64_t(), E57_INT64_MIN, E57_INT64_MAX));
+        root.set("si2", ScaledIntegerNode(imf, int64_t(123), E57_INT64_MIN, E57_INT64_MAX));
         root.set("si3", ScaledIntegerNode(imf, 123, 0, 1023));
         root.set("si4", ScaledIntegerNode(imf, 123, 0, 1023, .001));
         root.set("si5", ScaledIntegerNode(imf, 123, 0, 1023, .001, 100.0));

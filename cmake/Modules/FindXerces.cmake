@@ -61,10 +61,13 @@ else(Xerces_USE_STATIC_LIBS)
 endif(Xerces_USE_STATIC_LIBS)
 endif(WIN32)
 
+set (Xerces_LIBRARY debug ${Xerces_LIBRARY_DEBUG} optimized ${Xerces_LIBRARY_RELEASE})
+
 mark_as_advanced(
     Xerces_INCLUDE_DIR
     Xerces_LIBRARY_DEBUG
     Xerces_LIBRARY_RELEASE
+    Xerces_LIBRARY
 )
 
 include(FindPackageHandleStandardArgs)
@@ -74,6 +77,7 @@ find_package_handle_standard_args(
     Xerces_INCLUDE_DIR
     Xerces_LIBRARY_DEBUG
     Xerces_LIBRARY_RELEASE
+    Xerces_LIBRARY
 )
 
 set(Xerces_FOUND ${XERCES_FOUND})

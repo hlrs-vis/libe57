@@ -25,18 +25,22 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-cmake_minimum_required(VERSION 2.8.5)
+cmake_minimum_required(VERSION 2.8.2)
 
-# Private Xerces find module
+# Override flags to enable prepare for linking to static runtime
+set(CMAKE_USER_MAKE_RULES_OVERRIDE ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/c_flag_overrides.cmake)
+set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/cxx_flag_overrides.cmake)
+
+# Set a private module find path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../../cmake/Modules/")
 
 include(CMakeGenerateDocumentation)
 
-project(E57SimpleImpl-doc)
+project(E57SimpleImpl_doc)
 
 # developer adjustable version numbers
 set(${PROJECT_NAME}_MAJOR_VERSION 1)
-set(${PROJECT_NAME}_MINOR_VERSION 0)
+set(${PROJECT_NAME}_MINOR_VERSION 1)
 
 # try to find subversion revision number
 execute_process(
@@ -56,18 +60,23 @@ set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
 set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
 set(${PROJECT_NAME}_TAG ${T_})
 
+include(Tags)
+
 # propose a default installation directory
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     string(REGEX REPLACE "/${PROJECT_NAME}" "" CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-    set(T_ -${${PROJECT_NAME}_MAJOR_VERSION})
-    set(T_ ${T_}-${${PROJECT_NAME}_MINOR_VERSION})
-    set(T_ ${T_}-${${PROJECT_NAME}_BUILD_VERSION})
-    set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/${${PROJECT_NAME}_TAG}
+    set(T_ ${PROJECT_NAME})
+    set(T_ ${T_}-${${PROJECT_NAME}_MAJOR_VERSION})
+    set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
+    set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
+    set(T_ ${T_}-${${PROJECT_NAME}_BUILD_TAG})
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/${T_}
         CACHE PATH
         "Install path prefix, prepended onto install directories."
         FORCE
     )
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+
 
 
 #

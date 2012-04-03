@@ -1,7 +1,7 @@
 # $Id$
 # This is the CMake project file for the libe57 reference implementation
 #
-# Copyright 2010-2011 Roland Schwarz, Riegl LMS GmbH
+# Copyright 2010-2012 Roland Schwarz, Riegl LMS GmbH
 #
 # Permission is hereby granted, free of charge, to any person or organization
 # obtaining a copy of the software and accompanying documentation covered by
@@ -25,100 +25,38 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-cmake_minimum_required(VERSION 2.8.5)
+cmake_minimum_required(VERSION 2.8.2)
 
-# Private Xerces find module
+# Override flags to enable prepare for linking to static runtime
+set(CMAKE_USER_MAKE_RULES_OVERRIDE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/c_flag_overrides.cmake)
+set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX ${CMAKE_CURRENT_SOURCE_DIR}/cmake/cxx_flag_overrides.cmake)
+
+# Set a private module find path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 project(E57RefImpl)
 
 # developer adjustable version numbers
 set(${PROJECT_NAME}_MAJOR_VERSION 1)
-set(${PROJECT_NAME}_MINOR_VERSION 0)
+set(${PROJECT_NAME}_MINOR_VERSION 1)
 
-# try to find subversion revision number
-execute_process(
-    COMMAND svnversion
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE ${PROJECT_NAME}_BUILD_VERSION
-)
-if (NOT ${PROJECT_NAME}_BUILD_VERSION)
-    set(${PROJECT_NAME}_BUILD_VERSION "unknown")
-else()
-    string(STRIP ${${PROJECT_NAME}_BUILD_VERSION} ${PROJECT_NAME}_BUILD_VERSION)
-endif ()
-
-set(E57_REFIMPL_REVISION_ID ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION}.${${PROJECT_NAME}_BUILD_VERSION})
-
-if (MSVC)
-    # Compiler switches for C++, needed for static runtime linking
-    set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1" CACHE STRING "msvc C++ build flags" FORCE)
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
-    set(CMAKE_CXX_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "msvc C++ build flags" FORCE)
-    # Compiler switches for C
-    set(CMAKE_C_FLAGS_DEBUG "/MTd /D_DEBUG /Zi  /Ob0 /Od /RTC1" CACHE STRING "msvc C build flags" FORCE)
-    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
-    set(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "msvc C build flags" FORCE)
-endif (MSVC)
-
-if (MINGW)
-    # GCC Linker switches for static runtime linking
-    set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc" CACHE STRING "gcc link flags" FORCE)
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-    if (GCC_VERSION VERSION_GREATER 4.5 OR GCC_VERSION VERSION_EQUAL 4.5)
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++" CACHE STRING "gcc link flags" FORCE)
-    endif()
-endif (MINGW)
-
-# calculate the library name tag
-set(T_ ${PROJECT_NAME})
-set(T_ ${T_}-${${PROJECT_NAME}_MAJOR_VERSION})
-set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
-set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
-set(T_ ${T_}-${CMAKE_SYSTEM_PROCESSOR})
-if (CMAKE_CL_64)
-    set(T_ ${T_}_64)
-endif (CMAKE_CL_64)
-string(TOLOWER ${CMAKE_SYSTEM_NAME} T1_)
-set(T_ ${T_}-${T1_})
-if (MSVC90)
-    set(T1_ "-vc-9.0")
-elseif (MSVC10)
-    set(T1_ "-vc-10.0")
-elseif (MSVC80)
-    set(T1_ "-vc-8.0")
-elseif (MSVC71)
-    set(T1_ "-vc-7.11")
-elseif (MSVC70)
-    set(T1_ "-vc-7")
-elseif (MINGW)
-    set(T1_ "-mgw")
-    exec_program(${CMAKE_CXX_COMPILER}
-        ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
-        OUTPUT_VARIABLE T2_
-    )
-    string(REGEX REPLACE "([0-9])\\.([0-9])(\\.[0-9])?" "\\1\\2" T2_ ${T2_})
-    set(T1_ ${T1_}-${T2_})
-else()
-    set(T1_)
-endif()
-set(T_ ${T_}${T1_})
-set(${PROJECT_NAME}_TAG ${T_})
+include(Tags)
 
 # propose a default installation directory
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     string(REGEX REPLACE "/${PROJECT_NAME}" "" CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-    set(T_ -${${PROJECT_NAME}_MAJOR_VERSION})
-    set(T_ ${T_}-${${PROJECT_NAME}_MINOR_VERSION})
-    set(T_ ${T_}-${${PROJECT_NAME}_BUILD_VERSION})
-    set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/${${PROJECT_NAME}_TAG}
+    set(T_ ${PROJECT_NAME})
+    set(T_ ${T_}-${${PROJECT_NAME}_MAJOR_VERSION})
+    set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
+    set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
+    set(T_ ${T_}-${${PROJECT_NAME}_BUILD_TAG})
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/${T_}
         CACHE PATH
         "Install path prefix, prepended onto install directories."
         FORCE
     )
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+
 
 # Find the Boost and Xerces libraries
 
@@ -151,7 +89,13 @@ Please set the the XERCES_ROOT to point to the root of the xerces directory."
 )
 endif (NOT Xerces_FOUND)
 
+configure_file (
+  "${PROJECT_SOURCE_DIR}/include/config.h.in"
+  "${PROJECT_BINARY_DIR}/include/config.h"
+)
+
 include_directories(
+    ${PROJECT_BINARY_DIR}/include
     include
     include/time_conversion
     src/refimpl
@@ -164,9 +108,7 @@ link_directories(
 )
 
 add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
-add_definitions("/DBOOST_ALL_NO_LIB")
-set(CDEFS "XERCES_STATIC_LIBRARY\;E57_REFIMPL_REVISION_ID=${${PROJECT_NAME}_TAG}\;SVN_VERSION=${${PROJECT_NAME}_BUILD_VERSION}")
-set(CFLAGS " ")
+add_definitions(-DBOOST_ALL_NO_LIB -DXERCES_STATIC_LIBRARY)
 
 #
 # The reference implementation
@@ -179,23 +121,7 @@ add_library( E57RefImpl STATIC
     include/E57Foundation.h
 )
 set_target_properties( E57RefImpl
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-)
-set_target_properties( E57RefImpl
     PROPERTIES DEBUG_POSTFIX "-d"
-    COMPILE_FLAGS ${CFLAGS}
-)
-install(
-    FILES
-        include/E57Foundation.h
-    DESTINATION
-        include/e57
-)
-install(
-    TARGETS
-        E57RefImpl
-    ARCHIVE DESTINATION
-        lib
 )
 
 #
@@ -205,10 +131,6 @@ install(
 add_library( LASReader STATIC
     src/LASReader/LASReader.cpp
     include/LASReader.h
-)
-set_target_properties( LASReader
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-    COMPILE_FLAGS ${CFLAGS}
 )
 
 #
@@ -230,27 +152,16 @@ add_library( time_conversion STATIC
 add_executable( DemoWrite01
     src/examples/DemoWrite01.cpp
 )
-set_target_properties( DemoWrite01
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-    COMPILE_FLAGS ${CFLAGS}
-)
 target_link_libraries( DemoWrite01
     E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
+    ${Xerces_LIBRARY}
 )
-
 add_executable( DemoRead01
     src/examples/DemoRead01.cpp
 )
-set_target_properties( DemoRead01
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-    COMPILE_FLAGS ${CFLAGS}
-)
 target_link_libraries( DemoRead01
     E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
+    ${Xerces_LIBRARY}
 )
 
 #
@@ -260,100 +171,62 @@ target_link_libraries( DemoRead01
 add_executable( las2e57
     src/tools/las2e57.cpp
 )
-set_target_properties( las2e57
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-    COMPILE_FLAGS ${CFLAGS}
-)
 target_link_libraries( las2e57
     E57RefImpl
     LASReader
     time_conversion
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
+    ${Xerces_LIBRARY}
     Rpcrt4.lib
 )
-install(
-    TARGETS
-        las2e57
-    RUNTIME DESTINATION
-        bin
-)
-
 add_executable( e57fields
     src/tools/e57fields.cpp
 )
-set_target_properties( e57fields
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-    COMPILE_FLAGS ${CFLAGS}
-)
 target_link_libraries( e57fields
     E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
+    ${Xerces_LIBRARY}
 )
-install(
-    TARGETS
-        e57fields
-    RUNTIME DESTINATION
-        bin
-)
-
 add_executable( e57xmldump
     src/tools/e57xmldump.cpp
 )
-set_target_properties( e57xmldump
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-    COMPILE_FLAGS ${CFLAGS}
-)
 target_link_libraries( e57xmldump
     E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
+    ${Xerces_LIBRARY}
 )
-install(
-    TARGETS
-        e57xmldump
-    RUNTIME DESTINATION
-        bin
-)
-
 add_executable( e57validate
     src/tools/e57validate.cpp
 )
-set_target_properties( e57validate
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-    COMPILE_FLAGS ${CFLAGS}
-)
 target_link_libraries( e57validate
     E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
+    ${Xerces_LIBRARY}
 )
-install(
-    TARGETS
-        e57validate
-    RUNTIME DESTINATION
-        bin
-)
-
 add_executable( e57unpack
     src/tools/e57unpack.cpp
 )
-set_target_properties( e57unpack
-    PROPERTIES COMPILE_DEFINITIONS ${CDEFS}
-    COMPILE_FLAGS ${CFLAGS}
-)
 target_link_libraries( e57unpack
     E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${E57_LIBRARY_RELEASE} ${Xerces_LIBRARY_RELEASE}
+    ${Xerces_LIBRARY}
     ${Boost_LIBRARIES}
 )
+
+#
+# Install section
+#
+
 install(
     TARGETS
+        E57RefImpl
+        e57fields
+        e57xmldump
         e57unpack
-    RUNTIME DESTINATION
-        bin
+        e57validate
+        las2e57
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib
+)
+install(
+    FILES
+        include/E57Foundation.h
+    DESTINATION include/e57
 )
 
 install(
@@ -361,8 +234,17 @@ install(
         CHANGES.TXT
         README.TXT
         src/refimpl/E57RefImplConfig.cmake
-    DESTINATION
-        .
+    DESTINATION .
 )
 
+#include (InstallRequiredSystemLibraries)
 
+set (CPACK_PACKAGE_VENDOR "Riegl LMS GmbH")
+set (CPACK_PACKAGE_VERSION_MAJOR "${${PROJECT_NAME}_MAJOR_VERSION}")
+set (CPACK_PACKAGE_VERSION_MINOR "${${PROJECT_NAME}_MINOR_VERSION}")
+set (CPACK_PACKAGE_VERSION_PATCH "${${PROJECT_NAME}_BUILD_VERSION}")
+set (CPACK_SYSTEM_NAME "${${PROJECT_NAME}_BUILD_TAG}")
+set (CPACK_GENERATOR "ZIP")
+set (CPACK_STRIP_FILES "TRUE")
+
+include (CPack)
