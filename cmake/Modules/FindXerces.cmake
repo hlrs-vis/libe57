@@ -35,31 +35,32 @@ endif()
 find_path(Xerces_INCLUDE_DIR
     xercesc/sax2/SAX2XMLReader.hpp
     ${XERCES_ROOT}/include
+    /usr/include
 )
 
-if (WIN32)
+#if (WIN32)
 if (Xerces_USE_STATIC_LIBS)
     find_library(Xerces_LIBRARY_DEBUG
         NAMES xerces-c_static_3D.lib libxerces-c.a
-        PATHS ${XERCES_ROOT}/lib
+        PATHS ${XERCES_ROOT}/lib /usr/lib
     )
 
     find_library(Xerces_LIBRARY_RELEASE
         NAMES xerces-c_static_3.lib libxerces-c.a
-        PATHS ${XERCES_ROOT}/lib
+        PATHS ${XERCES_ROOT}/lib usr/lib
     )
 else(Xerces_USE_STATIC_LIBS)
     find_library(Xerces_LIBRARY_DEBUG
-        NAMES xerces-c_3D.lib libxerces-c.dll.a
-        PATHS ${XERCES_ROOT}/lib
+        NAMES xerces-c_3D.lib libxerces-c.dll.a libxerces-c.so
+        PATHS ${XERCES_ROOT}/lib /usr/lib
     )
 
     find_library(Xerces_LIBRARY_RELEASE
-        NAMES xerces-c_3.lib libxerces-c.dll.a
-        PATHS ${XERCES_ROOT}/lib
+        NAMES xerces-c_3.lib libxerces-c.dll.a libxerces-c.so
+        PATHS ${XERCES_ROOT}/lib /usr/lib
     )
 endif(Xerces_USE_STATIC_LIBS)
-endif(WIN32)
+#endif(WIN32)
 
 set (Xerces_LIBRARY debug ${Xerces_LIBRARY_DEBUG} optimized ${Xerces_LIBRARY_RELEASE})
 

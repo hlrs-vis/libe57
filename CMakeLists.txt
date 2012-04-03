@@ -110,6 +110,12 @@ link_directories(
 add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
 add_definitions(-DBOOST_ALL_NO_LIB -DXERCES_STATIC_LIBRARY)
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	add_definitions(-DLINUX)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+	add_definitions(-DWINDOWS)
+endif()
+
 #
 # The reference implementation
 #
