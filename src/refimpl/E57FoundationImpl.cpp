@@ -117,7 +117,22 @@ const XMLCh att_allowHeterogeneousChildren[] = {
     chLatin_h, chLatin_i, chLatin_l, chLatin_d, chLatin_r, chLatin_e,
     chLatin_n, chNull
 };
+const XMLCh att_fileOffset[] = {
+    chLatin_f, chLatin_i, chLatin_l, chLatin_e, chLatin_O, chLatin_f,
+    chLatin_f, chLatin_s, chLatin_e, chLatin_t, chNull
+};
 
+const XMLCh att_type[] = {
+    chLatin_t, chLatin_y, chLatin_p, chLatin_e, chNull
+};
+const XMLCh att_length[] = {
+    chLatin_l, chLatin_e, chLatin_n, chLatin_g, chLatin_t, chLatin_h,
+    chNull
+};
+const XMLCh att_recordCount[] = {
+    chLAtin_r, chLatin_e, chLatin_c, chLatin_o, chLatin_r, chLatin_d,
+    chLatin_C, chLatin_o, chLatin_u, chLatin_n, chLatin_t, chNull
+};
 }
 
 //???using namespace std::tr1;
@@ -3121,7 +3136,7 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
     }
 #endif
     /// Get Type attribute
-    ustring node_type = lookupAttribute(attributes, L"type");
+    ustring node_type = lookupAttribute(attributes, att_type);
 
     //??? check to make sure not in primitive type (can only nest inside compound types).
 
@@ -3283,7 +3298,7 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         //??? check validity of numeric strings
 
         /// fileOffset is required to be defined
-        ustring fileOffset_str = lookupAttribute(attributes, L"fileOffset");
+        ustring fileOffset_str = lookupAttribute(attributes, att_fileOffset);
 #if defined(_MSC_VER)
         pi.fileOffset = _atoi64(fileOffset_str.c_str());
 #elif defined(__GNUC__)
@@ -3293,7 +3308,7 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 #endif
 
         /// length is required to be defined
-        ustring length_str = lookupAttribute(attributes, L"length");
+        ustring length_str = lookupAttribute(attributes, att_length);
 #if defined(_MSC_VER)
         pi.length = _atoi64(length_str.c_str());
 #elif defined(__GNUC__)
@@ -3399,7 +3414,7 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         pi.nodeType = E57_COMPRESSED_VECTOR;
 
         /// fileOffset is required to be defined
-        ustring fileOffset_str = lookupAttribute(attributes, L"fileOffset");
+        ustring fileOffset_str = lookupAttribute(attributes, att_fileOffset);
 #if defined(_MSC_VER)
         pi.fileOffset = _atoi64(fileOffset_str.c_str());
 #elif defined(__GNUC__)
@@ -3409,7 +3424,7 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 #endif
 
         /// recordCount is required to be defined
-        ustring recordCount_str = lookupAttribute(attributes, L"recordCount");
+        ustring recordCount_str = lookupAttribute(attributes, att_recordCount);
 #if defined(_MSC_VER)
         pi.recordCount = _atoi64(recordCount_str.c_str());
 #elif defined(__GNUC__)
