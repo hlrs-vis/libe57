@@ -34,6 +34,7 @@
 #include <iostream>
 #include <iomanip>
 #include <map>
+#include <sstream>
 
 #if 0
 #ifdef WIN32
@@ -1574,7 +1575,9 @@ ustring generateUuidString()
     return(guidUnparse(uuid.Data1, uuid.Data2, uuid.Data3, uuid.Data4));
 #endif
     boost::uuids::uuid id = boost::uuids::random_generator()();
-    return to_string(id);
+    stringstream s;
+    s << id;
+    return s.str();
 }
 
 ustring guidUnparse(uint32_t data1, uint16_t data2, uint16_t data3, uint8_t data4[8]) {

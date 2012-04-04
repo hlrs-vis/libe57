@@ -192,7 +192,6 @@ target_link_libraries( las2e57
     LASReader
     time_conversion
     ${XML_LIBRARIES}
-    Rpcrt4.lib
     ${CMAKE_THREAD_LIBS_INIT}
 )
 add_executable( e57fields
