@@ -130,7 +130,7 @@ const XMLCh att_length[] = {
     chNull
 };
 const XMLCh att_recordCount[] = {
-    chLAtin_r, chLatin_e, chLatin_c, chLatin_o, chLatin_r, chLatin_d,
+    chLatin_r, chLatin_e, chLatin_c, chLatin_o, chLatin_r, chLatin_d,
     chLatin_C, chLatin_o, chLatin_u, chLatin_n, chLatin_t, chNull
 };
 }
