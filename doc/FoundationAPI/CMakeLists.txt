@@ -58,6 +58,7 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     )
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
+find_package(Threads REQUIRED)
 
 # Find the Boost and Xerces libraries
 
@@ -90,6 +91,21 @@ Please set the the XERCES_ROOT to point to the root of the xerces directory."
 )
 endif (NOT Xerces_FOUND)
 
+set (XML_LIBRARIES ${Xerces_LIBRARY})
+set (XML_INCLUDE_DIRS ${Xerces_INCLUDE_DIR})
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    add_definitions(-DLINUX)
+    find_package(ICU REQUIRED)
+    set (XML_LIBRARIES ${XML_LIBRARIES} ${ICU_LIBRARIES})
+    set (XML_INCLUDE_DIRS ${XML_INCLUDE_DIRS} ${ICU_INCLUDE_DIRS})
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    add_definitions(-DWINDOWS)
+endif()
+
+add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
+add_definitions(-DBOOST_ALL_NO_LIB -DXERCES_STATIC_LIBRARY)
+
 configure_file (
   "${PROJECT_SOURCE_DIR}/../../include/config.h.in"
   "${PROJECT_BINARY_DIR}/include/config.h"
@@ -99,16 +115,13 @@ include_directories(
     ${PROJECT_BINARY_DIR}/include
     ../../include
     ../../src/refimpl
-    ${Xerces_INCLUDE_DIR}
+    ${XML_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIR}
 )
 
 link_directories(
     ${Boost_LIBRARY_DIRS}
 )
-
-add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
-add_definitions(-DBOOST_ALL_NO_LIB -DXERCES_STATIC_LIBRARY)
 
 #
 # The reference implementation
@@ -120,9 +133,6 @@ add_library( E57RefImpl STATIC
     ../../src/refimpl/E57FoundationImpl.h
     ../../include/E57Foundation.h
 )
-#set_target_properties( E57RefImpl
-#    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-#)
 set_target_properties( E57RefImpl
     PROPERTIES DEBUG_POSTFIX "-d"
 )
@@ -134,13 +144,10 @@ set_target_properties( E57RefImpl
 add_executable( e57xmldump
     ../../src/tools/e57xmldump.cpp
 )
-#set_target_properties( e57xmldump
-#    PROPERTIES COMPILE_DEFINITIONS XERCES_STATIC_LIBRARY
-#)
 target_link_libraries( e57xmldump
     E57RefImpl
-    debug ${Xerces_LIBRARY_DEBUG}
-    optimized ${Xerces_LIBRARY_RELEASE}
+    ${XML_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 #
@@ -193,8 +200,8 @@ foreach(X ${DOC_EXAMPLES})
     add_executable(${F} ${X})
     target_link_libraries(${F}
         E57RefImpl
-        debug ${Xerces_LIBRARY_DEBUG}
-        optimized ${Xerces_LIBRARY_RELEASE}
+        ${XML_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
     )
     add_custom_command(TARGET ${F} POST_BUILD
         COMMAND ${F} > examples/${F}.out

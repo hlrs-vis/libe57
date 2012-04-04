@@ -50,8 +50,10 @@ SUCH DAMAGE.
 #include "time_conversion.h"
 #include "constants.h"
 
+#if 0
 #ifndef WIN32 
   #define _CRT_SECURE_NO_DEPRECATE  
+#endif
 #endif
 
 #ifdef WIN32
