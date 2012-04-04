@@ -26,7 +26,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "LASReader.h"
-#include "e57FoundationImpl.h"
+#include "E57FoundationImpl.h"
 
 #include <algorithm>
 
