@@ -35,12 +35,18 @@
 #include <iomanip>
 #include <map>
 
+#if 0
 #ifdef WIN32
 #  include <Rpc.h>  // for UuidCreate
 #   ifdef _MSC_VER
 #       pragma comment(lib, "Rpcrt4.lib")
 #   endif
 #endif
+#endif
+
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 using namespace std;
 using namespace e57;
@@ -1548,6 +1554,8 @@ void copyPerFileData(CommandLineOptions& options, LASReader& lasf, ImageFile imf
 
 ustring generateUuidString()
 {
+    // use boost uuid for portability
+#if 0
     UUID uuid;
     memset(&uuid, 0, sizeof(UUID));
 
@@ -1564,6 +1572,9 @@ ustring generateUuidString()
     cout << endl;
 #endif
     return(guidUnparse(uuid.Data1, uuid.Data2, uuid.Data3, uuid.Data4));
+#endif
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+    return to_string(id);
 }
 
 ustring guidUnparse(uint32_t data1, uint16_t data2, uint16_t data3, uint8_t data4[8]) {
