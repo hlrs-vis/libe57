@@ -89,6 +89,37 @@ using boost::weak_ptr;
 using boost::shared_ptr;
 using boost::dynamic_pointer_cast;
 
+namespace {
+
+// define convenient constants for the attribute names
+const XMLCh att_minimum[] = {
+    chLatin_m, chLatin_i, chLatin_n, chLatin_i, chLatin_m, chLatin_u,
+    chLatin_m, chNull
+};
+const XMLCh att_maximum[] = {
+    chLatin_m, chLatin_a, chLatin_x, chLatin_i, chLatin_m, chLatin_u,
+    chLatin_m, chNull
+};
+const XMLCh att_scale[] = {
+    chLatin_s, chLatin_c, chLatin_a, chLatin_l, chLatin_e, chNull
+};
+const XMLCh att_offset[] = {
+    chLatin_o, chLatin_f, chLatin_f, chLatin_s, chLatin_e, chLatin_t, chNull
+};
+const XMLCh att_precision[] = {
+    chLatin_p, chLatin_r, chLatin_e, chLatin_c, chLatin_i, chLatin_s,
+    chLatin_i, chLatin_o, chLatin_n, chNull
+};
+const XMLCh att_allowHeterogeneousChildren[] = {
+    chLatin_a, chLatin_l, chLatin_l, chLatin_o, chLatin_w, chLatin_H,
+    chLatin_e, chLatin_t, chLatin_e, chLatin_r, chLatin_o, chLatin_g,
+    chLatin_e, chLatin_n, chLatin_e, chLatin_u, chLatin_s, chLatin_C,
+    chLatin_h, chLatin_i, chLatin_l, chLatin_d, chLatin_r, chLatin_e,
+    chLatin_n, chNull
+};
+
+}
+
 //???using namespace std::tr1;
 
 ///============================================================================================================
@@ -2972,8 +3003,8 @@ public:
     void fatalError(const SAXParseException& exc);
 private:
     ustring toUString(const XMLCh* const xml_str);
-    ustring lookupAttribute(const Attributes& attributes, const wchar_t* attribute_name);
-    bool    isAttributeDefined(const Attributes& attributes, const wchar_t* attribute_name);
+    ustring lookupAttribute(const Attributes& attributes, const XMLCh* attribute_name);
+    bool    isAttributeDefined(const Attributes& attributes, const XMLCh* attribute_name);
 
     boost::shared_ptr<ImageFileImpl> imf_;   /// Image file we are reading
 
@@ -3103,8 +3134,8 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         //??? check validity of numeric strings
         pi.nodeType = E57_INTEGER;
 
-        if (isAttributeDefined(attributes, L"minimum")) {
-            ustring minimum_str = lookupAttribute(attributes, L"minimum");
+        if (isAttributeDefined(attributes, att_minimum)) {
+            ustring minimum_str = lookupAttribute(attributes, att_minimum);
 #if defined(_MSC_VER)
             pi.minimum = _atoi64(minimum_str.c_str());
 #elif defined(__GNUC__)
@@ -3117,8 +3148,8 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
             pi.minimum = E57_INT64_MIN;
         }
 
-        if (isAttributeDefined(attributes, L"maximum")) {
-            ustring maximum_str   = lookupAttribute(attributes, L"maximum");
+        if (isAttributeDefined(attributes, att_maximum)) {
+            ustring maximum_str   = lookupAttribute(attributes, att_maximum);
 #if defined(_MSC_VER)
             pi.maximum = _atoi64(maximum_str.c_str());
 #elif defined(__GNUC__)
@@ -3140,8 +3171,8 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
         pi.nodeType = E57_SCALED_INTEGER;
 
         //??? check validity of numeric strings
-        if (isAttributeDefined(attributes, L"minimum")) {
-            ustring minimum_str = lookupAttribute(attributes, L"minimum");
+        if (isAttributeDefined(attributes, att_minimum)) {
+            ustring minimum_str = lookupAttribute(attributes, att_minimum);
 #if defined(_MSC_VER)
             pi.minimum = _atoi64(minimum_str.c_str());
 #elif defined(__GNUC__)
@@ -3154,8 +3185,8 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
             pi.minimum = E57_INT64_MIN;
         }
 
-        if (isAttributeDefined(attributes, L"maximum")) {
-            ustring maximum_str   = lookupAttribute(attributes, L"maximum");
+        if (isAttributeDefined(attributes, att_maximum)) {
+            ustring maximum_str   = lookupAttribute(attributes, att_maximum);
 #if defined(_MSC_VER)
             pi.maximum = _atoi64(maximum_str.c_str());
 #elif defined(__GNUC__)
@@ -3168,16 +3199,16 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
             pi.maximum = E57_INT64_MAX;
         }
 
-        if (isAttributeDefined(attributes, L"scale")) {
-            ustring scale_str = lookupAttribute(attributes, L"scale");
+        if (isAttributeDefined(attributes, att_scale)) {
+            ustring scale_str = lookupAttribute(attributes, att_scale);
             pi.scale = atof(scale_str.c_str());  //??? use exact rounding library
         } else {
             /// Not defined defined in XML, so defaults to 1.0
             pi.scale = 1.0;
         }
 
-        if (isAttributeDefined(attributes, L"offset")) {
-            ustring offset_str = lookupAttribute(attributes, L"offset");
+        if (isAttributeDefined(attributes, att_offset)) {
+            ustring offset_str = lookupAttribute(attributes, att_offset);
             pi.offset = atof(offset_str.c_str());  //??? use exact rounding library
         } else {
             /// Not defined defined in XML, so defaults to 0.0
@@ -3192,8 +3223,8 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 #endif
         pi.nodeType = E57_FLOAT;
 
-        if (isAttributeDefined(attributes, L"precision")) {
-			ustring precision_str = lookupAttribute(attributes, L"precision");
+        if (isAttributeDefined(attributes, att_precision)) {
+			ustring precision_str = lookupAttribute(attributes, att_precision);
 			if (precision_str == "single")
 				pi.precision = E57_SINGLE;
 			else if (precision_str == "double")
@@ -3211,8 +3242,8 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 			pi.precision = E57_DOUBLE;
 		}
 
-        if (isAttributeDefined(attributes, L"minimum")) {
-            ustring minimum_str = lookupAttribute(attributes, L"minimum");
+        if (isAttributeDefined(attributes, att_minimum)) {
+            ustring minimum_str = lookupAttribute(attributes, att_minimum);
             pi.floatMinimum = atof(minimum_str.c_str());  //??? use exact rounding library
         } else {
             /// Not defined defined in XML, so defaults to E57_FLOAT_MIN or E57_DOUBLE_MIN
@@ -3222,8 +3253,8 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
                 pi.floatMinimum = E57_DOUBLE_MIN;
         }
 
-        if (isAttributeDefined(attributes, L"maximum")) {
-            ustring maximum_str = lookupAttribute(attributes, L"maximum");
+        if (isAttributeDefined(attributes, att_maximum)) {
+            ustring maximum_str = lookupAttribute(attributes, att_maximum);
             pi.floatMaximum = atof(maximum_str.c_str());  //??? use exact rounding library
         } else {
             /// Not defined defined in XML, so defaults to FLOAT_MAX or DOUBLE_MAX
@@ -3329,8 +3360,8 @@ void E57XmlParser::startElement(const   XMLCh* const    uri,
 #endif
         pi.nodeType = E57_VECTOR;
 
-        if (isAttributeDefined(attributes, L"allowHeterogeneousChildren")) {
-            ustring allowHetero_str = lookupAttribute(attributes, L"allowHeterogeneousChildren");
+        if (isAttributeDefined(attributes, att_allowHeterogeneousChildren)) {
+            ustring allowHetero_str = lookupAttribute(attributes, att_allowHeterogeneousChildren);
 #if defined(_MSC_VER)
             int64_t i64 = _atoi64(allowHetero_str.c_str());
 #elif defined(__GNUC__)
@@ -3670,30 +3701,18 @@ ustring E57XmlParser::toUString(const XMLCh* const xml_str)
     return(u_str);
 }
 
-ustring E57XmlParser::lookupAttribute(const Attributes& attributes, const wchar_t* attribute_name)
+ustring E57XmlParser::lookupAttribute(const Attributes& attributes, const XMLCh* attribute_name)
 {
-#ifdef E57_MAX_DEBUG
-    if (sizeof(XMLCh) != sizeof(wchar_t))
-        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "sizeof(XMLCh)=" + toString(sizeof(XMLCh)) + " sizeof(wchar_t)=" + toString(sizeof(wchar_t)));
-#endif
-
-    const XMLCh* XMLCh_attribute_name = reinterpret_cast<const XMLCh*>(attribute_name);
     XMLSize_t attr_index;
-    if (!attributes.getIndex(XMLCh_attribute_name, attr_index))
-        throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT, "attributeName=" + toUString(XMLCh_attribute_name));
+    if (!attributes.getIndex(attribute_name, attr_index))
+        throw E57_EXCEPTION2(E57_ERROR_BAD_XML_FORMAT, "attributeName=" + toUString(attribute_name));
     return(toUString(attributes.getValue(attr_index)));
 }
 
-bool E57XmlParser::isAttributeDefined(const Attributes& attributes, const wchar_t* attribute_name)
+bool E57XmlParser::isAttributeDefined(const Attributes& attributes, const XMLCh* attribute_name)
 {
-#ifdef E57_MAX_DEBUG
-    if (sizeof(XMLCh) != sizeof(wchar_t))
-        throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "sizeof(XMLCh)=" + toString(sizeof(XMLCh)) + " sizeof(wchar_t)=" + toString(sizeof(wchar_t)));
-#endif
-
-    const XMLCh* XMLCh_attribute_name = reinterpret_cast<const XMLCh*>(attribute_name);
     XMLSize_t attr_index;
-    return(attributes.getIndex(XMLCh_attribute_name, attr_index));
+    return(attributes.getIndex(attribute_name, attr_index));
 }
 
 //=============================================================================

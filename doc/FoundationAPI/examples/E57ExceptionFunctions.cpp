@@ -8,7 +8,7 @@ using namespace std;
 
 //! @brief Example use of E57Exception functions
 int main(int /*argc*/, char** /*argv*/) {
-    char* fileName = "doesnt_exist.e57";
+    const char* fileName = "doesnt_exist.e57";
     try {
         ImageFile imf(fileName, "r");
         imf.close(); // don't forget to explicitly close the ImageFile
