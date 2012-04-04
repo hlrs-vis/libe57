@@ -37,6 +37,10 @@
 #endif
 #include "E57Foundation.h"
 #include "E57FoundationImpl.h" //??? for exceptions, should be in separate file
+
+#include <boost/math/special_functions/fpclassify.hpp>
+using boost::math::fpclassify;
+
 using namespace e57;
 using namespace std;
 using namespace std::tr1;
@@ -395,49 +399,36 @@ void calcDoubleStats(OccurrenceStats* occur, const char* measure, double value, 
         occur->zero.count++;
     }
 
-    switch (_fpclass(value)) {
-        case _FPCLASS_SNAN: // Signaling NaN
-            if (occur->signalingNan.count == 0) {
-                occur->signalingNan.dvalue = value;
-                occur->signalingNan.firstPath = getPathFunctor.getPath();
-            }
-            occur->signalingNan.count++;
-            break;
-        case _FPCLASS_QNAN: // Quiet NaN
+    switch (boost::math::fpclassify(value)) {
+        case FP_NAN: // Quiet NaN
              if (occur->quietNan.count == 0) {
                 occur->quietNan.dvalue = value;
                 occur->quietNan.firstPath = getPathFunctor.getPath();
             }
             occur->quietNan.count++;
             break;
-        case _FPCLASS_NINF: // Negative infinity
-        case _FPCLASS_PINF: // Positive infinity (+INF)
+        case FP_INFINITE: // Negative or positive infinity
              if (occur->infinity.count == 0) {
                 occur->infinity.dvalue = value;
                 occur->infinity.firstPath = getPathFunctor.getPath();
             }
             occur->infinity.count++;
             break;
-        case _FPCLASS_ND:   // Negative denormalized
-        case _FPCLASS_PD:   // Positive denormalized
+        case FP_SUBNORMAL:   // Negative or positive denormalized
              if (occur->denormalized.count == 0) {
                 occur->denormalized.dvalue = value;
                 occur->denormalized.firstPath = getPathFunctor.getPath();
             }
             occur->denormalized.count++;
             break;
-        case _FPCLASS_NZ:   // Negative zero (-0)
-            if (occur->negativeZero.count == 0) {
+        case FP_ZERO:   // Negative zero (-0)
+            if (value < 0.0 && occur->negativeZero.count == 0) {
                 occur->negativeZero.dvalue = value;
                 occur->negativeZero.firstPath = getPathFunctor.getPath();
             }
             occur->negativeZero.count++;
             break;
-
-        case _FPCLASS_NN:   // Negative normalized non-zero  (non-special value)
-        case _FPCLASS_PZ:   // Positive 0 (+0)               (non-special value)
-        case _FPCLASS_PN:   // Positive normalized non-zero  (non-special value)
-            /// These are the "usual" cases, nothing to do.
+        default:
             break;
     }
 }
