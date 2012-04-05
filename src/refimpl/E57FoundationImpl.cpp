@@ -5925,7 +5925,7 @@ void CompressedVectorWriterImpl::write(const size_t requestedRecordCount)
 #else
                 //!!! For now, process up to 50 records at a time
                 uint64_t recordCount = endRecordIndex - bytestreams_.at(i)->currentRecordIndex();
-                recordCount = min(recordCount, 50ULL);
+                recordCount = (recordCount<50ULL)?recordCount:50ULL; //min(recordCount, 50ULL);
                 bytestreams_.at(i)->processRecords((unsigned)recordCount);
 #endif
             }
@@ -8391,7 +8391,7 @@ size_t BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf, 
     /// Repeat until have filled destBuffer, or completed all records
 
 #ifdef E57_DEBUG
-#if 0 // I know now way to do this portably 
+#if 0 // I know now way to do this portably
       // Deactivate for now until a better solution is found.
     /// Verify that inbuf is naturally aligned to RegisterT boundary (1, 2, 4,or 8 bytes).  Base class is doing this for us.
     if ((reinterpret_cast<unsigned>(inbuf)) % sizeof(RegisterT))
