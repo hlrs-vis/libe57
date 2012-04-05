@@ -52,6 +52,7 @@
 #  define _LARGEFILE64_SOURCE
 #  define __LARGE64_FILES
 #  include <sys/types.h>
+#  include <sys/stat.h>
 #  include <unistd.h>
 # include <fcntl.h>
 # define O_BINARY (0)
@@ -1804,8 +1805,8 @@ void SourceDestBufferImpl::dump(int indent, ostream& os)
         case E57_USTRING:   os << "ustring" << endl;   break;
         default:            os << "<unknown>" << endl; break;
     }
-    os << space(indent) << "base:                 " << reinterpret_cast<unsigned>(base_) << endl;
-    os << space(indent) << "ustrings:             " << reinterpret_cast<unsigned>(ustrings_) << endl;
+    os << space(indent) << "base:                 " << static_cast<const void*>(base_) << endl;
+    os << space(indent) << "ustrings:             " << static_cast<const void*>(ustrings_) << endl;
     os << space(indent) << "capacity:             " << capacity_ << endl;
     os << space(indent) << "doConversion:         " << doConversion_ << endl;
     os << space(indent) << "doScaling:            " << doScaling_ << endl;
@@ -7464,13 +7465,15 @@ size_t BitpackFloatDecoder::inputProcessAligned(const char* inbuf, const size_t 
     size_t typeSize = (precision_ == E57_SINGLE) ? sizeof(float) : sizeof(double);
 
 #ifdef E57_DEBUG
+#if 0 // I know no way to do this portably <rs>
+      // Deactivate for now until a better solution is found.
     /// Verify that inbuf is naturally aligned to correct boundary (4 or 8 bytes).  Base class should be doing this for us.
     if (reinterpret_cast<unsigned>(inbuf) % typeSize) {
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL,
                              "inbuf=" + toString(reinterpret_cast<unsigned>(inbuf))
                              + " typeSize=" + toString(typeSize));
     }
-
+#endif
     /// Verify first bit is zero
     if (firstBit != 0)
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "firstBit=" + toString(firstBit));
@@ -8388,10 +8391,12 @@ size_t BitpackIntegerDecoder<RegisterT>::inputProcessAligned(const char* inbuf, 
     /// Repeat until have filled destBuffer, or completed all records
 
 #ifdef E57_DEBUG
+#if 0 // I know now way to do this portably 
+      // Deactivate for now until a better solution is found.
     /// Verify that inbuf is naturally aligned to RegisterT boundary (1, 2, 4,or 8 bytes).  Base class is doing this for us.
     if ((reinterpret_cast<unsigned>(inbuf)) % sizeof(RegisterT))
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "inbuf=" + toString(reinterpret_cast<unsigned>(inbuf)));
-
+#endif
     /// Verfiy first bit is in first word
     if (firstBit >= 8*sizeof(RegisterT))
         throw E57_EXCEPTION2(E57_ERROR_INTERNAL, "firstBit=" + toString(firstBit));
