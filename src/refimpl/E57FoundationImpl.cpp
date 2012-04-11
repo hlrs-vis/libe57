@@ -114,9 +114,9 @@ const XMLCh att_precision[] = {
 const XMLCh att_allowHeterogeneousChildren[] = {
     chLatin_a, chLatin_l, chLatin_l, chLatin_o, chLatin_w, chLatin_H,
     chLatin_e, chLatin_t, chLatin_e, chLatin_r, chLatin_o, chLatin_g,
-    chLatin_e, chLatin_n, chLatin_e, chLatin_u, chLatin_s, chLatin_C,
-    chLatin_h, chLatin_i, chLatin_l, chLatin_d, chLatin_r, chLatin_e,
-    chLatin_n, chNull
+    chLatin_e, chLatin_n, chLatin_e, chLatin_o, chLatin_u, chLatin_s,
+    chLatin_C, chLatin_h, chLatin_i, chLatin_l, chLatin_d, chLatin_r,
+    chLatin_e, chLatin_n, chNull
 };
 const XMLCh att_fileOffset[] = {
     chLatin_f, chLatin_i, chLatin_l, chLatin_e, chLatin_O, chLatin_f,
