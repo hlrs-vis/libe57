@@ -68,6 +68,13 @@
 #include <cmath> //??? needed?
 #include <float.h> //??? needed?
 
+#ifdef E57_MAX_VERBOSE
+#include <iostream>
+using std::cout;
+using std::endl;
+using std::cerr;
+#endif
+
 #include "E57FoundationImpl.h"
 using namespace e57;
 //using namespace std;
@@ -89,6 +96,8 @@ using std::max;
 using boost::weak_ptr;
 using boost::shared_ptr;
 using boost::dynamic_pointer_cast;
+
+#include <xercesc/util/TransService.hpp>
 
 namespace {
 
@@ -3698,22 +3707,11 @@ void E57XmlParser::warning(const SAXParseException& ex)
 
 ustring E57XmlParser::toUString(const XMLCh* const xml_str)
 {
-    char* cp_str = NULL;
     ustring u_str;
-
-    try {
-        /// Use Xerces to convert a XMLCh* to char* to ustring
-        ///??? uses allocated buf, if small input, use buf on stack?, for speed
-        cp_str = XMLString::transcode(xml_str);
-        if (cp_str == NULL)
-            throw E57_EXCEPTION1(E57_ERROR_INTERNAL);
-        u_str = ustring(cp_str);
-    } catch (...) {
-        if (cp_str != NULL)
-            XMLString::release(&cp_str);
-        throw;  // rethrow
+    if (xml_str && *xml_str) {
+        TranscodeToStr UTF8Transcoder(xml_str, "UTF-8");
+        u_str  = ustring(reinterpret_cast<const char*>(UTF8Transcoder.str()));
     }
-    XMLString::release(&cp_str);
     return(u_str);
 }
 
