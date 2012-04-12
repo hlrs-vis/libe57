@@ -446,7 +446,8 @@ bool	ReaderImpl :: GetE57Root(
 		fileHeader.versionMajor = (int32_t) IntegerNode(root_.get("versionMajor")).value();
 		fileHeader.versionMinor = (int32_t) IntegerNode(root_.get("versionMinor")).value();
 		fileHeader.guid = StringNode(root_.get("guid")).value();
-		fileHeader.e57LibraryVersion = StringNode(root_.get("e57LibraryVersion")).value();
+		if(root_.isDefined("e57LibraryVersion"))
+			fileHeader.e57LibraryVersion = StringNode(root_.get("e57LibraryVersion")).value();
 
 		if(root_.isDefined("coordinateMetadata"))
 			fileHeader.coordinateMetadata = StringNode(root_.get("coordinateMetadata")).value();
