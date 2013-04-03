@@ -50,7 +50,7 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(T_ ${T_}-${${PROJECT_NAME}_MAJOR_VERSION})
     set(T_ ${T_}.${${PROJECT_NAME}_MINOR_VERSION})
     set(T_ ${T_}.${${PROJECT_NAME}_BUILD_VERSION})
-    set(T_ ${T_}-${${PROJECT_NAME}_BUILD_TAG})
+    # set(T_ ${T_}-${${PROJECT_NAME}_BUILD_TAG})
     set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/${T_}
         CACHE PATH
         "Install path prefix, prepended onto install directories."
