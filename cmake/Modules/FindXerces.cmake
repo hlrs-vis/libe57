@@ -51,12 +51,12 @@ if (Xerces_USE_STATIC_LIBS)
     )
 else(Xerces_USE_STATIC_LIBS)
     find_library(Xerces_LIBRARY_DEBUG
-        NAMES xerces-c_3D.lib libxerces-c.dll.a libxerces-c.so
+        NAMES xerces-c_3D.lib libxerces-c.dll.a libxerces-c.so libxerces-c.dylib
         PATHS ${XERCES_ROOT}/lib /usr/lib
     )
 
     find_library(Xerces_LIBRARY_RELEASE
-        NAMES xerces-c_3.lib libxerces-c.dll.a libxerces-c.so
+        NAMES xerces-c_3.lib libxerces-c.dll.a libxerces-c.so libxerces-c.dylib
         PATHS ${XERCES_ROOT}/lib /usr/lib
     )
 endif(Xerces_USE_STATIC_LIBS)
