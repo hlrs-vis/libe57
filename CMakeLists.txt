@@ -145,6 +145,10 @@ add_library( E57RefImpl STATIC
     src/refimpl/E57FoundationImpl.cpp
     src/refimpl/E57FoundationImpl.h
     include/E57Foundation.h
+    src/refimpl/E57Simple.cpp
+    src/refimpl/E57SimpleImpl.cpp
+    src/time_conversion/time_conversion.c
+    include/E57Simple.h
 )
 set_target_properties( E57RefImpl
     PROPERTIES DEBUG_POSTFIX "-d"
@@ -258,6 +262,7 @@ install(
 install(
     FILES
         include/E57Foundation.h
+        include/E57Simple.h
     DESTINATION include/e57
 )
 
