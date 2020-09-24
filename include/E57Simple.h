@@ -57,10 +57,6 @@
 #include "E57Foundation.h"
 #endif
 
-#ifndef _C_TIMECONV_H_
-#include "time_conversion.h"
-#endif
-
 using namespace std;
 using namespace boost;
 
