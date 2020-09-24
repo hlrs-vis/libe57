@@ -1,14 +1,12 @@
+# linux branch
+
+This is v1.1.312 with the changes from https://github.com/clausmichele/libE57-linux applied.
+This file has been copied from the original repo and updated accordingly.
+
 # libE57-linux
 Slightly modified version of libE57 to make it work on Linux. Tested on Ubuntu 18.04.
 
 # Instructions
-
-Download libE57 source code from here: http://sourceforge.net/projects/e57-3d-imgfmt/files/E57Refimpl-src/E57RefImpl_src-1.1.312.zip/download
-
-Unpack the zip and replace:
-- CMakeLists.txt in the project's root directory
-- e57fields.cpp in ./src/tools/
-- E57FoundationImpl.cpp in ./src/refimpl/
 
 Compile with:
 
