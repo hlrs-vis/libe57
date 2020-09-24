@@ -24,6 +24,6 @@ make && sudo make install
 Please refer to http://libe57.org/license.html
 
 
-[1][https://svn.code.sf.net/p/e57-3d-imgfmt/code/]
-[2][http://www.libe57.org/]
-[3][https://github.com/clausmichele/libE57-linux.git]
+[1]: [https://svn.code.sf.net/p/e57-3d-imgfmt/code/]
+[2]: [http://www.libe57.org/]
+[3]: [https://github.com/clausmichele/libE57-linux.git]
