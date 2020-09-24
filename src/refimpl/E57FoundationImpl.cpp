@@ -4670,7 +4670,7 @@ CheckedFile& CheckedFile::operator<<(uint64_t i)
 CheckedFile& CheckedFile::operator<<(float f)
 {
     //??? is 7 digits right number?
-    return(writeFloatingPoint(f, 7));
+    return(writeFloatingPoint(f, 8));
 }
 
 CheckedFile& CheckedFile::operator<<(double d)
