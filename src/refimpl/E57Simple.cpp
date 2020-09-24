@@ -800,6 +800,13 @@ DEALINGS IN THE SOFTWARE.
 #  define __LARGE64_FILES
 #  include <sys/types.h>
 #  include <unistd.h>
+#elif defined(__APPLE__)
+#  define _LARGEFILE64_SOURCE
+#  define __LARGE64_FILES
+#  include <sys/types.h>
+#  include <sys/stat.h>
+#  include <unistd.h>
+#  include <fcntl.h>
 #else
 #  error "no supported OS platform defined"
 #endif

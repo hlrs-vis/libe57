@@ -76,6 +76,16 @@
 #  include <boost/uuid/uuid.hpp>
 #  include <boost/uuid/uuid_generators.hpp>
 #  include <boost/uuid/uuid_io.hpp>
+#elif defined(__APPLE__)
+#  define _LARGEFILE64_SOURCE
+#  define __LARGE64_FILES
+#  include <sys/types.h>
+#  include <sys/stat.h>
+#  include <unistd.h>
+#  include <fcntl.h>
+#  include <boost/uuid/uuid.hpp>
+#  include <boost/uuid/uuid_generators.hpp>
+#  include <boost/uuid/uuid_io.hpp>
 #else
 #  error "no supported OS platform defined"
 #endif
