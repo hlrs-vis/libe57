@@ -75,8 +75,6 @@ find_package(Threads REQUIRED)
 
 # Find the Boost and Xerces libraries
 
-set(Boost_USE_STATIC_LIBS   ON)
-set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost
     COMPONENTS
@@ -94,7 +92,6 @@ Please set the BOOST_ROOT to point to the boost distribution files."
 )
 endif(NOT Boost_FOUND)
 
-set(Xerces_USE_STATIC_LIBS On)
 find_package(Xerces QUIET)
 if (NOT Xerces_FOUND)
     set(XERCES_ROOT CACHE PATH "Location of the xerces library")
