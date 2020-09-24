@@ -66,15 +66,7 @@
 
 
 ================================================================*/
-using namespace std;
-#if defined(_MSC_VER)
-#   include <unordered_map>
-#elif defined(__APPLE__)
-#   include <unordered_map>
-#else
-#   include <tr1/unordered_map>
-using tr1::unordered_map;
-#endif
+#include <unordered_map>
 #include <cstring>
 using std::strlen;
 #include <cmath>

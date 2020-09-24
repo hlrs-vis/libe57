@@ -30,14 +30,7 @@
 #include <iomanip>
 #include <float.h>
 #include <map>
-#if defined(_MSC_VER)
-#   include <memory>
-#elif defined(__APPLE__)
-#   include <memory>
-#else
-#   include <tr1/memory>
-using namespace std::tr1;
-#endif
+#include <memory>
 #include "E57Foundation.h"
 #include "E57FoundationImpl.h" //??? for exceptions, should be in separate file
 

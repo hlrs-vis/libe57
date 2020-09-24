@@ -45,14 +45,8 @@ using std::exception;
 #include <stdexcept>
 using std::runtime_error;
 
-#if defined(_MSC_VER)
-#   include <memory>
-#elif defined(__APPLE__)
-#   include <memory> 
-#else
-#   include <tr1/memory>
-using std::tr1::shared_ptr;
-#endif
+#include <memory> 
+using std::shared_ptr;
 
 #include <string>
 using std::string;

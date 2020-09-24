@@ -30,7 +30,6 @@
 #include "E57FoundationImpl.h" //??? for exceptions, should be in separate file
 using namespace e57;
 using namespace std;
-//using namespace std::tr1; //??? is this really needed, gives error on gcc <roland>
 
 /// Uncomment the line below to enable debug printing
 //#define VERBOSE 1
