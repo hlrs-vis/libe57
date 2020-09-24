@@ -82,7 +82,6 @@ find_package(Boost
         system
         thread
         filesystem
-    QUIET
 )
 if (NOT Boost_FOUND)
     set(BOOST_ROOT CACHE PATH  "Location of the boost root directory" )
@@ -92,7 +91,7 @@ Please set the BOOST_ROOT to point to the boost distribution files."
 )
 endif(NOT Boost_FOUND)
 
-find_package(Xerces QUIET)
+find_package(Xerces)
 if (NOT Xerces_FOUND)
     set(XERCES_ROOT CACHE PATH "Location of the xerces library")
     message(FATAL_ERROR
