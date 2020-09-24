@@ -47,10 +47,12 @@ using std::runtime_error;
 
 #if defined(_MSC_VER)
 #   include <memory>
+#elif defined(__APPLE__)
+#   include <memory> 
 #else
 #   include <tr1/memory>
-#endif
 using std::tr1::shared_ptr;
+#endif
 
 #include <string>
 using std::string;
