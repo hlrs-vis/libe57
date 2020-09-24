@@ -446,9 +446,9 @@ struct CVElementInfo {
     /// Only one is used, depending on the type of the E57 element.
     /// One of these three should be resized to BUFFER_ELEMENT_COUNT.
     /// These are smart pointers to avoid the copying (and the moving) when put on the cvElements list.
-    shared_ptr<vector<int64_t> > iBuffer;
-    shared_ptr<vector<double> >  dBuffer;
-    shared_ptr<vector<string> >  sBuffer;
+    boost::shared_ptr<vector<int64_t> > iBuffer;
+    boost::shared_ptr<vector<double> >  dBuffer;
+    boost::shared_ptr<vector<string> >  sBuffer;
 
     /// The precalculated parts of the element path name.
     /// The only part that is missing is the record number which goes in between.
