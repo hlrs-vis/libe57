@@ -37,6 +37,7 @@
 #    include <io.h>
 #    include <fcntl.h>
 #    include <sys\stat.h>
+#    include <codecvt>
 #  elif defined(__GNUC__)
 #  define _LARGEFILE64_SOURCE
 #  define __LARGE64_FILES
@@ -4523,8 +4524,11 @@ int CheckedFile::open64(ustring fileName, int flags, int mode)
 {
 //??? handle utf-8 file names?
 #if defined(_MSC_VER)
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> utf16conv;
+    std::wstring wfileName = utf16conv.from_bytes(fileName);
+
     int handle;
-    int err = _sopen_s(&handle, fileName_.c_str(), flags, _SH_DENYNO, mode);
+    int err = _wsopen_s(&handle, wfileName.c_str(), flags, _SH_DENYNO, mode);
     if (handle < 0) {
         throw E57_EXCEPTION2(E57_ERROR_OPEN_FAILED,
                              "err=" + toString(err)
