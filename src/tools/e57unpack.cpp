@@ -402,7 +402,7 @@ main(
                     format tfmt(fmt);
                     tfmt.exceptions( all_error_bits ^ too_many_args_bit );
                     out << pointrecord << endl; // put the header line into csv
-                    while(count = rd.read()) {
+                    while((count = rd.read())) {
                         total_count += count;
                         for (size_t i=0; i<count; ++i) {
                             for (size_t j=0; j<buf.size(); ++j)
