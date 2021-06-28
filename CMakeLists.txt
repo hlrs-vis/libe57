@@ -37,7 +37,14 @@
 # patches are most welcome! Please send them to the development mailing list.
 
 
-cmake_minimum_required(VERSION 2.8.2)
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+
+set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD_REQUIRED 11)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set (CMAKE_C_STANDARD 11)
+set (CMAKE_C_STANDARD_REQUIRED 99)
+set(CMAKE_C_EXTENSIONS OFF)
 
 # Override flags to enable prepare for linking to static runtime
 set(CMAKE_USER_MAKE_RULES_OVERRIDE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/c_flag_overrides.cmake)
