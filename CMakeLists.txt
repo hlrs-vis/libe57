@@ -276,8 +276,13 @@ install(
     FILES
         CHANGES.TXT
         README.TXT
+    DESTINATION share/doc/libe57/
+)
+
+install(
+    FILES
         src/refimpl/E57RefImplConfig.cmake
-    DESTINATION .
+    DESTINATION lib/cmake/
 )
 
 #include (InstallRequiredSystemLibraries)
