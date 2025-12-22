@@ -63,18 +63,29 @@ find_package(Threads REQUIRED)
 
 # Find the Boost and Xerces libraries
 
-set(Boost_USE_STATIC_LIBS   ON)
-set(Boost_USE_STATIC_RUNTIME ON)
+#set(Boost_USE_STATIC_LIBS   ON)
+#set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_USE_MULTITHREADED ON)
+set(Boost_DEBUG ON)
 find_package(Boost
     COMPONENTS
         program_options
         system
         thread
         filesystem
-    QUIET
+#    QUIET
 )
+#message("Boost_FOUND:" ${Boost_FOUND})
+#message("Boost_PROGRAM_OPTIONS_FOUND:" ${Boost_PROGRAM_OPTIONS_FOUND})
+#message("Boost_SYSTEM_FOUND:" ${Boost_SYSTEM_FOUND})
+#message("Boost_THREAD_FOUND:" ${Boost_THREAD_FOUND})
+#message("Boost_FILESYSTEM_FOUND:" ${Boost_FILESYSTEM_FOUND})
 if (NOT Boost_FOUND)
+    #message("Boost_FOUND:" ${Boost_FOUND})
+    #message("Boost_PROGRAM_OPTIONS_FOUND:" ${Boost_PROGRAM_OPTIONS_FOUND})
+    #message("Boost_SYSTEM_FOUND:" ${Boost_SYSTEM_FOUND})
+    #message("Boost_THREAD_FOUND:" ${Boost_THREAD_FOUND})
+    #message("Boost_FILESYSTEM_FOUND:" ${Boost_FILESYSTEM_FOUND})
     set(BOOST_ROOT CACHE PATH  "Location of the boost root directory" )
     message(FATAL_ERROR
 "Unable to find boost library.
@@ -82,8 +93,10 @@ Please set the BOOST_ROOT to point to the boost distribution files."
 )
 endif(NOT Boost_FOUND)
 
-set(Xerces_USE_STATIC_LIBS On)
-find_package(Xerces QUIET)
+#set(Xerces_USE_STATIC_LIBS On)
+#find_package(Xerces QUIET)
+find_package(Xerces)
+#message("Xerces_FOUND:" ${Xerces_FOUND})
 if (NOT Xerces_FOUND)
     set(XERCES_ROOT CACHE PATH "Location of the xerces library")
     message(FATAL_ERROR
