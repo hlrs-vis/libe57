@@ -57,6 +57,10 @@
 #include "E57Foundation.h"
 #endif
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 using namespace std;
 using namespace boost;
 
